@@ -6,6 +6,10 @@ pipeline {
             steps {
                 echo 'test'
             }
+
+            steps {
+                sh './gradlew assemble'
+            }
         }
     }
 }
