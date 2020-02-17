@@ -18,7 +18,7 @@ pipeline {
             steps {
                 sh '''
                     echo "Testing the first module aggs-matrix-stats"
-                    ls
+                    
                 '''
             }
         }
