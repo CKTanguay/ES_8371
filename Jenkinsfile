@@ -5,34 +5,33 @@ pipeline {
         stage ('Build stage') {
             steps {
                 echo 'Building the project'
-                echo './gradlew --continue clean build --scan -s -p modules/'
-                echo 'test automation'
+                sh './gradlew --continue clean build --scan -s -p modules/'
             }
         }
 
-        stage ('Linter') {
+        stage ('Linting') {
             steps {
                 echo 'Validating code quality'
-                echo './gradlew lint'
+                sh './gradlew lint'
             }
         }
 
         stage ('Testing') {
             steps {
                 echo 'Testing the first module aggs-matrix-stats'
-                echo 'gradle clean test --scan -p aggs-matrix-stats'
+                sh 'gradle clean test --scan -p aggs-matrix-stats'
 
                 echo 'Testing the second module lang-painless'
-                echo 'gradle clean test --scan -p lang-painless'
+                sh 'gradle clean test --scan -p lang-painless'
 
                 echo 'Testing the third module ingest-common'
-                echo 'gradle clean test --scan -p ingest-common'
+                sh 'gradle clean test --scan -p ingest-common'
 
                 echo 'Testing the fourth module lang-mustache'
-                echo 'gradle clean test --scan -p lang-mustache'
+                sh 'gradle clean test --scan -p lang-mustache'
 
                 echo 'Testing the fifth module lang-expression'
-                echo 'gradle clean test --scan -p lang-expression'
+                sh 'gradle clean test --scan -p lang-expression'
             }
         }
     }
