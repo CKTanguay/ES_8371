@@ -16,7 +16,10 @@ pipeline {
 
         stage ('Testing') {
             steps {
-                echo 'This is the testing stage'
+                sh '''
+                    echo "Testing the first module aggs-matrix-stats"
+                    ls
+                '''
             }
         }
     }
