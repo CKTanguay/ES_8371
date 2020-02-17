@@ -6,6 +6,7 @@ pipeline {
             steps {
                 echo 'Building the project'
                 echo './gradlew --continue clean build --scan -s -p modules/'
+                echo 'test automation'
             }
         }
 
