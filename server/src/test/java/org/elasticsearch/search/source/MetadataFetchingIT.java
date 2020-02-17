@@ -41,7 +41,7 @@ public class MetadataFetchingIT extends ESIntegTestCase {
         assertAcked(prepareCreate("test"));
         ensureGreen();
 
-        client().prepareIndex("test", "_doc", "1").setSource("field", "value").get();
+        client().prepareIndex("test").setId("1").setSource("field", "value").get();
         refresh();
 
         SearchResponse response = client()
@@ -50,7 +50,6 @@ public class MetadataFetchingIT extends ESIntegTestCase {
             .setFetchSource(false)
             .get();
         assertThat(response.getHits().getAt(0).getId(), nullValue());
-        assertThat(response.getHits().getAt(0).getType(),  equalTo("_doc"));
         assertThat(response.getHits().getAt(0).getSourceAsString(), nullValue());
 
         response = client()
@@ -58,14 +57,13 @@ public class MetadataFetchingIT extends ESIntegTestCase {
             .storedFields("_none_")
             .get();
         assertThat(response.getHits().getAt(0).getId(), nullValue());
-        assertThat(response.getHits().getAt(0).getType(),  equalTo("_doc"));
         assertThat(response.getHits().getAt(0).getSourceAsString(), nullValue());
     }
 
     public void testInnerHits() {
-        assertAcked(prepareCreate("test").addMapping("_doc", "nested", "type=nested"));
+        assertAcked(prepareCreate("test").setMapping("nested", "type=nested"));
         ensureGreen();
-        client().prepareIndex("test", "_doc", "1")
+        client().prepareIndex("test").setId("1")
             .setSource("field", "value", "nested", Collections.singletonMap("title", "foo")).get();
         refresh();
 
@@ -82,13 +80,11 @@ public class MetadataFetchingIT extends ESIntegTestCase {
             .get();
         assertThat(response.getHits().getTotalHits().value, equalTo(1L));
         assertThat(response.getHits().getAt(0).getId(), nullValue());
-        assertThat(response.getHits().getAt(0).getType(), equalTo("_doc"));
         assertThat(response.getHits().getAt(0).getSourceAsString(), nullValue());
         assertThat(response.getHits().getAt(0).getInnerHits().size(), equalTo(1));
         SearchHits hits = response.getHits().getAt(0).getInnerHits().get("nested");
         assertThat(hits.getTotalHits().value, equalTo(1L));
         assertThat(hits.getAt(0).getId(), nullValue());
-        assertThat(hits.getAt(0).getType(), equalTo("_doc"));
         assertThat(hits.getAt(0).getSourceAsString(), nullValue());
     }
 
@@ -96,7 +92,7 @@ public class MetadataFetchingIT extends ESIntegTestCase {
         assertAcked(prepareCreate("test"));
         ensureGreen();
 
-        client().prepareIndex("test", "_doc", "1").setSource("field", "value").setRouting("toto").get();
+        client().prepareIndex("test").setId("1").setSource("field", "value").setRouting("toto").get();
         refresh();
 
         SearchResponse response = client()
@@ -105,7 +101,6 @@ public class MetadataFetchingIT extends ESIntegTestCase {
             .setFetchSource(false)
             .get();
         assertThat(response.getHits().getAt(0).getId(), nullValue());
-        assertThat(response.getHits().getAt(0).getType(),  equalTo("_doc"));
         assertThat(response.getHits().getAt(0).field("_routing"), nullValue());
         assertThat(response.getHits().getAt(0).getSourceAsString(), nullValue());
 
@@ -114,7 +109,6 @@ public class MetadataFetchingIT extends ESIntegTestCase {
             .storedFields("_none_")
             .get();
         assertThat(response.getHits().getAt(0).getId(), nullValue());
-        assertThat(response.getHits().getAt(0).getType(),  equalTo("_doc"));
         assertThat(response.getHits().getAt(0).getSourceAsString(), nullValue());
     }
 
@@ -122,7 +116,7 @@ public class MetadataFetchingIT extends ESIntegTestCase {
         assertAcked(prepareCreate("test"));
         ensureGreen();
 
-        index("test", "type1", "1", "field", "value");
+        indexDoc("test", "1", "field", "value");
         refresh();
 
         {

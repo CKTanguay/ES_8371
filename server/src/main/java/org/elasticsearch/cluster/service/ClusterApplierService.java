@@ -486,12 +486,6 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
 
         nodeConnectionsService.disconnectFromNodesExcept(newClusterState.nodes());
 
-        assert newClusterState.coordinationMetaData().getLastAcceptedConfiguration()
-            .equals(newClusterState.coordinationMetaData().getLastCommittedConfiguration())
-            : newClusterState.coordinationMetaData().getLastAcceptedConfiguration()
-            + " vs " + newClusterState.coordinationMetaData().getLastCommittedConfiguration()
-            + " on " + newClusterState.nodes().getLocalNode();
-
         logger.debug("set locally applied cluster state to version {}", newClusterState.version());
         state.set(newClusterState);
 

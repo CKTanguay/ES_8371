@@ -15,6 +15,7 @@ import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -44,7 +45,7 @@ public class TransportPostStartTrialAction extends TransportMasterNodeAction<Pos
     }
 
     @Override
-    protected void masterOperation(PostStartTrialRequest request, ClusterState state,
+    protected void masterOperation(Task task, PostStartTrialRequest request, ClusterState state,
                                    ActionListener<PostStartTrialResponse> listener) throws Exception {
         licenseService.startTrialLicense(request, listener);
     }

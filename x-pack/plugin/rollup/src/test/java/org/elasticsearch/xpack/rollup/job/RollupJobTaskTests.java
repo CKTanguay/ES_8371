@@ -64,7 +64,7 @@ public class RollupJobTaskTests extends ESTestCase {
 
     public void testInitialStatusStopped() {
         RollupJob job = new RollupJob(ConfigTestHelpers.randomRollupJobConfig(random()), Collections.emptyMap());
-        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, Collections.singletonMap("foo", "bar"), randomBoolean());
+        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, Collections.singletonMap("foo", "bar"));
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         SchedulerEngine schedulerEngine = new SchedulerEngine(SETTINGS, Clock.systemUTC());
@@ -79,12 +79,12 @@ public class RollupJobTaskTests extends ESTestCase {
 
     public void testInitialStatusAborting() {
         RollupJob job = new RollupJob(ConfigTestHelpers.randomRollupJobConfig(random()), Collections.emptyMap());
-        RollupJobStatus status = new RollupJobStatus(IndexerState.ABORTING, Collections.singletonMap("foo", "bar"), randomBoolean());
+        RollupJobStatus status = new RollupJobStatus(IndexerState.ABORTING, Collections.singletonMap("foo", "bar"));
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         SchedulerEngine schedulerEngine = new SchedulerEngine(SETTINGS, Clock.systemUTC());
         TaskId taskId = new TaskId("node", 123);
-        RollupJobTask task = new RollupJobTask(1, "type", "action", new TaskId("node", 123), job,
+        RollupJobTask task = new RollupJobTask(1, "type", "action", taskId, job,
             status, client, schedulerEngine, pool, Collections.emptyMap());
         task.init(null, mock(TaskManager.class), taskId.toString(), 123);
         assertThat(((RollupJobStatus)task.getStatus()).getIndexerState(), equalTo(IndexerState.STOPPED));
@@ -94,7 +94,7 @@ public class RollupJobTaskTests extends ESTestCase {
 
     public void testInitialStatusStopping() {
         RollupJob job = new RollupJob(ConfigTestHelpers.randomRollupJobConfig(random()), Collections.emptyMap());
-        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPING, Collections.singletonMap("foo", "bar"), randomBoolean());
+        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPING, Collections.singletonMap("foo", "bar"));
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         SchedulerEngine schedulerEngine = new SchedulerEngine(SETTINGS, Clock.systemUTC());
@@ -109,7 +109,7 @@ public class RollupJobTaskTests extends ESTestCase {
 
     public void testInitialStatusStarted() {
         RollupJob job = new RollupJob(ConfigTestHelpers.randomRollupJobConfig(random()), Collections.emptyMap());
-        RollupJobStatus status = new RollupJobStatus(IndexerState.STARTED, Collections.singletonMap("foo", "bar"), randomBoolean());
+        RollupJobStatus status = new RollupJobStatus(IndexerState.STARTED, Collections.singletonMap("foo", "bar"));
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         SchedulerEngine schedulerEngine = new SchedulerEngine(SETTINGS, Clock.systemUTC());
@@ -124,7 +124,7 @@ public class RollupJobTaskTests extends ESTestCase {
 
     public void testInitialStatusIndexingOldID() {
         RollupJob job = new RollupJob(ConfigTestHelpers.randomRollupJobConfig(random()), Collections.emptyMap());
-        RollupJobStatus status = new RollupJobStatus(IndexerState.INDEXING, Collections.singletonMap("foo", "bar"), false);
+        RollupJobStatus status = new RollupJobStatus(IndexerState.INDEXING, Collections.singletonMap("foo", "bar"));
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         SchedulerEngine schedulerEngine = new SchedulerEngine(SETTINGS, Clock.systemUTC());
@@ -139,7 +139,7 @@ public class RollupJobTaskTests extends ESTestCase {
 
     public void testInitialStatusIndexingNewID() {
         RollupJob job = new RollupJob(ConfigTestHelpers.randomRollupJobConfig(random()), Collections.emptyMap());
-        RollupJobStatus status = new RollupJobStatus(IndexerState.INDEXING, Collections.singletonMap("foo", "bar"), true);
+        RollupJobStatus status = new RollupJobStatus(IndexerState.INDEXING, Collections.singletonMap("foo", "bar"));
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         SchedulerEngine schedulerEngine = new SchedulerEngine(SETTINGS, Clock.systemUTC());
@@ -167,7 +167,7 @@ public class RollupJobTaskTests extends ESTestCase {
 
     public void testStartWhenStarted() throws InterruptedException {
         RollupJob job = new RollupJob(ConfigTestHelpers.randomRollupJobConfig(random()), Collections.emptyMap());
-        RollupJobStatus status = new RollupJobStatus(IndexerState.STARTED, Collections.singletonMap("foo", "bar"), randomBoolean());
+        RollupJobStatus status = new RollupJobStatus(IndexerState.STARTED, Collections.singletonMap("foo", "bar"));
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         SchedulerEngine schedulerEngine = new SchedulerEngine(SETTINGS, Clock.systemUTC());
@@ -180,17 +180,16 @@ public class RollupJobTaskTests extends ESTestCase {
         assertTrue(((RollupJobStatus)task.getStatus()).getPosition().containsKey("foo"));
 
         CountDownLatch latch = new CountDownLatch(1);
-        task.start(new ActionListener<StartRollupJobAction.Response>() {
+        task.start(new ActionListener<>() {
             @Override
             public void onResponse(StartRollupJobAction.Response response) {
-                fail("Should not have entered onResponse.");
+                assertTrue(response.isStarted());
+                latch.countDown();
             }
 
             @Override
             public void onFailure(Exception e) {
-                assertThat(e.getMessage(), equalTo("Cannot start task for Rollup Job ["
-                    + job.getConfig().getId() + "] because state was [STARTED]"));
-                latch.countDown();
+                fail("Should not have throw exception: " + e.getMessage());
             }
         });
         latch.await(3, TimeUnit.SECONDS);
@@ -279,7 +278,7 @@ public class RollupJobTaskTests extends ESTestCase {
 
     public void testStartWhenStopped() throws InterruptedException {
         RollupJob job = new RollupJob(ConfigTestHelpers.randomRollupJobConfig(random()), Collections.emptyMap());
-        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, Collections.singletonMap("foo", "bar"), randomBoolean());
+        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, Collections.singletonMap("foo", "bar"));
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         SchedulerEngine schedulerEngine = mock(SchedulerEngine.class);
@@ -319,7 +318,7 @@ public class RollupJobTaskTests extends ESTestCase {
 
     public void testTriggerUnrelated() throws InterruptedException {
         RollupJob job = new RollupJob(ConfigTestHelpers.randomRollupJobConfig(random()), Collections.emptyMap());
-        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, Collections.singletonMap("foo", "bar"), randomBoolean());
+        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, Collections.singletonMap("foo", "bar"));
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         SchedulerEngine schedulerEngine = mock(SchedulerEngine.class);
@@ -449,10 +448,6 @@ public class RollupJobTaskTests extends ESTestCase {
                     listener.onResponse(new PersistentTasksCustomMetaData.PersistentTask<>("foo", RollupField.TASK_NAME, job, 1,
                         new PersistentTasksCustomMetaData.Assignment("foo", "foo")));
                 } else if (counterValue == 1) {
-                    // When we get here, doSaveState() was just invoked so we will have
-                    // have upgraded IDs
-                    RollupJobStatus s = (RollupJobStatus)this.getStatus();
-                    assertTrue(s.isUpgradedDocumentID());
                     finished.set(true);
                 }
 
@@ -462,11 +457,11 @@ public class RollupJobTaskTests extends ESTestCase {
         assertThat(((RollupJobStatus)task.getStatus()).getIndexerState(), equalTo(IndexerState.STOPPED));
         assertNull(((RollupJobStatus)task.getStatus()).getPosition());
 
-        task.start(new ActionListener<StartRollupJobAction.Response>() {
+        task.start(new ActionListener<>() {
             @Override
             public void onResponse(StartRollupJobAction.Response response) {
                 assertTrue(response.isStarted());
-                assertThat(((RollupJobStatus)task.getStatus()).getIndexerState(), equalTo(IndexerState.STARTED));
+                assertThat(((RollupJobStatus) task.getStatus()).getIndexerState(), equalTo(IndexerState.STARTED));
                 started.set(true);
             }
 
@@ -539,10 +534,6 @@ public class RollupJobTaskTests extends ESTestCase {
                     listener.onResponse(new PersistentTasksCustomMetaData.PersistentTask<>("foo", RollupField.TASK_NAME, job, 1,
                         new PersistentTasksCustomMetaData.Assignment("foo", "foo")));
                 } else if (counterValue == 1) {
-                    // When we get here, doSaveState() was just invoked so we will have
-                    // have upgraded IDs
-                    RollupJobStatus s = (RollupJobStatus)this.getStatus();
-                    assertTrue(s.isUpgradedDocumentID());
                     finished.set(true);
                 }
 
@@ -552,11 +543,11 @@ public class RollupJobTaskTests extends ESTestCase {
         assertThat(((RollupJobStatus)task.getStatus()).getIndexerState(), equalTo(IndexerState.STOPPED));
         assertNull(((RollupJobStatus)task.getStatus()).getPosition());
 
-        task.start(new ActionListener<StartRollupJobAction.Response>() {
+        task.start(new ActionListener<>() {
             @Override
             public void onResponse(StartRollupJobAction.Response response) {
                 assertTrue(response.isStarted());
-                assertThat(((RollupJobStatus)task.getStatus()).getIndexerState(), equalTo(IndexerState.STARTED));
+                assertThat(((RollupJobStatus) task.getStatus()).getIndexerState(), equalTo(IndexerState.STARTED));
                 started.set(true);
             }
 
@@ -616,7 +607,7 @@ public class RollupJobTaskTests extends ESTestCase {
         }).when(client).execute(anyObject(), anyObject(), anyObject());
 
         SchedulerEngine schedulerEngine = mock(SchedulerEngine.class);
-        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, null, false);
+        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, null);
         TaskId taskId = new TaskId("node", 123);
         RollupJobTask task = new RollupJobTask(1, "type", "action", taskId, job,
             status, client, schedulerEngine, pool, Collections.emptyMap()) {
@@ -630,10 +621,6 @@ public class RollupJobTaskTests extends ESTestCase {
                     listener.onResponse(new PersistentTasksCustomMetaData.PersistentTask<>("foo", RollupField.TASK_NAME, job, 1,
                         new PersistentTasksCustomMetaData.Assignment("foo", "foo")));
                 } else if (counterValue == 1) {
-                    // When we get here, doSaveState() was just invoked so we will have
-                    // have upgraded IDs
-                    RollupJobStatus s = (RollupJobStatus)this.getStatus();
-                    assertTrue(s.isUpgradedDocumentID());
                     finished.set(true);
                 }
 
@@ -643,11 +630,11 @@ public class RollupJobTaskTests extends ESTestCase {
         assertThat(((RollupJobStatus)task.getStatus()).getIndexerState(), equalTo(IndexerState.STOPPED));
         assertNull(((RollupJobStatus)task.getStatus()).getPosition());
 
-        task.start(new ActionListener<StartRollupJobAction.Response>() {
+        task.start(new ActionListener<>() {
             @Override
             public void onResponse(StartRollupJobAction.Response response) {
                 assertTrue(response.isStarted());
-                assertThat(((RollupJobStatus)task.getStatus()).getIndexerState(), equalTo(IndexerState.STARTED));
+                assertThat(((RollupJobStatus) task.getStatus()).getIndexerState(), equalTo(IndexerState.STARTED));
                 started.set(true);
             }
 
@@ -670,7 +657,7 @@ public class RollupJobTaskTests extends ESTestCase {
 
     public void testStopWhenStopped() throws InterruptedException {
         RollupJob job = new RollupJob(ConfigTestHelpers.randomRollupJobConfig(random()), Collections.emptyMap());
-        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, null, randomBoolean());
+        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, null);
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         SchedulerEngine schedulerEngine = new SchedulerEngine(SETTINGS, Clock.systemUTC());
@@ -781,7 +768,7 @@ public class RollupJobTaskTests extends ESTestCase {
 
     public void testStopWhenAborting() throws InterruptedException {
         RollupJob job = new RollupJob(ConfigTestHelpers.randomRollupJobConfig(random()), Collections.emptyMap());
-        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, null, randomBoolean());
+        RollupJobStatus status = new RollupJobStatus(IndexerState.STOPPED, null);
         Client client = mock(Client.class);
         when(client.settings()).thenReturn(Settings.EMPTY);
         SchedulerEngine schedulerEngine = new SchedulerEngine(SETTINGS, Clock.systemUTC());

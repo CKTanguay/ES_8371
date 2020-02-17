@@ -21,6 +21,7 @@ package org.elasticsearch.snapshots.mockstore;
 
 import org.apache.lucene.codecs.CodecUtil;
 import org.elasticsearch.cluster.metadata.RepositoryMetaData;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.blobstore.BlobContainer;
 import org.elasticsearch.common.blobstore.BlobMetaData;
@@ -29,6 +30,7 @@ import org.elasticsearch.common.blobstore.BlobStore;
 import org.elasticsearch.common.blobstore.DeleteResult;
 import org.elasticsearch.common.blobstore.support.PlainBlobMetaData;
 import org.elasticsearch.common.bytes.BytesArray;
+import org.elasticsearch.common.util.Maps;
 import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentHelper;
@@ -36,14 +38,12 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.repositories.blobstore.BlobStoreRepository;
 import org.elasticsearch.snapshots.SnapshotInfo;
 import org.elasticsearch.test.ESTestCase;
-import org.elasticsearch.threadpool.ThreadPool;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,10 +74,10 @@ public class MockEventuallyConsistentRepository extends BlobStoreRepository {
     public MockEventuallyConsistentRepository(
         final RepositoryMetaData metadata,
         final NamedXContentRegistry namedXContentRegistry,
-        final ThreadPool threadPool,
+        final ClusterService clusterService,
         final Context context,
         final Random random) {
-        super(metadata, false, namedXContentRegistry, threadPool);
+        super(metadata, namedXContentRegistry, clusterService, BlobPath.cleanPath());
         this.context = context;
         this.namedXContentRegistry = namedXContentRegistry;
         this.random = random;
@@ -94,7 +94,7 @@ public class MockEventuallyConsistentRepository extends BlobStoreRepository {
                 lastActions.remove(action.path);
             }
         }
-        return new ArrayList<>(lastActions.values());
+        return List.copyOf(lastActions.values());
     }
 
     @Override
@@ -105,11 +105,6 @@ public class MockEventuallyConsistentRepository extends BlobStoreRepository {
     @Override
     protected BlobStore createBlobStore() {
         return new MockBlobStore();
-    }
-
-    @Override
-    public BlobPath basePath() {
-        return BlobPath.cleanPath();
     }
 
     /**
@@ -225,10 +220,12 @@ public class MockEventuallyConsistentRepository extends BlobStoreRepository {
             }
 
             @Override
-            public void deleteBlob(String blobName) {
+            public void deleteBlobsIgnoringIfNotExists(List<String> blobNames) {
                 ensureNotClosed();
                 synchronized (context.actions) {
-                    context.actions.add(new BlobStoreAction(Operation.DELETE, path.buildAsString() + blobName));
+                    for (String blobName : blobNames) {
+                        context.actions.add(new BlobStoreAction(Operation.DELETE, path.buildAsString() + blobName));
+                    }
                 }
             }
 
@@ -283,18 +280,18 @@ public class MockEventuallyConsistentRepository extends BlobStoreRepository {
             @Override
             public Map<String, BlobMetaData> listBlobsByPrefix(String blobNamePrefix) {
                 return maybeMissLatestIndexN(
-                    listBlobs().entrySet().stream().filter(entry -> entry.getKey().startsWith(blobNamePrefix))
-                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+                    Maps.ofEntries(listBlobs().entrySet().stream().filter(entry -> entry.getKey().startsWith(blobNamePrefix))
+                        .collect(Collectors.toList())));
             }
 
-            // Randomly filter out the latest /index-N blob from a listing to test that tracking of it in latestKnownRepoGen
-            // overrides an inconsistent listing
+            // Randomly filter out the index-N blobs from a listing to test that tracking of it in latestKnownRepoGen and the cluster state
+            // ensures consistent repository operations
             private Map<String, BlobMetaData> maybeMissLatestIndexN(Map<String, BlobMetaData> listing) {
-                // Only filter out latest index-N at the repo root and only as long as we're not in a forced consistent state
-                if (path.parent() == null && context.consistent == false && random.nextBoolean()) {
+                // Randomly filter out index-N blobs at the repo root to proof that we don't need them to be consistently listed
+                if (path.parent() == null && context.consistent == false) {
                     final Map<String, BlobMetaData> filtered = new HashMap<>(listing);
-                    filtered.remove(BlobStoreRepository.INDEX_FILE_PREFIX + latestKnownRepoGen.get());
-                    return Collections.unmodifiableMap(filtered);
+                    filtered.keySet().removeIf(b -> b.startsWith(BlobStoreRepository.INDEX_FILE_PREFIX) && random.nextBoolean());
+                    return Map.copyOf(filtered);
                 }
                 return listing;
             }

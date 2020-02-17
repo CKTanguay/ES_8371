@@ -5,7 +5,6 @@
  */
 package org.elasticsearch.xpack.core.ml.action;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.ActionType;
@@ -43,8 +42,7 @@ public class RevertModelSnapshotAction extends ActionType<RevertModelSnapshotAct
         public static final ParseField SNAPSHOT_ID = new ParseField("snapshot_id");
         public static final ParseField DELETE_INTERVENING = new ParseField("delete_intervening_results");
 
-        private static ObjectParser<Request, Void> PARSER = new ObjectParser<>(NAME, Request::new);
-
+        private static final ObjectParser<Request, Void> PARSER = new ObjectParser<>(NAME, Request::new);
         static {
             PARSER.declareString((request, jobId) -> request.jobId = jobId, Job.ID);
             PARSER.declareString((request, snapshotId) -> request.snapshotId = snapshotId, SNAPSHOT_ID);
@@ -153,10 +151,6 @@ public class RevertModelSnapshotAction extends ActionType<RevertModelSnapshotAct
 
         public Response(StreamInput in) throws IOException {
             super(in);
-            if (in.getVersion().before(Version.V_6_3_0)) {
-                //the acknowledged flag was removed
-                in.readBoolean();
-            }
             model = new ModelSnapshot(in);
         }
 
@@ -171,10 +165,6 @@ public class RevertModelSnapshotAction extends ActionType<RevertModelSnapshotAct
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
-            if (out.getVersion().before(Version.V_6_3_0)) {
-                //the acknowledged flag is no longer supported
-                out.writeBoolean(true);
-            }
             model.writeTo(out);
         }
 

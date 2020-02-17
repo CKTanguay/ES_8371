@@ -138,16 +138,6 @@ public class SnapshotShardFailure extends ShardOperationFailedException {
 
         ShardId shardId = new ShardId(index, indexUuid != null ? indexUuid : IndexMetaData.INDEX_UUID_NA_VALUE, intShardId);
 
-        // Workaround for https://github.com/elastic/elasticsearch/issues/25878
-        // Some old snapshot might still have null in shard failure reasons
-        String nonNullReason;
-        if (reason != null) {
-            nonNullReason = reason;
-        } else {
-            nonNullReason = "";
-        }
-
-
         RestStatus restStatus;
         if (status != null) {
             restStatus = RestStatus.valueOf(status);
@@ -155,7 +145,7 @@ public class SnapshotShardFailure extends ShardOperationFailedException {
             restStatus = RestStatus.INTERNAL_SERVER_ERROR;
         }
 
-        return new SnapshotShardFailure(nodeId, shardId, nonNullReason, restStatus);
+        return new SnapshotShardFailure(nodeId, shardId, reason, restStatus);
     }
 
     /**

@@ -31,6 +31,7 @@ import org.elasticsearch.common.util.concurrent.EsRejectedExecutionException;
 import org.elasticsearch.index.Index;
 import org.elasticsearch.index.IndexSettings;
 import org.elasticsearch.test.ESTestCase;
+import org.elasticsearch.test.VersionUtils;
 import org.elasticsearch.xpack.ccr.Ccr;
 import org.elasticsearch.xpack.ccr.CcrLicenseChecker;
 import org.elasticsearch.xpack.ccr.CcrSettings;
@@ -95,7 +96,7 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         Map<String, List<String>> followedLeaderIndexUUIDS = new HashMap<>();
         followedLeaderIndexUUIDS.put("remote", new ArrayList<>());
         Map<String, Map<String, String>> autoFollowHeaders = new HashMap<>();
-        autoFollowHeaders.put("remote", Collections.singletonMap("key", "val"));
+        autoFollowHeaders.put("remote", Map.of("key", "val"));
         AutoFollowMetadata autoFollowMetadata = new AutoFollowMetadata(patterns, followedLeaderIndexUUIDS, autoFollowHeaders);
 
         ClusterState currentState = ClusterState.builder(new ClusterName("name"))
@@ -265,13 +266,13 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         final String remoteCluster = randomAlphaOfLength(5);
 
         final Map<String, AutoFollowPattern> autoFollowPatterns = new HashMap<>(2);
-        autoFollowPatterns.put("pattern_1", new AutoFollowPattern(remoteCluster, Arrays.asList("logs-*", "test-*"), "copy-", false,
-            null, null, null, null, null, null, null, null, null, null));
-        autoFollowPatterns.put("pattern_2", new AutoFollowPattern(remoteCluster, Arrays.asList("users-*"), "copy-", false, null, null,
+        autoFollowPatterns.put("pattern_1", new AutoFollowPattern(remoteCluster, List.of("logs-*", "test-*"), "copy-", false, null, null,
+            null, null, null, null, null, null, null, null));
+        autoFollowPatterns.put("pattern_2", new AutoFollowPattern(remoteCluster, List.of("users-*"), "copy-", false, null, null,
             null, null, null, null, null, null, null, null));
 
         final Map<String, List<String>> followedLeaderIndexUUIDs = new HashMap<>(2);
-        followedLeaderIndexUUIDs.put("pattern_1", Arrays.asList("uuid1", "uuid2"));
+        followedLeaderIndexUUIDs.put("pattern_1", List.of("uuid1", "uuid2"));
         followedLeaderIndexUUIDs.put("pattern_2", Collections.emptyList());
 
         final Map<String, Map<String, String>> headers = new HashMap<>(2);
@@ -544,9 +545,8 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
     }
 
     public void testGetLeaderIndicesToFollow() {
-        AutoFollowPattern autoFollowPattern = new AutoFollowPattern("remote", Collections.singletonList("metrics-*"), null, true,
+        final AutoFollowPattern autoFollowPattern = new AutoFollowPattern("remote", Collections.singletonList("metrics-*"), null, true,
             null, null, null, null, null, null, null, null, null, null);
-        Map<String, Map<String, String>> headers = new HashMap<>();
 
         RoutingTable.Builder routingTableBuilder = RoutingTable.builder();
         MetaData.Builder imdBuilder = MetaData.builder();
@@ -611,14 +611,14 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
     }
 
     public void testGetLeaderIndicesToFollow_shardsNotStarted() {
-        AutoFollowPattern autoFollowPattern = new AutoFollowPattern("remote", Collections.singletonList("*"), null, true,
-            null, null, null, null, null, null, null, null, null, null);
+        AutoFollowPattern autoFollowPattern = new AutoFollowPattern("remote", Collections.singletonList("*"),
+            null, true, null, null, null, null, null, null, null, null, null, null);
 
         // 1 shard started and another not started:
         ClusterState remoteState = createRemoteClusterState("index1", true);
         MetaData.Builder mBuilder= MetaData.builder(remoteState.metaData());
         mBuilder.put(IndexMetaData.builder("index2")
-            .settings(settings(Version.CURRENT).put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true))
+            .settings(settings(Version.CURRENT))
             .numberOfShards(1)
             .numberOfReplicas(0));
         ShardRouting shardRouting =
@@ -672,7 +672,7 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
 
     public void testRecordLeaderIndexAsFollowFunction() {
         AutoFollowMetadata autoFollowMetadata = new AutoFollowMetadata(Collections.emptyMap(),
-            Collections.singletonMap("pattern1", Collections.emptyList()), Collections.emptyMap());
+            Map.of("pattern1", Collections.emptyList()), Collections.emptyMap());
         ClusterState clusterState = new ClusterState.Builder(new ClusterName("name"))
             .metaData(new MetaData.Builder().putCustom(AutoFollowMetadata.TYPE, autoFollowMetadata))
             .build();
@@ -699,7 +699,7 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
 
     public void testCleanFollowedLeaderIndices() {
         AutoFollowMetadata autoFollowMetadata = new AutoFollowMetadata(Collections.emptyMap(),
-            Collections.singletonMap("pattern1", Arrays.asList("index1", "index2", "index3")), Collections.emptyMap());
+            Map.of("pattern1", Arrays.asList("index1", "index2", "index3")), Collections.emptyMap());
         ClusterState clusterState = new ClusterState.Builder(new ClusterName("name"))
             .metaData(new MetaData.Builder().putCustom(AutoFollowMetadata.TYPE, autoFollowMetadata))
             .build();
@@ -707,13 +707,11 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         MetaData remoteMetadata = new MetaData.Builder()
             .put(IndexMetaData.builder("index1")
                 .settings(settings(Version.CURRENT)
-                    .put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true)
                     .put(IndexMetaData.SETTING_INDEX_UUID, "index1"))
                 .numberOfShards(1)
                 .numberOfReplicas(0))
             .put(IndexMetaData.builder("index3")
                 .settings(settings(Version.CURRENT)
-                    .put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true)
                     .put(IndexMetaData.SETTING_INDEX_UUID, "index3"))
                 .numberOfShards(1)
                 .numberOfReplicas(0))
@@ -728,7 +726,7 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
 
     public void testCleanFollowedLeaderIndicesNoChanges() {
         AutoFollowMetadata autoFollowMetadata = new AutoFollowMetadata(Collections.emptyMap(),
-            Collections.singletonMap("pattern1", Arrays.asList("index1", "index2", "index3")), Collections.emptyMap());
+            Map.of("pattern1", Arrays.asList("index1", "index2", "index3")), Collections.emptyMap());
         ClusterState clusterState = new ClusterState.Builder(new ClusterName("name"))
             .metaData(new MetaData.Builder().putCustom(AutoFollowMetadata.TYPE, autoFollowMetadata))
             .build();
@@ -736,19 +734,16 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         MetaData remoteMetadata = new MetaData.Builder()
             .put(IndexMetaData.builder("index1")
                 .settings(settings(Version.CURRENT)
-                    .put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true)
                     .put(IndexMetaData.SETTING_INDEX_UUID, "index1"))
                 .numberOfShards(1)
                 .numberOfReplicas(0))
             .put(IndexMetaData.builder("index2")
                 .settings(settings(Version.CURRENT)
-                    .put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true)
                     .put(IndexMetaData.SETTING_INDEX_UUID, "index2"))
                 .numberOfShards(1)
                 .numberOfReplicas(0))
             .put(IndexMetaData.builder("index3")
                 .settings(settings(Version.CURRENT)
-                    .put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true)
                     .put(IndexMetaData.SETTING_INDEX_UUID, "index3"))
                 .numberOfShards(1)
                 .numberOfReplicas(0))
@@ -761,14 +756,14 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
 
     public void testCleanFollowedLeaderIndicesNoEntry() {
         AutoFollowMetadata autoFollowMetadata = new AutoFollowMetadata(Collections.emptyMap(),
-            Collections.singletonMap("pattern2", Arrays.asList("index1", "index2", "index3")), Collections.emptyMap());
+            Map.of("pattern2", Arrays.asList("index1", "index2", "index3")), Collections.emptyMap());
         ClusterState clusterState = new ClusterState.Builder(new ClusterName("name"))
             .metaData(new MetaData.Builder().putCustom(AutoFollowMetadata.TYPE, autoFollowMetadata))
             .build();
 
         MetaData remoteMetadata = new MetaData.Builder()
             .put(IndexMetaData.builder("index1")
-                .settings(settings(Version.CURRENT).put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true))
+                .settings(settings(Version.CURRENT))
                 .numberOfShards(1)
                 .numberOfReplicas(0))
             .build();
@@ -1059,7 +1054,7 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         Map<String, List<String>> followedLeaderIndexUUIDS = new HashMap<>();
         followedLeaderIndexUUIDS.put("remote", new ArrayList<>());
         Map<String, Map<String, String>> autoFollowHeaders = new HashMap<>();
-        autoFollowHeaders.put("remote", Collections.singletonMap("key", "val"));
+        autoFollowHeaders.put("remote", Map.of("key", "val"));
         AutoFollowMetadata autoFollowMetadata = new AutoFollowMetadata(patterns, followedLeaderIndexUUIDS, autoFollowHeaders);
 
         final LinkedList<ClusterState> leaderStates = new LinkedList<>();
@@ -1122,7 +1117,7 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         Map<String, List<String>> followedLeaderIndexUUIDS = new HashMap<>();
         followedLeaderIndexUUIDS.put("remote", new ArrayList<>());
         Map<String, Map<String, String>> autoFollowHeaders = new HashMap<>();
-        autoFollowHeaders.put("remote", Collections.singletonMap("key", "val"));
+        autoFollowHeaders.put("remote", Map.of("key", "val"));
         AutoFollowMetadata autoFollowMetadata = new AutoFollowMetadata(patterns, followedLeaderIndexUUIDS, autoFollowHeaders);
 
         ClusterState[] states = new ClusterState[16];
@@ -1171,8 +1166,7 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         Client client = mock(Client.class);
         when(client.getRemoteClusterClient(anyString())).thenReturn(client);
 
-        ClusterState remoteState = randomBoolean() ? createRemoteClusterState("logs-20190101", false) :
-            createRemoteClusterState("logs-20190101", null);
+        ClusterState remoteState = createRemoteClusterState("logs-20190101", false);
 
         AutoFollowPattern autoFollowPattern = new AutoFollowPattern("remote", Collections.singletonList("logs-*"),
             null, true, null, null, null, null, null, null, null, null, null, null);
@@ -1181,7 +1175,7 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         Map<String, List<String>> followedLeaderIndexUUIDS = new HashMap<>();
         followedLeaderIndexUUIDS.put("remote", new ArrayList<>());
         Map<String, Map<String, String>> autoFollowHeaders = new HashMap<>();
-        autoFollowHeaders.put("remote", Collections.singletonMap("key", "val"));
+        autoFollowHeaders.put("remote", Map.of("key", "val"));
         AutoFollowMetadata autoFollowMetadata = new AutoFollowMetadata(patterns, followedLeaderIndexUUIDS, autoFollowHeaders);
 
         ClusterState currentState = ClusterState.builder(new ClusterName("name"))
@@ -1247,14 +1241,14 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         Map<String, List<String>> followedLeaderIndexUUIDS = new HashMap<>();
         followedLeaderIndexUUIDS.put("remote", new ArrayList<>());
         Map<String, Map<String, String>> autoFollowHeaders = new HashMap<>();
-        autoFollowHeaders.put("remote", Collections.singletonMap("key", "val"));
+        autoFollowHeaders.put("remote", Map.of("key", "val"));
         AutoFollowMetadata autoFollowMetadata = new AutoFollowMetadata(patterns, followedLeaderIndexUUIDS, autoFollowHeaders);
 
         ClusterState currentState = ClusterState.builder(new ClusterName("name"))
             .metaData(MetaData.builder()
                 .put(IndexMetaData.builder("logs-20190101")
-                    .settings(settings(Version.CURRENT).put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true))
-                    .putCustom(Ccr.CCR_CUSTOM_METADATA_KEY, Collections.singletonMap(Ccr.CCR_CUSTOM_METADATA_LEADER_INDEX_UUID_KEY,
+                    .settings(settings(Version.CURRENT))
+                    .putCustom(Ccr.CCR_CUSTOM_METADATA_KEY, Map.of(Ccr.CCR_CUSTOM_METADATA_LEADER_INDEX_UUID_KEY,
                         remoteState.metaData().index("logs-20190101").getIndexUUID()))
                     .numberOfShards(1)
                     .numberOfReplicas(0))
@@ -1325,7 +1319,7 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         when(clusterState.metaData()).thenReturn(metaData);
         final AutoFollowPattern pattern = new AutoFollowPattern(
             "remote",
-            Collections.singletonList("*"),
+            List.of("*"),
             "{}",
             true, 0,
             0,
@@ -1337,10 +1331,7 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
             ByteSizeValue.ZERO,
             TimeValue.ZERO,
             TimeValue.ZERO);
-        final AutoFollowMetadata autoFollowMetadata = new AutoFollowMetadata(
-            Collections.singletonMap("remote", pattern),
-            Collections.emptyMap(),
-            Collections.emptyMap());
+        final AutoFollowMetadata autoFollowMetadata = new AutoFollowMetadata(Map.of("remote", pattern), Map.of(), Map.of());
         when(metaData.custom(AutoFollowMetadata.TYPE)).thenReturn(autoFollowMetadata);
 
         final int iterations = randomIntBetween(16384, 32768); // sufficiently large to exercise that we do not stack overflow
@@ -1401,11 +1392,9 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         final ClusterState localState = ClusterState.builder(new ClusterName("local"))
             .metaData(MetaData.builder()
                 .putCustom(AutoFollowMetadata.TYPE,
-                    new AutoFollowMetadata(Collections.singletonMap(pattern,
-                        new AutoFollowPattern("remote", Collections.singletonList("docs-*"), null, true,
-                            null, null, null, null, null, null, null, null, null, null)),
-                        Collections.singletonMap(pattern, Collections.emptyList()),
-                        Collections.singletonMap(pattern, Collections.emptyMap()))))
+                    new AutoFollowMetadata(Map.of(pattern, new AutoFollowPattern("remote", List.of("docs-*"), null, true,
+                        null, null, null, null, null, null, null, null, null, null)),
+                        Map.of(pattern, List.of()), Map.of(pattern, Map.of()))))
             .build();
 
         ClusterState remoteState = null;
@@ -1474,17 +1463,19 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         }
     }
 
-    private static ClusterState createRemoteClusterState(String indexName, Boolean enableSoftDeletes) {
+    private static ClusterState createRemoteClusterState(String indexName, boolean enableSoftDeletes) {
         return createRemoteClusterState(indexName, enableSoftDeletes, 0L);
     }
 
-    private static ClusterState createRemoteClusterState(String indexName, Boolean enableSoftDeletes, long metadataVersion) {
+    private static ClusterState createRemoteClusterState(String indexName, boolean enableSoftDeletes, long metadataVersion) {
         Settings.Builder indexSettings;
-        if (enableSoftDeletes != null) {
-            indexSettings = settings(Version.CURRENT).put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), enableSoftDeletes);
+        if (enableSoftDeletes == false) {
+            indexSettings = settings(VersionUtils.randomPreviousCompatibleVersion(random(), Version.V_8_0_0))
+                .put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), false);
         } else {
-            indexSettings = settings(Version.V_6_6_0);
+            indexSettings = settings(Version.CURRENT);
         }
+        indexSettings.put(IndexMetaData.SETTING_INDEX_UUID, UUIDs.randomBase64UUID(random()));
 
         IndexMetaData indexMetaData = IndexMetaData.builder(indexName)
             .settings(indexSettings)
@@ -1513,7 +1504,6 @@ public class AutoFollowCoordinatorTests extends ESTestCase {
         for (String indexName : indices) {
             IndexMetaData indexMetaData = IndexMetaData.builder(indexName)
                 .settings(settings(Version.CURRENT)
-                    .put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true)
                     .put(IndexMetaData.SETTING_INDEX_UUID, UUIDs.randomBase64UUID(random())))
                 .numberOfShards(1)
                 .numberOfReplicas(0)

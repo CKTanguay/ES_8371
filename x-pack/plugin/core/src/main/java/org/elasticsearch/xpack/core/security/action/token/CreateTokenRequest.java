@@ -5,7 +5,6 @@
  */
 package org.elasticsearch.xpack.core.security.action.token;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.common.Nullable;
@@ -72,16 +71,11 @@ public final class CreateTokenRequest extends ActionRequest {
     public CreateTokenRequest(StreamInput in) throws IOException {
         super(in);
         grantType = in.readString();
-        if (in.getVersion().onOrAfter(Version.V_6_2_0)) {
-            username = in.readOptionalString();
-            password = in.readOptionalSecureString();
-            refreshToken = in.readOptionalString();
-            kerberosTicket = in.readOptionalSecureString();
-        } else {
-            username = in.readString();
-            password = in.readSecureString();
-        }
+        username = in.readOptionalString();
+        password = in.readOptionalSecureString();
+        refreshToken = in.readOptionalString();
         scope = in.readOptionalString();
+        kerberosTicket = in.readOptionalSecureString();
     }
 
     public CreateTokenRequest() {}
@@ -221,29 +215,11 @@ public final class CreateTokenRequest extends ActionRequest {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        if (out.getVersion().before(Version.V_6_5_0) && GrantType.CLIENT_CREDENTIALS.getValue().equals(grantType)) {
-            throw new IllegalArgumentException("a request with the client_credentials grant_type cannot be sent to version [" +
-                out.getVersion() + "]");
-        }
-        if (out.getVersion().before(Version.V_7_3_0) && GrantType.KERBEROS.getValue().equals(grantType)) {
-            throw new IllegalArgumentException("a request with the _kerberos grant_type cannot be sent to version [" +
-                out.getVersion() + "]");
-        }
-
         out.writeString(grantType);
-        if (out.getVersion().onOrAfter(Version.V_6_2_0)) {
-            out.writeOptionalString(username);
-            out.writeOptionalSecureString(password);
-            out.writeOptionalString(refreshToken);
-            out.writeOptionalSecureString(kerberosTicket);
-        } else {
-            if ("refresh_token".equals(grantType)) {
-                throw new IllegalArgumentException("a refresh request cannot be sent to an older version");
-            } else {
-                out.writeString(username);
-                out.writeSecureString(password);
-            }
-        }
+        out.writeOptionalString(username);
+        out.writeOptionalSecureString(password);
+        out.writeOptionalString(refreshToken);
         out.writeOptionalString(scope);
+        out.writeOptionalSecureString(kerberosTicket);
     }
 }

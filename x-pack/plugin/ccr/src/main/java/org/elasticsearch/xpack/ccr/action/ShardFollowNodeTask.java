@@ -548,7 +548,6 @@ public abstract class ShardFollowNodeTask extends AllocatedPersistentTask {
             actual instanceof ConnectTransportException ||
             actual instanceof NodeClosedException ||
             actual instanceof NoSuchRemoteClusterException ||
-            (actual.getMessage() != null && actual.getMessage().contains("TransportService is closed")) ||
             actual instanceof EsRejectedExecutionException;
     }
 

@@ -26,11 +26,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.elasticsearch.index.mapper.MapperService.SINGLE_MAPPING_NAME;
 
 public final class TransformIndex {
     private static final Logger logger = LogManager.getLogger(TransformIndex.class);
 
-    public static final String DOC_TYPE = "_doc";
     private static final String PROPERTIES = "properties";
     private static final String TYPE = "type";
     private static final String META = "_meta";
@@ -50,9 +50,7 @@ public final class TransformIndex {
                 .put(IndexMetaData.SETTING_NUMBER_OF_SHARDS, 1)
                 .put(IndexMetaData.SETTING_AUTO_EXPAND_REPLICAS, "0-1"));
 
-        request.mapping(
-            DOC_TYPE,
-            createMappingXContent(mappings, transformConfig.getId(), clock));
+        request.mapping(createMappingXContent(mappings, transformConfig.getId(), clock));
 
         client.execute(CreateIndexAction.INSTANCE, request, ActionListener.wrap(createIndexResponse -> {
             listener.onResponse(true);
@@ -69,10 +67,10 @@ public final class TransformIndex {
                                                          Clock clock) {
         try {
             XContentBuilder builder = jsonBuilder().startObject();
-            builder.startObject(DOC_TYPE);
+            builder.startObject(SINGLE_MAPPING_NAME);
             addProperties(builder, mappings);
             addMetaData(builder, id, clock);
-            builder.endObject(); // DOC_TYPE
+            builder.endObject(); // _doc type
             return builder.endObject();
         } catch (IOException e) {
             throw new RuntimeException(e);

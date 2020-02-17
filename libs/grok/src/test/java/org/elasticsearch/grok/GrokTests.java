@@ -19,7 +19,6 @@
 
 package org.elasticsearch.grok;
 
-import org.apache.lucene.util.LuceneTestCase;
 import org.elasticsearch.test.ESTestCase;
 
 import java.util.Arrays;
@@ -35,7 +34,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
-@LuceneTestCase.AwaitsFix(bugUrl = "https://github.com/elastic/elasticsearch/issues/43673")
+
 public class GrokTests extends ESTestCase {
     private static final Map<String, String> basePatterns = Grok.getBuiltinPatterns();
 
@@ -431,7 +430,7 @@ public class GrokTests extends ESTestCase {
             });
             t.start();
         };
-        Grok grok = new Grok(basePatterns, grokPattern, ThreadWatchdog.newInstance(10, 200, System::currentTimeMillis, scheduler));
+        Grok grok = new Grok(basePatterns, grokPattern, MatcherWatchdog.newInstance(10, 200, System::currentTimeMillis, scheduler));
         Exception e = expectThrows(RuntimeException.class, () -> grok.captures(logLine));
         run.set(false);
         assertThat(e.getMessage(), equalTo("grok pattern matching was interrupted after [200] ms"));

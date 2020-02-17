@@ -58,8 +58,8 @@ public class TransportAnalyticsStatsActionTests extends ESTestCase {
 
     public void testCumulativeCardStats() throws Exception {
         AnalyticsStatsAction.Request request = new AnalyticsStatsAction.Request();
-        AnalyticsStatsAction.NodeResponse nodeResponse1 = action.nodeOperation(new AnalyticsStatsAction.NodeRequest(request));
-        AnalyticsStatsAction.NodeResponse nodeResponse2 = action.nodeOperation(new AnalyticsStatsAction.NodeRequest(request));
+        AnalyticsStatsAction.NodeResponse nodeResponse1 = action.nodeOperation(new AnalyticsStatsAction.NodeRequest(request), null);
+        AnalyticsStatsAction.NodeResponse nodeResponse2 = action.nodeOperation(new AnalyticsStatsAction.NodeRequest(request), null);
 
         AnalyticsStatsAction.Response response = action.newResponse(request,
             Arrays.asList(nodeResponse1, nodeResponse2), Collections.emptyList());

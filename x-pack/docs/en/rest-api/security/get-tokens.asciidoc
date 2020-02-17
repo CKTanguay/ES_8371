@@ -41,7 +41,6 @@ information, see <<token-service-settings>>.
 If you want to invalidate a token immediately, you can do so by using the 
 <<security-api-invalidate-token,invalidate token API>>.
 
-
 [[security-api-get-token-request-body]]
 ==== {api-request-body-title}
 
@@ -140,7 +139,8 @@ curl -H "Authorization: Bearer dGhpcyBpcyBub3QgYSByZWFsIHRva2VuIGJ1dCBpdCBpcyBvb
 // NOTCONSOLE
 
 The following example obtains a token for the `test_admin` user using the
-`password` grant type:
+`password` grant type. This request needs to be made by an authenticated user with sufficient privileges that may
+or may not be the same as the one whose username is passed in the `username` parameter:
 
 [source,console]
 --------------------------------------------------

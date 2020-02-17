@@ -37,7 +37,6 @@ import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 import java.util.Set;
-import java.util.HashSet;
 
 public class RangeHistogramAggregatorTests extends AggregatorTestCase {
 
@@ -145,12 +144,12 @@ public class RangeHistogramAggregatorTests extends AggregatorTestCase {
         try (Directory dir = newDirectory();
              RandomIndexWriter w = new RandomIndexWriter(random(), dir)) {
             Document doc = new Document();
-            Set<RangeFieldMapper.Range> multiRecord = new HashSet<>(4);
-            multiRecord.add(new RangeFieldMapper.Range(rangeType, 1L, 5L, true, true)); // bucket 0 5
-            multiRecord.add(new RangeFieldMapper.Range(rangeType, -3L, 4L, true, true)); // bucket -5, 0
-            multiRecord.add(new RangeFieldMapper.Range(rangeType, 4L, 13L, true, true)); // bucket 0, 5, 10
-            multiRecord.add(new RangeFieldMapper.Range(rangeType, 42L, 49L, true, true)); // bucket 40, 45
-            BytesRef encodedRange = rangeType.encodeRanges(multiRecord);
+            BytesRef encodedRange = rangeType.encodeRanges(Set.of(
+                new RangeFieldMapper.Range(rangeType, 1L, 5L, true, true), // bucket 0 5
+                new RangeFieldMapper.Range(rangeType, -3L, 4L, true, true), // bucket -5, 0
+                new RangeFieldMapper.Range(rangeType, 4L, 13L, true, true), // bucket 0, 5, 10
+                new RangeFieldMapper.Range(rangeType, 42L, 49L, true, true) // bucket 40, 45
+            ));
             doc.add(new BinaryDocValuesField("field", encodedRange));
             w.addDocument(doc);
 
@@ -192,12 +191,12 @@ public class RangeHistogramAggregatorTests extends AggregatorTestCase {
         try (Directory dir = newDirectory();
              RandomIndexWriter w = new RandomIndexWriter(random(), dir)) {
             Document doc = new Document();
-            Set<RangeFieldMapper.Range> multiRecord = new HashSet<>(4);
-            multiRecord.add(new RangeFieldMapper.Range(rangeType, 1L, 2L, true, true)); // bucket 0 5
-            multiRecord.add(new RangeFieldMapper.Range(rangeType, 1L, 4L, true, true)); // bucket -5, 0
-            multiRecord.add(new RangeFieldMapper.Range(rangeType, 1L, 13L, true, true)); // bucket 0, 5, 10
-            multiRecord.add(new RangeFieldMapper.Range(rangeType, 1L, 5L, true, true)); // bucket 40, 45
-            BytesRef encodedRange = rangeType.encodeRanges(multiRecord);
+            BytesRef encodedRange = rangeType.encodeRanges(Set.of(
+                new RangeFieldMapper.Range(rangeType, 1L, 2L, true, true), // bucket 0
+                new RangeFieldMapper.Range(rangeType, 1L, 4L, true, true), // bucket 0
+                new RangeFieldMapper.Range(rangeType, 1L, 13L, true, true), // bucket 0, 5, 10
+                new RangeFieldMapper.Range(rangeType, 1L, 5L, true, true) // bucket 0, 5
+            ));
             doc.add(new BinaryDocValuesField("field", encodedRange));
             w.addDocument(doc);
 

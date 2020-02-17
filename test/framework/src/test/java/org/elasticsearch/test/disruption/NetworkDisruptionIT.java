@@ -165,7 +165,7 @@ public class NetworkDisruptionIT extends ESIntegTestCase {
 
     private void sendRequest(TransportService source, TransportService target, CountDownLatch latch) {
         source.sendRequest(target.getLocalNode(), ClusterHealthAction.NAME, new ClusterHealthRequest(),
-            new TransportResponseHandler<TransportResponse>() {
+            new TransportResponseHandler<>() {
                 private AtomicBoolean responded = new AtomicBoolean();
                 @Override
                 public void handleResponse(TransportResponse response) {

@@ -16,6 +16,7 @@ import org.junit.Before;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +32,7 @@ import static org.mockito.Mockito.when;
 
 public class AbstractNativeProcessTests extends ESTestCase {
 
+    private NativeController nativeController;
     private InputStream logStream;
     private OutputStream inputStream;
     private InputStream outputStream;
@@ -42,6 +44,7 @@ public class AbstractNativeProcessTests extends ESTestCase {
     @Before
     @SuppressWarnings("unchecked")
     public void initialize() throws IOException {
+        nativeController = mock(NativeController.class);
         logStream = mock(InputStream.class);
         // This answer blocks the thread on the executor service.
         // In order to unblock it, the test needs to call wait.countDown().
@@ -55,7 +58,8 @@ public class AbstractNativeProcessTests extends ESTestCase {
         when(outputStream.read(new byte[512])).thenReturn(-1);
         restoreStream =  mock(OutputStream.class);
         onProcessCrash = mock(Consumer.class);
-        executorService = EsExecutors.newFixed("test", 1, 1, EsExecutors.daemonThreadFactory("test"), new ThreadContext(Settings.EMPTY));
+        executorService = EsExecutors.newFixed("test", 1, 1, EsExecutors.daemonThreadFactory("test"), new ThreadContext(Settings.EMPTY),
+            false);
     }
 
     @After
@@ -140,7 +144,7 @@ public class AbstractNativeProcessTests extends ESTestCase {
     private class TestNativeProcess extends AbstractNativeProcess {
 
         TestNativeProcess(OutputStream inputStream) {
-            super("foo", logStream, inputStream, outputStream, restoreStream, 0, null, onProcessCrash);
+            super("foo", nativeController, logStream, inputStream, outputStream, restoreStream, 0, null, onProcessCrash, Duration.ZERO);
         }
 
         @Override

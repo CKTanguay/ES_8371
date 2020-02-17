@@ -88,7 +88,7 @@ public class SnapshotLifecycleTask implements SchedulerEngine.Listener {
                 ClientHelper.INDEX_LIFECYCLE_ORIGIN, policyMetadata.getHeaders());
             logger.info("snapshot lifecycle policy [{}] issuing create snapshot [{}]",
                 policyMetadata.getPolicy().getId(), request.snapshot());
-            clientWithHeaders.admin().cluster().createSnapshot(request, new ActionListener<CreateSnapshotResponse>() {
+            clientWithHeaders.admin().cluster().createSnapshot(request, new ActionListener<>() {
                 @Override
                 public void onResponse(CreateSnapshotResponse createSnapshotResponse) {
                     logger.debug("snapshot response for [{}]: {}",

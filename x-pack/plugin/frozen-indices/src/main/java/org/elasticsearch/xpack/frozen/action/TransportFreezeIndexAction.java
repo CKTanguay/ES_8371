@@ -101,11 +101,6 @@ public final class TransportFreezeIndexAction extends
     }
 
     @Override
-    protected void masterOperation(FreezeRequest request, ClusterState state, ActionListener<FreezeResponse> listener) {
-        throw new UnsupportedOperationException("The task parameter is required");
-    }
-
-    @Override
     protected void masterOperation(Task task, FreezeRequest request, ClusterState state,
                                    ActionListener<FreezeResponse> listener) throws Exception {
         final Index[] concreteIndices = resolveIndices(request, state);
@@ -119,7 +114,7 @@ public final class TransportFreezeIndexAction extends
             .masterNodeTimeout(request.masterNodeTimeout())
             .indices(concreteIndices);
 
-        indexStateService.closeIndices(closeRequest, new ActionListener<CloseIndexResponse>() {
+        indexStateService.closeIndices(closeRequest, new ActionListener<>() {
             @Override
             public void onResponse(final CloseIndexResponse response) {
                 if (response.isAcknowledged()) {
@@ -141,13 +136,13 @@ public final class TransportFreezeIndexAction extends
     private void toggleFrozenSettings(final Index[] concreteIndices, final FreezeRequest request,
                                       final ActionListener<FreezeResponse> listener) {
         clusterService.submitStateUpdateTask("toggle-frozen-settings",
-            new AckedClusterStateUpdateTask<AcknowledgedResponse>(Priority.URGENT, request, new ActionListener<AcknowledgedResponse>() {
+            new AckedClusterStateUpdateTask<>(Priority.URGENT, request, new ActionListener<AcknowledgedResponse>() {
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                     OpenIndexClusterStateUpdateRequest updateRequest = new OpenIndexClusterStateUpdateRequest()
                         .ackTimeout(request.timeout()).masterNodeTimeout(request.masterNodeTimeout())
                         .indices(concreteIndices).waitForActiveShards(request.waitForActiveShards());
-                    indexStateService.openIndex(updateRequest, new ActionListener<OpenIndexClusterStateUpdateResponse>() {
+                    indexStateService.openIndex(updateRequest, new ActionListener<>() {
                         @Override
                         public void onResponse(OpenIndexClusterStateUpdateResponse openIndexClusterStateUpdateResponse) {
                             listener.onResponse(new FreezeResponse(openIndexClusterStateUpdateResponse.isAcknowledged(),

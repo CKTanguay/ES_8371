@@ -5,18 +5,6 @@
  */
 package org.elasticsearch.xpack.enrich;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.LatchedActionListener;
@@ -39,10 +27,10 @@ import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.common.xcontent.smile.SmileXContent;
-import org.elasticsearch.index.engine.Segment;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
+import org.elasticsearch.common.xcontent.smile.SmileXContent;
 import org.elasticsearch.index.IndexNotFoundException;
+import org.elasticsearch.index.engine.Segment;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.reindex.ReindexPlugin;
@@ -62,6 +50,16 @@ import org.elasticsearch.xpack.core.enrich.action.ExecuteEnrichPolicyStatus;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -72,7 +70,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> getPlugins() {
-        return Arrays.asList(ReindexPlugin.class, IngestCommonPlugin.class);
+        return List.of(ReindexPlugin.class, IngestCommonPlugin.class);
     }
 
     private static ThreadPool testThreadPool;
@@ -120,16 +118,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(sourceDocMap.get("field4"), is(equalTo("ignored")));
         assertThat(sourceDocMap.get("field5"), is(equalTo("value5")));
 
-        List<String> enrichFields = new ArrayList<>();
-        enrichFields.add("field2");
-        enrichFields.add("field5");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndex),
-            "field1",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("field2", "field5");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndex), "field1", enrichFields);
         String policyName = "test1";
 
         final long createTime = randomNonNegativeLong();
@@ -155,7 +145,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(settings.get("index.auto_expand_replicas"), is(equalTo("0-all")));
 
         // Validate Mapping
-        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).get("_doc").sourceAsMap();
+        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).sourceAsMap();
         validateMappingMetadata(mapping, policyName, policy);
         assertThat(mapping.get("dynamic"), is("false"));
         Map<?, ?> properties = (Map<?, ?>) mapping.get("properties");
@@ -205,8 +195,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(sourceDocMap.get("location"), is(equalTo("POINT(10.0 10.0)")));
         assertThat(sourceDocMap.get("zipcode"), is(equalTo(90210)));
 
-        List<String> enrichFields = Arrays.asList("zipcode");
-        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.GEO_MATCH_TYPE, null, Arrays.asList(sourceIndex), "location", enrichFields);
+        List<String> enrichFields = List.of("zipcode");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.GEO_MATCH_TYPE, null, List.of(sourceIndex), "location", enrichFields);
         String policyName = "test1";
 
         final long createTime = randomNonNegativeLong();
@@ -232,7 +222,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(settings.get("index.auto_expand_replicas"), is(equalTo("0-all")));
 
         // Validate Mapping
-        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).get("_doc").sourceAsMap();
+        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).sourceAsMap();
         validateMappingMetadata(mapping, policyName, policy);
         assertThat(mapping.get("dynamic"), is("false"));
         Map<?, ?> properties = (Map<?, ?>) mapping.get("properties");
@@ -307,18 +297,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         }
 
         String sourceIndexPattern = baseSourceName + "*";
-        List<String> enrichFields = new ArrayList<>();
-        enrichFields.add("idx");
-        enrichFields.add("field1");
-        enrichFields.add("field2");
-        enrichFields.add("field5");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndexPattern),
-            "key",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("idx", "field1", "field2", "field5");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndexPattern), "key", enrichFields);
         String policyName = "test1";
 
         final long createTime = randomNonNegativeLong();
@@ -344,7 +324,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(settings.get("index.auto_expand_replicas"), is(equalTo("0-all")));
 
         // Validate Mapping
-        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).get("_doc").sourceAsMap();
+        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).sourceAsMap();
         validateMappingMetadata(mapping, policyName, policy);
         assertThat(mapping.get("dynamic"), is("false"));
         Map<?, ?> properties = (Map<?, ?>) mapping.get("properties");
@@ -429,14 +409,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         }
 
         String sourceIndexPattern = baseSourceName + "*";
-        List<String> enrichFields = Arrays.asList("idx", "field1", "field2", "field5");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndexPattern),
-            "key",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("idx", "field1", "field2", "field5");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndexPattern), "key", enrichFields);
         String policyName = "test1";
 
         final long createTime = randomNonNegativeLong();
@@ -462,7 +436,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(settings.get("index.auto_expand_replicas"), is(equalTo("0-all")));
 
         // Validate Mapping
-        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).get("_doc").sourceAsMap();
+        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).sourceAsMap();
         assertThat(mapping.get("dynamic"), is("false"));
         Map<?, ?> properties = (Map<?, ?>) mapping.get("properties");
         assertNotNull(properties);
@@ -545,14 +519,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         }
 
         String sourceIndexPattern = baseSourceName + "*";
-        List<String> enrichFields = Arrays.asList("idx", "field1", "field2", "field5");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndexPattern),
-            "key",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("idx", "field1", "field2", "field5");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndexPattern), "key", enrichFields);
         String policyName = "test1";
 
         final long createTime = randomNonNegativeLong();
@@ -578,7 +546,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(settings.get("index.auto_expand_replicas"), is(equalTo("0-all")));
 
         // Validate Mapping
-        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).get("_doc").sourceAsMap();
+        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).sourceAsMap();
         assertThat(mapping.get("dynamic"), is("false"));
         Map<?, ?> properties = (Map<?, ?>) mapping.get("properties");
         assertNotNull(properties);
@@ -611,16 +579,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
     public void testRunnerNoSourceIndex() throws Exception {
         final String sourceIndex = "source-index";
 
-        List<String> enrichFields = new ArrayList<>();
-        enrichFields.add("field2");
-        enrichFields.add("field5");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndex),
-            "field1",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("field2", "field5");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndex), "field1", enrichFields);
         String policyName = "test1";
 
         final long createTime = randomNonNegativeLong();
@@ -646,16 +606,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         CreateIndexResponse createResponse = client().admin().indices().create(new CreateIndexRequest(sourceIndex)).actionGet();
         assertTrue(createResponse.isAcknowledged());
 
-        List<String> enrichFields = new ArrayList<>();
-        enrichFields.add("field2");
-        enrichFields.add("field5");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndex),
-            "field1",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("field2", "field5");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndex), "field1", enrichFields);
         String policyName = "test1";
 
         final long createTime = randomNonNegativeLong();
@@ -709,19 +661,13 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
             .endObject();
         CreateIndexResponse createResponse = client().admin()
             .indices()
-            .create(new CreateIndexRequest(sourceIndex).mapping(MapperService.SINGLE_MAPPING_NAME, mappingBuilder))
+            .create(new CreateIndexRequest(sourceIndex).mapping(mappingBuilder))
             .actionGet();
         assertTrue(createResponse.isAcknowledged());
 
         String policyName = "test1";
-        List<String> enrichFields = Collections.singletonList("field2");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndex),
-            "nesting.key",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("field2");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndex), "nesting.key", enrichFields);
 
         final long createTime = randomNonNegativeLong();
         final AtomicReference<Exception> exception = new AtomicReference<>();
@@ -778,15 +724,13 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
             .endObject();
         CreateIndexResponse createResponse = client().admin()
             .indices()
-            .create(new CreateIndexRequest(sourceIndex).mapping(MapperService.SINGLE_MAPPING_NAME, mappingBuilder))
+            .create(new CreateIndexRequest(sourceIndex).mapping(mappingBuilder))
             .actionGet();
         assertTrue(createResponse.isAcknowledged());
 
         String policyName = "test1";
-        List<String> enrichFields = new ArrayList<>();
-        enrichFields.add("nesting.field2");
-        enrichFields.add("missingField");
-        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, Collections.singletonList(sourceIndex), "key", enrichFields);
+        List<String> enrichFields = List.of("nesting.field2", "missingField");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndex), "key", enrichFields);
 
         final long createTime = randomNonNegativeLong();
         final AtomicReference<Exception> exception = new AtomicReference<>();
@@ -846,7 +790,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
             .endObject();
         CreateIndexResponse createResponse = client().admin()
             .indices()
-            .create(new CreateIndexRequest(sourceIndex).mapping(MapperService.SINGLE_MAPPING_NAME, mappingBuilder))
+            .create(new CreateIndexRequest(sourceIndex).mapping(mappingBuilder))
             .actionGet();
         assertTrue(createResponse.isAcknowledged());
 
@@ -874,16 +818,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(dataField.get("field3"), is(equalTo("ignored")));
 
         String policyName = "test1";
-        List<String> enrichFields = new ArrayList<>();
-        enrichFields.add("data.field2");
-        enrichFields.add("missingField");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndex),
-            "data.field1",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("data.field2", "missingField");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndex), "data.field1", enrichFields);
 
         final long createTime = randomNonNegativeLong();
         final AtomicReference<Exception> exception = new AtomicReference<>();
@@ -908,7 +844,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(settings.get("index.auto_expand_replicas"), is(equalTo("0-all")));
 
         // Validate Mapping
-        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).get("_doc").sourceAsMap();
+        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).sourceAsMap();
         validateMappingMetadata(mapping, policyName, policy);
         assertThat(mapping.get("dynamic"), is("false"));
         Map<?, ?> properties = (Map<?, ?>) mapping.get("properties");
@@ -972,7 +908,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
             .endObject();
         CreateIndexResponse createResponse = client().admin()
             .indices()
-            .create(new CreateIndexRequest(sourceIndex).mapping(MapperService.SINGLE_MAPPING_NAME, mappingBuilder))
+            .create(new CreateIndexRequest(sourceIndex).mapping(mappingBuilder))
             .actionGet();
         assertTrue(createResponse.isAcknowledged());
 
@@ -1000,16 +936,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(dataField.get("field3"), is(equalTo("ignored")));
 
         String policyName = "test1";
-        List<String> enrichFields = new ArrayList<>();
-        enrichFields.add("data.field2");
-        enrichFields.add("missingField");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndex),
-            "data.field1",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("data.field2", "missingField");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndex), "data.field1", enrichFields);
 
         final long createTime = randomNonNegativeLong();
         final AtomicReference<Exception> exception = new AtomicReference<>();
@@ -1034,7 +962,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(settings.get("index.auto_expand_replicas"), is(equalTo("0-all")));
 
         // Validate Mapping
-        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).get("_doc").sourceAsMap();
+        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).sourceAsMap();
         validateMappingMetadata(mapping, policyName, policy);
         assertThat(mapping.get("dynamic"), is("false"));
         Map<?, ?> properties = (Map<?, ?>) mapping.get("properties");
@@ -1101,7 +1029,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
             .endObject();
         CreateIndexResponse createResponse = client().admin()
             .indices()
-            .create(new CreateIndexRequest(sourceIndex).mapping(MapperService.SINGLE_MAPPING_NAME, mappingBuilder))
+            .create(new CreateIndexRequest(sourceIndex).mapping(mappingBuilder))
             .actionGet();
         assertTrue(createResponse.isAcknowledged());
 
@@ -1139,16 +1067,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(fieldsField.get("field3"), is(equalTo("ignored")));
 
         String policyName = "test1";
-        List<String> enrichFields = new ArrayList<>();
-        enrichFields.add("data.fields.field2");
-        enrichFields.add("missingField");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndex),
-            "data.fields.field1",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("data.fields.field2", "missingField");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndex), "data.fields.field1", enrichFields);
 
         final long createTime = randomNonNegativeLong();
         final AtomicReference<Exception> exception = new AtomicReference<>();
@@ -1173,7 +1093,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(settings.get("index.auto_expand_replicas"), is(equalTo("0-all")));
 
         // Validate Mapping
-        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).get("_doc").sourceAsMap();
+        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).sourceAsMap();
         validateMappingMetadata(mapping, policyName, policy);
         assertThat(mapping.get("dynamic"), is("false"));
         Map<?, ?> properties = (Map<?, ?>) mapping.get("properties");
@@ -1240,7 +1160,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
             .endObject();
         CreateIndexResponse createResponse = client().admin()
             .indices()
-            .create(new CreateIndexRequest(sourceIndex).mapping(MapperService.SINGLE_MAPPING_NAME, mappingBuilder))
+            .create(new CreateIndexRequest(sourceIndex).mapping(mappingBuilder))
             .actionGet();
         assertTrue(createResponse.isAcknowledged());
 
@@ -1263,16 +1183,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(sourceDocMap.get("data.field3"), is(equalTo("ignored")));
 
         String policyName = "test1";
-        List<String> enrichFields = new ArrayList<>();
-        enrichFields.add("data.field2");
-        enrichFields.add("missingField");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndex),
-            "data.field1",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("data.field2", "missingField");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndex), "data.field1", enrichFields);
 
         final long createTime = randomNonNegativeLong();
         final AtomicReference<Exception> exception = new AtomicReference<>();
@@ -1297,7 +1209,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(settings.get("index.auto_expand_replicas"), is(equalTo("0-all")));
 
         // Validate Mapping
-        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).get("_doc").sourceAsMap();
+        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).sourceAsMap();
         validateMappingMetadata(mapping, policyName, policy);
         assertThat(mapping.get("dynamic"), is("false"));
         Map<?, ?> properties = (Map<?, ?>) mapping.get("properties");
@@ -1364,14 +1276,8 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(sourceDocMap.get("field4"), is(equalTo("ignored")));
         assertThat(sourceDocMap.get("field5"), is(equalTo("value5")));
 
-        List<String> enrichFields = Arrays.asList("field2", "field5");
-        EnrichPolicy policy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList(sourceIndex),
-            "field1",
-            enrichFields
-        );
+        List<String> enrichFields = List.of("field2", "field5");
+        EnrichPolicy policy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of(sourceIndex), "field1", enrichFields);
         String policyName = "test1";
 
         final long createTime = randomNonNegativeLong();
@@ -1404,7 +1310,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         // The executor would wrap the listener in order to clean up the task in the
         // task manager, but we're just testing the runner, so we make sure to clean
         // up after ourselves.
-        ActionListener<ExecuteEnrichPolicyStatus> wrappedListener = new ActionListener<ExecuteEnrichPolicyStatus>() {
+        ActionListener<ExecuteEnrichPolicyStatus> wrappedListener = new ActionListener<>() {
             @Override
             public void onResponse(ExecuteEnrichPolicyStatus policyExecutionResult) {
                 testTaskManager.unregister(task);
@@ -1472,7 +1378,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         assertThat(settings.get("index.auto_expand_replicas"), is(equalTo("0-all")));
 
         // Validate Mapping
-        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).get("_doc").sourceAsMap();
+        Map<String, Object> mapping = enrichIndex.getMappings().get(createdEnrichIndex).sourceAsMap();
         validateMappingMetadata(mapping, policyName, policy);
         assertThat(mapping.get("dynamic"), is("false"));
         Map<?, ?> properties = (Map<?, ?>) mapping.get("properties");
@@ -1488,7 +1394,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
             new SearchRequest(".enrich-test1").source(SearchSourceBuilder.searchSource().query(QueryBuilders.matchAllQuery()))
         ).actionGet();
         assertThat(allEnrichDocs.getHits().getTotalHits().value, equalTo(2L));
-        for (String keyValue : Arrays.asList("value1", "value1.1")) {
+        for (String keyValue : List.of("value1", "value1.1")) {
             SearchResponse enrichSearchResponse = client().search(
                 new SearchRequest(".enrich-test1").source(
                     SearchSourceBuilder.searchSource().query(QueryBuilders.matchQuery("field1", keyValue))
@@ -1542,7 +1448,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
         // The executor would wrap the listener in order to clean up the task in the
         // task manager, but we're just testing the runner, so we make sure to clean
         // up after ourselves.
-        ActionListener<ExecuteEnrichPolicyStatus> wrappedListener = new ActionListener<ExecuteEnrichPolicyStatus>() {
+        ActionListener<ExecuteEnrichPolicyStatus> wrappedListener = new ActionListener<>() {
             @Override
             public void onResponse(ExecuteEnrichPolicyStatus policyExecutionResult) {
                 testTaskManager.unregister(task);
@@ -1609,7 +1515,7 @@ public class EnrichPolicyRunnerTests extends ESSingleNodeTestCase {
             () -> client().index(
                 new IndexRequest().index(createdEnrichIndex)
                     .id(randomAlphaOfLength(10))
-                    .source(Collections.singletonMap(randomAlphaOfLength(6), randomAlphaOfLength(10)))
+                    .source(Map.of(randomAlphaOfLength(6), randomAlphaOfLength(10)))
             ).actionGet()
         );
 

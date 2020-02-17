@@ -24,7 +24,6 @@ import org.elasticsearch.xpack.core.security.action.rolemapping.PutRoleMappingRe
 import org.elasticsearch.xpack.core.security.action.rolemapping.PutRoleMappingResponse;
 import org.elasticsearch.xpack.core.security.authc.ldap.ActiveDirectorySessionFactorySettings;
 import org.elasticsearch.xpack.core.security.authc.support.UsernamePasswordToken;
-import org.elasticsearch.xpack.core.security.client.SecurityClient;
 import org.elasticsearch.xpack.core.ssl.VerificationMode;
 import org.elasticsearch.xpack.security.support.SecurityIndexManager;
 import org.junit.After;
@@ -139,12 +138,11 @@ public abstract class AbstractAdLdapRealmTestCase extends SecurityIntegTestCase 
         if (content.isEmpty()) {
             return;
         }
-        SecurityClient securityClient = securityClient();
         Map<String, ActionFuture<PutRoleMappingResponse>> futures = new LinkedHashMap<>(content.size());
         for (int i = 0; i < content.size(); i++) {
             final String name = "external_" + i;
-            final PutRoleMappingRequestBuilder builder = securityClient.preparePutRoleMapping(
-                    name, new BytesArray(content.get(i)), XContentType.JSON);
+            final PutRoleMappingRequestBuilder builder = new PutRoleMappingRequestBuilder(client())
+                .source(name, new BytesArray(content.get(i)), XContentType.JSON);
             futures.put(name, builder.execute());
         }
         for (String mappingName : futures.keySet()) {
@@ -211,7 +209,7 @@ public abstract class AbstractAdLdapRealmTestCase extends SecurityIntegTestCase 
 
     protected void assertAccessAllowed(String user, String index) throws IOException {
         Client client = client().filterWithHeader(Collections.singletonMap(BASIC_AUTH_HEADER, userHeader(user, PASSWORD)));
-        IndexResponse indexResponse = client.prepareIndex(index, "type").
+        IndexResponse indexResponse = client.prepareIndex(index).
                 setSource(jsonBuilder()
                         .startObject()
                         .field("name", "value")
@@ -223,7 +221,7 @@ public abstract class AbstractAdLdapRealmTestCase extends SecurityIntegTestCase 
 
         refresh();
 
-        GetResponse getResponse = client.prepareGet(index, "type", indexResponse.getId())
+        GetResponse getResponse = client.prepareGet(index, indexResponse.getId())
                 .get();
 
         assertThat("user " + user + " should have read access to index " + index, getResponse.getId(), equalTo(indexResponse.getId()));
@@ -232,7 +230,7 @@ public abstract class AbstractAdLdapRealmTestCase extends SecurityIntegTestCase 
     protected void assertAccessDenied(String user, String index) throws IOException {
         try {
             client().filterWithHeader(Collections.singletonMap(BASIC_AUTH_HEADER, userHeader(user, PASSWORD)))
-                    .prepareIndex(index, "type").
+                    .prepareIndex(index).
                     setSource(jsonBuilder()
                             .startObject()
                             .field("name", "value")
@@ -383,7 +381,7 @@ public abstract class AbstractAdLdapRealmTestCase extends SecurityIntegTestCase 
         }
 
         public Settings buildSettings(List<String> certificateAuthorities) {
-            return buildSettings(certificateAuthorities, 1);
+            return buildSettings(certificateAuthorities, randomInt());
         }
 
 

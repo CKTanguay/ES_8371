@@ -11,7 +11,6 @@ tasks from the command line:
 * <<certutil>>
 * <<elasticsearch-croneval>>
 * <<elasticsearch-keystore>>
-* <<migrate-tool>>
 * <<node-tool>>
 * <<saml-metadata>>
 * <<setup-passwords>>
@@ -25,7 +24,6 @@ include::certgen.asciidoc[]
 include::certutil.asciidoc[]
 include::croneval.asciidoc[]
 include::keystore.asciidoc[]
-include::migrate-tool.asciidoc[]
 include::node-tool.asciidoc[]
 include::saml-metadata.asciidoc[]
 include::setup-passwords.asciidoc[]

@@ -33,7 +33,6 @@ import org.apache.lucene.search.IndexOrDocValuesQuery;
 import org.apache.lucene.search.MatchNoDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.FutureArrays;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.geo.ShapeRelation;
 import org.elasticsearch.common.network.InetAddresses;
@@ -46,6 +45,7 @@ import java.net.InetAddress;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -150,7 +150,7 @@ public enum RangeType {
                 BiFunction<InetAddress, InetAddress, Query> querySupplier) {
             byte[] lowerBytes = InetAddressPoint.encode((InetAddress) lower);
             byte[] upperBytes = InetAddressPoint.encode((InetAddress) upper);
-            if (FutureArrays.compareUnsigned(lowerBytes, 0, lowerBytes.length, upperBytes, 0, upperBytes.length) > 0) {
+            if (Arrays.compareUnsigned(lowerBytes, 0, lowerBytes.length, upperBytes, 0, upperBytes.length) > 0) {
                 throw new IllegalArgumentException(
                         "Range query `from` value (" + lower + ") is greater than `to` value (" + upper + ")");
             }
@@ -158,7 +158,7 @@ public enum RangeType {
             InetAddress correctedTo = includeUpper ? (InetAddress) upper : nextDown(upper);;
             lowerBytes = InetAddressPoint.encode(correctedFrom);
             upperBytes = InetAddressPoint.encode(correctedTo);
-            if (FutureArrays.compareUnsigned(lowerBytes, 0, lowerBytes.length, upperBytes, 0, upperBytes.length) > 0) {
+            if (Arrays.compareUnsigned(lowerBytes, 0, lowerBytes.length, upperBytes, 0, upperBytes.length) > 0) {
                 return new MatchNoDocsQuery("float range didn't intersect anything");
             } else {
                 return querySupplier.apply(correctedFrom, correctedTo);
@@ -232,12 +232,14 @@ public enum RangeType {
 
             DateMathParser dateMathParser = (parser == null) ?
                 DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER.toDateMathParser() : parser;
+            boolean roundUp = includeLower == false; // using "gt" should round lower bound up
             Long low = lowerTerm == null ? Long.MIN_VALUE :
                 dateMathParser.parse(lowerTerm instanceof BytesRef ? ((BytesRef) lowerTerm).utf8ToString() : lowerTerm.toString(),
-                    context::nowInMillis, false, zone).toEpochMilli();
+                    context::nowInMillis, roundUp, zone).toEpochMilli();
+            roundUp = includeUpper; // using "lte" should round upper bound up
             Long high = upperTerm == null ? Long.MAX_VALUE :
                 dateMathParser.parse(upperTerm instanceof BytesRef ? ((BytesRef) upperTerm).utf8ToString() : upperTerm.toString(),
-                    context::nowInMillis, false, zone).toEpochMilli();
+                    context::nowInMillis, roundUp, zone).toEpochMilli();
 
             return super.rangeQuery(field, hasDocValues, low, high, includeLower, includeUpper, relation, zone,
                 dateMathParser, context);

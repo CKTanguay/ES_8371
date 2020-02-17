@@ -404,7 +404,7 @@ public class SearchAsyncActionTests extends ESTestCase {
         AtomicInteger numRequests = new AtomicInteger(0);
         AtomicInteger numFailReplicas = new AtomicInteger(0);
         AbstractSearchAsyncAction<TestSearchPhaseResult> asyncAction =
-            new AbstractSearchAsyncAction<TestSearchPhaseResult>(
+            new AbstractSearchAsyncAction<>(
                 "test",
                 logger,
                 transportService,

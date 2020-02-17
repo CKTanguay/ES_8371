@@ -45,7 +45,7 @@ public final class CreateApiKeyRequest extends ActionRequest {
      */
     public CreateApiKeyRequest(@Nullable String name, @Nullable List<RoleDescriptor> roleDescriptors, @Nullable TimeValue expiration) {
         this.name = name;
-        this.roleDescriptors = (roleDescriptors == null) ? Collections.emptyList() : Collections.unmodifiableList(roleDescriptors);
+        this.roleDescriptors = (roleDescriptors == null) ? List.of() : List.copyOf(roleDescriptors);
         this.expiration = expiration;
     }
 
@@ -57,7 +57,7 @@ public final class CreateApiKeyRequest extends ActionRequest {
             this.name = in.readString();
         }
         this.expiration = in.readOptionalTimeValue();
-        this.roleDescriptors = Collections.unmodifiableList(in.readList(RoleDescriptor::new));
+        this.roleDescriptors = List.copyOf(in.readList(RoleDescriptor::new));
         this.refreshPolicy = WriteRequest.RefreshPolicy.readFrom(in);
     }
 
@@ -82,7 +82,7 @@ public final class CreateApiKeyRequest extends ActionRequest {
     }
 
     public void setRoleDescriptors(@Nullable List<RoleDescriptor> roleDescriptors) {
-        this.roleDescriptors = (roleDescriptors == null) ? Collections.emptyList() : Collections.unmodifiableList(roleDescriptors);
+        this.roleDescriptors = (roleDescriptors == null) ? List.of() : List.copyOf(roleDescriptors);
     }
 
     public WriteRequest.RefreshPolicy getRefreshPolicy() {

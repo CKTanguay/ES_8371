@@ -28,7 +28,6 @@ import org.elasticsearch.search.lookup.SearchLookup;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.DoubleSupplier;
@@ -62,21 +61,12 @@ public abstract class ScoreScript {
         }
     }
 
-    private static final Map<String, String> DEPRECATIONS;
-    static {
-        Map<String, String> deprecations = new HashMap<>();
-        deprecations.put(
+    private static final Map<String, String> DEPRECATIONS = Map.of(
             "doc",
-            "Accessing variable [doc] via [params.doc] from within a score script " +
-                "is deprecated in favor of directly accessing [doc]."
-        );
-        deprecations.put(
-            "_doc",
-            "Accessing variable [doc] via [params._doc] from within a score script " +
-                "is deprecated in favor of directly accessing [doc]."
-        );
-        DEPRECATIONS = Collections.unmodifiableMap(deprecations);
-    }
+            "Accessing variable [doc] via [params.doc] from within a score script "
+                    + "is deprecated in favor of directly accessing [doc].",
+            "_doc", "Accessing variable [doc] via [params._doc] from within a score script "
+                    + "is deprecated in favor of directly accessing [doc].");
 
     public static final String[] PARAMETERS = new String[]{ "explanation" };
 
@@ -119,7 +109,7 @@ public abstract class ScoreScript {
     }
 
     /** The doc lookup for the Lucene segment this script was created for. */
-    public final Map<String, ScriptDocValues<?>> getDoc() {
+    public Map<String, ScriptDocValues<?>> getDoc() {
         return leafLookup.doc();
     }
 
@@ -239,7 +229,7 @@ public abstract class ScoreScript {
     }
 
     /** A factory to construct stateful {@link ScoreScript} factories for a specific index. */
-    public interface Factory {
+    public interface Factory extends ScriptFactory {
 
         ScoreScript.LeafFactory newFactory(Map<String, Object> params, SearchLookup lookup);
 

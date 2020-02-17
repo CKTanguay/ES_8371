@@ -25,7 +25,6 @@ import org.elasticsearch.ingest.common.IngestCommonPlugin;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.test.ESIntegTestCase;
-import org.elasticsearch.xpack.core.XPackSettings;
 import org.elasticsearch.xpack.core.enrich.EnrichPolicy;
 import org.elasticsearch.xpack.core.enrich.action.DeleteEnrichPolicyAction;
 import org.elasticsearch.xpack.core.enrich.action.EnrichStatsAction;
@@ -34,16 +33,12 @@ import org.elasticsearch.xpack.core.enrich.action.ExecuteEnrichPolicyAction;
 import org.elasticsearch.xpack.core.enrich.action.GetEnrichPolicyAction;
 import org.elasticsearch.xpack.core.enrich.action.PutEnrichPolicyAction;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.elasticsearch.xpack.enrich.MatchProcessorTests.mapOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
@@ -60,17 +55,7 @@ public class EnrichMultiNodeIT extends ESIntegTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        return Arrays.asList(LocalStateEnrich.class, ReindexPlugin.class, IngestCommonPlugin.class);
-    }
-
-    @Override
-    protected Collection<Class<? extends Plugin>> transportClientPlugins() {
-        return nodePlugins();
-    }
-
-    @Override
-    protected Settings transportClientSettings() {
-        return Settings.builder().put(super.transportClientSettings()).put(XPackSettings.SECURITY_ENABLED.getKey(), false).build();
+        return List.of(LocalStateEnrich.class, ReindexPlugin.class, IngestCommonPlugin.class);
     }
 
     public void testEnrichAPIs() {
@@ -84,9 +69,9 @@ public class EnrichMultiNodeIT extends ESIntegTestCase {
             EnrichPolicy enrichPolicy = new EnrichPolicy(
                 EnrichPolicy.MATCH_TYPE,
                 null,
-                Arrays.asList(SOURCE_INDEX_NAME),
+                List.of(SOURCE_INDEX_NAME),
                 MATCH_FIELD,
-                Arrays.asList(DECORATE_FIELDS)
+                List.of(DECORATE_FIELDS)
             );
             PutEnrichPolicyAction.Request request = new PutEnrichPolicyAction.Request(policyName, enrichPolicy);
             client().execute(PutEnrichPolicyAction.INSTANCE, request).actionGet();
@@ -160,7 +145,7 @@ public class EnrichMultiNodeIT extends ESIntegTestCase {
             IndexRequest indexRequest = new IndexRequest();
             indexRequest.id(Integer.toString(i));
             indexRequest.setPipeline(PIPELINE_NAME);
-            indexRequest.source(Collections.singletonMap(MATCH_FIELD, randomFrom(keys)));
+            indexRequest.source(Map.of(MATCH_FIELD, randomFrom(keys)));
             bulkRequest.add(indexRequest);
         }
         BulkResponse bulkResponse = client(coordinatingNode).bulk(bulkRequest).actionGet();
@@ -203,7 +188,7 @@ public class EnrichMultiNodeIT extends ESIntegTestCase {
             indexRequest.create(true);
             indexRequest.id(key);
             indexRequest.source(
-                mapOf(
+                Map.of(
                     MATCH_FIELD,
                     key,
                     DECORATE_FIELDS[0],
@@ -217,16 +202,16 @@ public class EnrichMultiNodeIT extends ESIntegTestCase {
             client().index(indexRequest).actionGet();
         }
         client().admin().indices().refresh(new RefreshRequest(SOURCE_INDEX_NAME)).actionGet();
-        return new ArrayList<>(keys);
+        return List.copyOf(keys);
     }
 
     private static void createAndExecutePolicy() {
         EnrichPolicy enrichPolicy = new EnrichPolicy(
             EnrichPolicy.MATCH_TYPE,
             null,
-            Arrays.asList(SOURCE_INDEX_NAME),
+            List.of(SOURCE_INDEX_NAME),
             MATCH_FIELD,
-            Arrays.asList(DECORATE_FIELDS)
+            List.of(DECORATE_FIELDS)
         );
         PutEnrichPolicyAction.Request request = new PutEnrichPolicyAction.Request(POLICY_NAME, enrichPolicy);
         client().execute(PutEnrichPolicyAction.INSTANCE, request).actionGet();
@@ -242,5 +227,4 @@ public class EnrichMultiNodeIT extends ESIntegTestCase {
         PutPipelineRequest request = new PutPipelineRequest(PIPELINE_NAME, new BytesArray(pipelineBody), XContentType.JSON);
         client().admin().cluster().putPipeline(request).actionGet();
     }
-
 }

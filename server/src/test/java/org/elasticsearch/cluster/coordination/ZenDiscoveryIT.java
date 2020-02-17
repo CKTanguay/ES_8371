@@ -34,7 +34,6 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.discovery.Discovery;
 import org.elasticsearch.discovery.DiscoveryStats;
-import org.elasticsearch.discovery.zen.FaultDetection;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.test.ESIntegTestCase;
 import org.elasticsearch.test.TestCustomMetaData;
@@ -58,19 +57,12 @@ import static org.hamcrest.Matchers.notNullValue;
 public class ZenDiscoveryIT extends ESIntegTestCase {
 
     public void testNoShardRelocationsOccurWhenElectedMasterNodeFails() throws Exception {
-        Settings defaultSettings = Settings.builder()
-                .put(FaultDetection.PING_TIMEOUT_SETTING.getKey(), "1s")
-                .put(FaultDetection.PING_RETRIES_SETTING.getKey(), "1")
-                .build();
-
         Settings masterNodeSettings = Settings.builder()
                 .put(Node.NODE_DATA_SETTING.getKey(), false)
-                .put(defaultSettings)
                 .build();
         internalCluster().startNodes(2, masterNodeSettings);
         Settings dateNodeSettings = Settings.builder()
                 .put(Node.NODE_MASTER_SETTING.getKey(), false)
-                .put(defaultSettings)
                 .build();
         internalCluster().startNodes(2, dateNodeSettings);
         ClusterHealthResponse clusterHealthResponse = client().admin().cluster().prepareHealth()

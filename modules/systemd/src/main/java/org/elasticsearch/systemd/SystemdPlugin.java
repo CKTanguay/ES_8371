@@ -37,7 +37,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.watcher.ResourceWatcherService;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 public class SystemdPlugin extends Plugin implements ClusterPlugin {
 
@@ -107,7 +107,7 @@ public class SystemdPlugin extends Plugin implements ClusterPlugin {
                 TimeValue.timeValueSeconds(15),
                 ThreadPool.Names.SAME);
         }
-        return Collections.emptyList();
+        return List.of();
     }
 
     int sd_notify(@SuppressWarnings("SameParameterValue") final int unset_environment, final String state) {

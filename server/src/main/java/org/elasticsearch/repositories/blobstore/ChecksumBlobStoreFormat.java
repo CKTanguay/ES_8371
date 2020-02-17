@@ -114,13 +114,6 @@ public final class ChecksumBlobStoreFormat<T extends ToXContent> {
         return readBlob(blobContainer, blobName);
     }
 
-    /**
-     * Deletes obj in the blob container
-     */
-    public void delete(BlobContainer blobContainer, String name) throws IOException {
-        blobContainer.deleteBlob(blobName(name));
-    }
-
     public String blobName(String name) {
         return String.format(Locale.ROOT, blobNameFormat, name);
     }
@@ -207,7 +200,7 @@ public final class ChecksumBlobStoreFormat<T extends ToXContent> {
                 CodecUtil.writeHeader(indexOutput, codec, VERSION);
                 try (OutputStream indexOutputOutputStream = new IndexOutputOutputStream(indexOutput) {
                     @Override
-                    public void close() throws IOException {
+                    public void close() {
                         // this is important since some of the XContentBuilders write bytes on close.
                         // in order to write the footer we need to prevent closing the actual index input.
                     }

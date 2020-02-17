@@ -17,8 +17,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -28,7 +26,7 @@ import java.util.concurrent.TimeoutException;
  * Maintains the connection to the native controller daemon that can start other processes.
  */
 @SuppressWarnings("ALL")
-public class NativeController {
+public class NativeController implements MlController {
     private static final Logger LOGGER = LogManager.getLogger(NativeController.class);
 
     /**
@@ -43,18 +41,16 @@ public class NativeController {
     private static final String START_COMMAND = "start";
     private static final String KILL_COMMAND = "kill";
 
-    public static final Map<String, Object> UNKNOWN_NATIVE_CODE_INFO;
-
-    static {
-        Map<String, Object> unknownInfo = new HashMap<>(2);
-        unknownInfo.put("version", "N/A");
-        unknownInfo.put("build_hash", "N/A");
-        UNKNOWN_NATIVE_CODE_INFO = Collections.unmodifiableMap(unknownInfo);
-    }
-
     private final String localNodeName;
     private final CppLogMessageHandler cppLogHandler;
     private final OutputStream commandStream;
+
+    public static NativeController makeNativeController(String localNodeName, Environment env)
+        throws IOException {
+        NativeController nativeController = new NativeController(localNodeName, env, new NamedPipeHelper());
+        nativeController.tailLogsInThread();
+        return nativeController;
+    }
 
     NativeController(String localNodeName, Environment env, NamedPipeHelper namedPipeHelper) throws IOException {
         ProcessPipes processPipes = new ProcessPipes(env, namedPipeHelper, CONTROLLER, null,
@@ -89,6 +85,7 @@ public class NativeController {
         return cppLogHandler.getPid(CONTROLLER_CONNECT_TIMEOUT);
     }
 
+    @Override
     public Map<String, Object> getNativeCodeInfo() throws TimeoutException {
         return cppLogHandler.getNativeCodeInfo(CONTROLLER_CONNECT_TIMEOUT);
     }
@@ -152,6 +149,7 @@ public class NativeController {
         }
     }
 
+    @Override
     public void stop() throws IOException {
         // The C++ process will exit when it gets EOF on the command stream
         commandStream.close();

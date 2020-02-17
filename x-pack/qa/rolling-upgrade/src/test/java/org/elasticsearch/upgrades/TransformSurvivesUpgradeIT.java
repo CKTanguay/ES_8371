@@ -80,11 +80,6 @@ public class TransformSurvivesUpgradeIT extends AbstractUpgradeTestCase {
 
     @Before
     public void waitForTemplates() throws Exception {
-        // no transform before 7.2
-        if (UPGRADE_FROM_VERSION.before(Version.V_7_2_0)) {
-            return;
-        }
-
         assertBusy(() -> {
             final Request catRequest = new Request("GET", "_cat/templates?h=n&s=n");
             final Response catResponse = adminClient().performRequest(catRequest);
@@ -129,7 +124,7 @@ public class TransformSurvivesUpgradeIT extends AbstractUpgradeTestCase {
      * index mappings when it is assigned to an upgraded node even if no other ML endpoint is called after the upgrade
      */
     public void testTransformRollingUpgrade() throws Exception {
-        assumeTrue("Continuous transform time sync not fixed until 7.4", UPGRADE_FROM_VERSION.onOrAfter(Version.V_7_4_0));
+        assumeTrue("Continuous transform not supported until 7.3", UPGRADE_FROM_VERSION.onOrAfter(Version.V_7_3_0));
         Request adjustLoggingLevels = new Request("PUT", "/_cluster/settings");
         adjustLoggingLevels.setJsonEntity(
             "{\"transient\": {" +

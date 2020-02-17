@@ -19,7 +19,6 @@
 
 package org.elasticsearch.index.reindex;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.search.SearchRequest;
@@ -44,11 +43,6 @@ import static org.elasticsearch.common.unit.TimeValue.timeValueMinutes;
 public abstract class AbstractBulkByScrollRequest<Self extends AbstractBulkByScrollRequest<Self>> extends ActionRequest {
 
     public static final int MAX_DOCS_ALL_MATCHES = -1;
-    /**
-     * @deprecated please use MAX_DOCS_ALL_MATCHES instead.
-     */
-    @Deprecated
-    public static final int SIZE_ALL_MATCHES = MAX_DOCS_ALL_MATCHES;
     public static final TimeValue DEFAULT_SCROLL_TIMEOUT = timeValueMinutes(5);
     public static final int DEFAULT_SCROLL_SIZE = 1000;
 
@@ -175,27 +169,6 @@ public abstract class AbstractBulkByScrollRequest<Self extends AbstractBulkByScr
             e = addValidationError("can't specify both manual and automatic slicing at the same time", e);
         }
         return e;
-    }
-
-    /**
-     * Maximum number of processed documents. Defaults to -1 meaning process all
-     * documents.
-     * @deprecated please use getMaxDocs() instead.
-     */
-    @Deprecated
-    public int getSize() {
-        return getMaxDocs();
-    }
-
-    /**
-     * Maximum number of processed documents. Defaults to -1 meaning process all
-     * documents.
-     *
-     * @deprecated please use setMaxDocs(int) instead.
-     */
-    @Deprecated
-    public Self setSize(int size) {
-        return setMaxDocs(size);
     }
 
     /**
@@ -467,12 +440,7 @@ public abstract class AbstractBulkByScrollRequest<Self extends AbstractBulkByScr
         out.writeTimeValue(retryBackoffInitialTime);
         out.writeVInt(maxRetries);
         out.writeFloat(requestsPerSecond);
-        if (out.getVersion().before(Version.V_6_1_0) && slices == AUTO_SLICES) {
-            throw new IllegalArgumentException("Slices set as \"auto\" are not supported before version [" + Version.V_6_1_0 + "]. " +
-                "Found version [" + out.getVersion() + "]");
-        } else {
-            out.writeVInt(slices);
-        }
+        out.writeVInt(slices);
     }
 
     /**
@@ -484,9 +452,6 @@ public abstract class AbstractBulkByScrollRequest<Self extends AbstractBulkByScr
             b.append(Arrays.toString(searchRequest.indices()));
         } else {
             b.append("[all indices]");
-        }
-        if (searchRequest.types() != null && searchRequest.types().length != 0) {
-            b.append(Arrays.toString(searchRequest.types()));
         }
     }
 

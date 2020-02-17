@@ -53,7 +53,6 @@ import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.threadpool.ThreadPool;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -85,7 +84,7 @@ public class IngestService implements ClusterStateApplier {
     // We know of all the processor factories when a node with all its plugin have been initialized. Also some
     // processor factories rely on other node services. Custom metadata is statically registered when classes
     // are loaded, so in the cluster state we just save the pipeline config and here we keep the actual pipelines around.
-    private volatile Map<String, PipelineHolder> pipelines = Collections.emptyMap();
+    private volatile Map<String, PipelineHolder> pipelines = Map.of();
     private final ThreadPool threadPool;
     private final IngestMetric totalMetrics = new IngestMetric();
     private final List<Consumer<ClusterState>> ingestClusterStateListeners = new CopyOnWriteArrayList<>();
@@ -294,7 +293,7 @@ public class IngestService implements ClusterStateApplier {
         return processorMetrics;
     }
 
-    public static ClusterState innerPut(PutPipelineRequest request, ClusterState currentState) {
+    static ClusterState innerPut(PutPipelineRequest request, ClusterState currentState) {
         IngestMetadata currentIngestMetadata = currentState.metaData().custom(IngestMetadata.TYPE);
         Map<String, PipelineConfiguration> pipelines;
         if (currentIngestMetadata != null) {
@@ -368,11 +367,11 @@ public class IngestService implements ClusterStateApplier {
                     final List<String> pipelines;
                     if (IngestService.NOOP_PIPELINE_NAME.equals(pipelineId) == false
                         && IngestService.NOOP_PIPELINE_NAME.equals(finalPipelineId) == false) {
-                        pipelines = Arrays.asList(pipelineId, finalPipelineId);
+                        pipelines = List.of(pipelineId, finalPipelineId);
                     } else if (IngestService.NOOP_PIPELINE_NAME.equals(pipelineId) == false ) {
-                        pipelines = Collections.singletonList(pipelineId);
+                        pipelines = List.of(pipelineId);
                     } else if (IngestService.NOOP_PIPELINE_NAME.equals(finalPipelineId) == false) {
-                        pipelines = Collections.singletonList(finalPipelineId);
+                        pipelines = List.of(finalPipelineId);
                     } else {
                         if (counter.decrementAndGet() == 0) {
                             onCompletion.accept(originalThread, null);
@@ -444,7 +443,7 @@ public class IngestService implements ClusterStateApplier {
             processorMetrics.forEach(t -> {
                 Processor processor = t.v1();
                 IngestMetric processorMetric = t.v2();
-                statsBuilder.addProcessorMetrics(id, getProcessorName(processor), processorMetric);
+                statsBuilder.addProcessorMetrics(id, getProcessorName(processor), processor.getType(), processorMetric);
             });
         });
         return statsBuilder.build();
@@ -462,7 +461,7 @@ public class IngestService implements ClusterStateApplier {
     }
 
     //package private for testing
-    static String getProcessorName(Processor processor){
+    static String getProcessorName(Processor processor) {
         // conditionals are implemented as wrappers around the real processor, so get the real processor for the correct type for the name
         if(processor instanceof ConditionalProcessor){
             processor = ((ConditionalProcessor) processor).getInnerProcessor();
@@ -471,7 +470,7 @@ public class IngestService implements ClusterStateApplier {
         sb.append(processor.getType());
 
         if(processor instanceof PipelineProcessor){
-            String pipelineName = ((PipelineProcessor) processor).getPipelineName();
+            String pipelineName = ((PipelineProcessor) processor).getPipelineTemplate().newInstance(Map.of()).execute();
             sb.append(":");
             sb.append(pipelineName);
         }
@@ -495,14 +494,13 @@ public class IngestService implements ClusterStateApplier {
         // (e.g. the pipeline may have been removed while we're ingesting a document
         totalMetrics.preIngest();
         String index = indexRequest.index();
-        String type = indexRequest.type();
         String id = indexRequest.id();
         String routing = indexRequest.routing();
         Long version = indexRequest.version();
         VersionType versionType = indexRequest.versionType();
         Map<String, Object> sourceAsMap = indexRequest.sourceAsMap();
-        IngestDocument ingestDocument = new IngestDocument(index, type, id, routing, version, versionType, sourceAsMap);
-        pipeline.execute(ingestDocument, (result, e) -> {
+        IngestDocument ingestDocument = new IngestDocument(index, id, routing, version, versionType, sourceAsMap);
+        ingestDocument.executePipeline(pipeline, (result, e) -> {
             long ingestTimeInMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeInNanos);
             totalMetrics.postIngest(ingestTimeInMillis);
             if (e != null) {
@@ -516,7 +514,6 @@ public class IngestService implements ClusterStateApplier {
                 //it's fine to set all metadata fields all the time, as ingest document holds their starting values
                 //before ingestion, which might also get modified during ingestion.
                 indexRequest.index((String) metadataMap.get(IngestDocument.MetaData.INDEX));
-                indexRequest.type((String) metadataMap.get(IngestDocument.MetaData.TYPE));
                 indexRequest.id((String) metadataMap.get(IngestDocument.MetaData.ID));
                 indexRequest.routing((String) metadataMap.get(IngestDocument.MetaData.ROUTING));
                 indexRequest.version(((Number) metadataMap.get(IngestDocument.MetaData.VERSION)).longValue());
@@ -638,7 +635,7 @@ public class IngestService implements ClusterStateApplier {
 
         if (newPipelines != null) {
             // Update the pipelines:
-            this.pipelines = Collections.unmodifiableMap(newPipelines);
+            this.pipelines = Map.copyOf(newPipelines);
 
             // Rethrow errors that may have occurred during creating new pipeline instances:
             if (exceptions != null) {

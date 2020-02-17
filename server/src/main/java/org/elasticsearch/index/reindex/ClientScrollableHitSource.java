@@ -64,14 +64,14 @@ public class ClientScrollableHitSource extends ScrollableHitSource {
         super(logger, backoffPolicy, threadPool, countSearchRetry, onResponse, fail);
         this.client = client;
         this.firstSearchRequest = firstSearchRequest;
+        firstSearchRequest.allowPartialSearchResults(false);
     }
 
     @Override
     public void doStart(RejectAwareActionListener<Response> searchListener) {
         if (logger.isDebugEnabled()) {
-            logger.debug("executing initial scroll against {}{}",
-                    isEmpty(firstSearchRequest.indices()) ? "all indices" : firstSearchRequest.indices(),
-                    isEmpty(firstSearchRequest.types()) ? "" : firstSearchRequest.types());
+            logger.debug("executing initial scroll against {}",
+                isEmpty(firstSearchRequest.indices()) ? "all indices" : firstSearchRequest.indices());
         }
         client.search(firstSearchRequest, wrapListener(searchListener));
     }
@@ -85,7 +85,7 @@ public class ClientScrollableHitSource extends ScrollableHitSource {
     }
 
     private ActionListener<SearchResponse> wrapListener(RejectAwareActionListener<Response> searchListener) {
-        return new ActionListener<SearchResponse>() {
+        return new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse searchResponse) {
                 searchListener.onResponse(wrapSearchResponse(searchResponse));
@@ -168,11 +168,6 @@ public class ClientScrollableHitSource extends ScrollableHitSource {
         @Override
         public String getIndex() {
             return delegate.getIndex();
-        }
-
-        @Override
-        public String getType() {
-            return delegate.getType();
         }
 
         @Override

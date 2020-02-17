@@ -26,6 +26,7 @@ import org.elasticsearch.action.bulk.TransportBulkActionTookTests.Resolver;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.support.ActionFilters;
+import org.elasticsearch.action.support.ActionTestUtils;
 import org.elasticsearch.action.support.AutoCreateIndex;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
@@ -48,6 +49,7 @@ import org.junit.After;
 import org.junit.Before;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.test.ClusterServiceUtils.createClusterService;
@@ -68,7 +70,7 @@ public class TransportBulkActionTests extends ESTestCase {
         boolean indexCreated = false; // set when the "real" index is created
 
         TestTransportBulkAction() {
-            super(TransportBulkActionTests.this.threadPool, transportService, clusterService, null, null,
+            super(TransportBulkActionTests.this.threadPool, transportService, clusterService, null,
                     null, new ActionFilters(Collections.emptySet()), new Resolver(),
                     new AutoCreateIndex(Settings.EMPTY, clusterService.getClusterSettings(), new Resolver()));
         }
@@ -108,9 +110,9 @@ public class TransportBulkActionTests extends ESTestCase {
     }
 
     public void testDeleteNonExistingDocDoesNotCreateIndex() throws Exception {
-        BulkRequest bulkRequest = new BulkRequest().add(new DeleteRequest("index", "type", "id"));
+        BulkRequest bulkRequest = new BulkRequest().add(new DeleteRequest("index").id("id"));
 
-        bulkAction.execute(null, bulkRequest, ActionListener.wrap(response -> {
+        ActionTestUtils.execute(bulkAction, null, bulkRequest, ActionListener.wrap(response -> {
             assertFalse(bulkAction.indexCreated);
             BulkItemResponse[] bulkResponses = ((BulkResponse) response).getItems();
             assertEquals(bulkResponses.length, 1);
@@ -124,9 +126,9 @@ public class TransportBulkActionTests extends ESTestCase {
 
     public void testDeleteNonExistingDocExternalVersionCreatesIndex() throws Exception {
         BulkRequest bulkRequest = new BulkRequest()
-                .add(new DeleteRequest("index", "type", "id").versionType(VersionType.EXTERNAL).version(0));
+                .add(new DeleteRequest("index").id("id").versionType(VersionType.EXTERNAL).version(0));
 
-        bulkAction.execute(null, bulkRequest, ActionListener.wrap(response -> {
+        ActionTestUtils.execute(bulkAction, null, bulkRequest, ActionListener.wrap(response -> {
             assertTrue(bulkAction.indexCreated);
         }, exception -> {
             throw new AssertionError(exception);
@@ -135,9 +137,9 @@ public class TransportBulkActionTests extends ESTestCase {
 
     public void testDeleteNonExistingDocExternalGteVersionCreatesIndex() throws Exception {
         BulkRequest bulkRequest = new BulkRequest()
-                .add(new DeleteRequest("index2", "type", "id").versionType(VersionType.EXTERNAL_GTE).version(0));
+                .add(new DeleteRequest("index2").id("id").versionType(VersionType.EXTERNAL_GTE).version(0));
 
-        bulkAction.execute(null, bulkRequest, ActionListener.wrap(response -> {
+        ActionTestUtils.execute(bulkAction, null, bulkRequest, ActionListener.wrap(response -> {
             assertTrue(bulkAction.indexCreated);
         }, exception -> {
             throw new AssertionError(exception);
@@ -145,10 +147,10 @@ public class TransportBulkActionTests extends ESTestCase {
     }
 
     public void testGetIndexWriteRequest() throws Exception {
-        IndexRequest indexRequest = new IndexRequest("index", "type", "id1").source(Collections.emptyMap());
-        UpdateRequest upsertRequest = new UpdateRequest("index", "type", "id1").upsert(indexRequest).script(mockScript("1"));
-        UpdateRequest docAsUpsertRequest = new UpdateRequest("index", "type", "id2").doc(indexRequest).docAsUpsert(true);
-        UpdateRequest scriptedUpsert = new UpdateRequest("index", "type", "id2").upsert(indexRequest).script(mockScript("1"))
+        IndexRequest indexRequest = new IndexRequest("index").id("id1").source(Collections.emptyMap());
+        UpdateRequest upsertRequest = new UpdateRequest("index", "id1").upsert(indexRequest).script(mockScript("1"));
+        UpdateRequest docAsUpsertRequest = new UpdateRequest("index", "id2").doc(indexRequest).docAsUpsert(true);
+        UpdateRequest scriptedUpsert = new UpdateRequest("index", "id2").upsert(indexRequest).script(mockScript("1"))
             .scriptedUpsert(true);
 
         assertEquals(TransportBulkAction.getIndexWriteRequest(indexRequest), indexRequest);
@@ -159,7 +161,7 @@ public class TransportBulkActionTests extends ESTestCase {
         DeleteRequest deleteRequest = new DeleteRequest("index", "id");
         assertNull(TransportBulkAction.getIndexWriteRequest(deleteRequest));
 
-        UpdateRequest badUpsertRequest = new UpdateRequest("index", "type", "id1");
+        UpdateRequest badUpsertRequest = new UpdateRequest("index", "id1");
         assertNull(TransportBulkAction.getIndexWriteRequest(badUpsertRequest));
     }
 
@@ -187,7 +189,7 @@ public class TransportBulkActionTests extends ESTestCase {
 
         // index name matches with ITMD:
         IndexTemplateMetaData.Builder templateBuilder = IndexTemplateMetaData.builder("name1")
-            .patterns(Collections.singletonList("id*"))
+            .patterns(List.of("id*"))
             .settings(settings(Version.CURRENT).put(IndexSettings.DEFAULT_PIPELINE.getKey(), "default-pipeline"));
         metaData = MetaData.builder().put(templateBuilder).build();
         indexRequest = new IndexRequest("idx");
@@ -223,7 +225,7 @@ public class TransportBulkActionTests extends ESTestCase {
 
         // index name matches with ITMD:
         IndexTemplateMetaData.Builder templateBuilder = IndexTemplateMetaData.builder("name1")
-            .patterns(Collections.singletonList("id*"))
+            .patterns(List.of("id*"))
             .settings(settings(Version.CURRENT).put(IndexSettings.FINAL_PIPELINE.getKey(), "final-pipeline"));
         metaData = MetaData.builder().put(templateBuilder).build();
         indexRequest = new IndexRequest("idx");

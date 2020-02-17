@@ -17,6 +17,7 @@ import org.elasticsearch.xpack.core.XPackSettings;
 import org.elasticsearch.xpack.core.ssl.TestsSSLService;
 import org.elasticsearch.xpack.core.watcher.history.WatchRecord;
 import org.elasticsearch.xpack.core.watcher.support.xcontent.XContentSource;
+import org.elasticsearch.xpack.core.watcher.transport.actions.put.PutWatchRequestBuilder;
 import org.elasticsearch.xpack.watcher.actions.ActionBuilders;
 import org.elasticsearch.xpack.watcher.common.http.BasicAuth;
 import org.elasticsearch.xpack.watcher.common.http.HttpMethod;
@@ -31,7 +32,6 @@ import org.junit.Before;
 import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Collections;
 import java.util.List;
 
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertNoFailures;
@@ -64,8 +64,8 @@ public class WebhookHttpsIntegrationTests extends AbstractWatcherIntegrationTest
 
     @Before
     public void startWebservice() throws Exception {
-        Settings settings = getInstanceFromMaster(Settings.class);
-        TestsSSLService sslService = new TestsSSLService(settings, getInstanceFromMaster(Environment.class));
+        final Environment environment = getInstanceFromMaster(Environment.class);
+        final TestsSSLService sslService = new TestsSSLService(environment);
         webServer = new MockWebServer(sslService.sslContext("xpack.http.ssl"), false);
         webServer.start();
     }
@@ -83,7 +83,7 @@ public class WebhookHttpsIntegrationTests extends AbstractWatcherIntegrationTest
                 .body(new TextTemplate("{key=value}"))
                 .method(HttpMethod.POST);
 
-        watcherClient().preparePutWatch("_id")
+        new PutWatchRequestBuilder(client(), "_id")
                 .setSource(watchBuilder()
                         .trigger(schedule(interval("5s")))
                         .input(simpleInput("key", "value"))
@@ -122,7 +122,7 @@ public class WebhookHttpsIntegrationTests extends AbstractWatcherIntegrationTest
                 .body(new TextTemplate("{key=value}"))
                 .method(HttpMethod.POST);
 
-        watcherClient().preparePutWatch("_id")
+        new PutWatchRequestBuilder(client(), "_id")
                 .setSource(watchBuilder()
                         .trigger(schedule(interval("5s")))
                         .input(simpleInput("key", "value"))
@@ -145,16 +145,14 @@ public class WebhookHttpsIntegrationTests extends AbstractWatcherIntegrationTest
      * 12.0.1 so we pin to TLSv1.2 when running on an earlier JDK
      */
     private static List<String> getProtocols() {
-        if (JavaVersion.current().compareTo(JavaVersion.parse("11")) < 0) {
-            return XPackSettings.DEFAULT_SUPPORTED_PROTOCOLS;
-        } else if (JavaVersion.current().compareTo(JavaVersion.parse("12")) < 0) {
-            return Collections.singletonList("TLSv1.2");
+        if (JavaVersion.current().compareTo(JavaVersion.parse("12")) < 0) {
+            return List.of("TLSv1.2");
         } else {
             JavaVersion full =
                 AccessController.doPrivileged(
                     (PrivilegedAction<JavaVersion>) () -> JavaVersion.parse(System.getProperty("java.version")));
             if (full.compareTo(JavaVersion.parse("12.0.1")) < 0) {
-                return Collections.singletonList("TLSv1.2");
+                return List.of("TLSv1.2");
             }
         }
         return XPackSettings.DEFAULT_SUPPORTED_PROTOCOLS;

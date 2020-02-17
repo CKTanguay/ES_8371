@@ -42,6 +42,7 @@ public class PeerRecoveryRetentionLeaseCreationIT extends ESIntegTestCase {
         return false;
     }
 
+    @AwaitsFix(bugUrl = "https://github.com/elastic/elasticsearch/issues/48701")
     public void testCanRecoverFromStoreWithoutPeerRecoveryRetentionLease() throws Exception {
         /*
          * In a full cluster restart from a version without peer-recovery retention leases, the leases on disk will not include a lease for
@@ -57,9 +58,7 @@ public class PeerRecoveryRetentionLeaseCreationIT extends ESIntegTestCase {
             .put(IndexMetaData.SETTING_NUMBER_OF_REPLICAS, 0)
             .put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true)
             .put(IndexMetaData.SETTING_VERSION_CREATED,
-                // simulate a version which supports soft deletes (v6.5.0-and-later) with which this node is compatible
-                VersionUtils.randomVersionBetween(random(),
-                    Version.max(Version.CURRENT.minimumIndexCompatibilityVersion(), Version.V_6_5_0), Version.CURRENT))));
+                VersionUtils.randomVersionBetween(random(), Version.CURRENT.minimumIndexCompatibilityVersion(), Version.CURRENT))));
         ensureGreen("index");
 
         // Change the node ID so that the persisted retention lease no longer applies.

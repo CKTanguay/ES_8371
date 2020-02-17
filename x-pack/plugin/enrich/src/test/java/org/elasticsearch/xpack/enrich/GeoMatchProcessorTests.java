@@ -14,14 +14,12 @@ import org.elasticsearch.action.search.ShardSearchFailure;
 import org.elasticsearch.cluster.routing.Preference;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.geo.ShapeRelation;
-import org.elasticsearch.common.text.Text;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.geometry.Geometry;
 import org.elasticsearch.geometry.MultiPoint;
 import org.elasticsearch.geometry.Point;
 import org.elasticsearch.index.VersionType;
-import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.query.ConstantScoreQueryBuilder;
 import org.elasticsearch.index.query.GeoShapeQueryBuilder;
 import org.elasticsearch.ingest.IngestDocument;
@@ -34,13 +32,12 @@ import org.elasticsearch.test.ESTestCase;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-import static org.elasticsearch.xpack.enrich.MatchProcessorTests.mapOf;
+import static org.elasticsearch.xpack.enrich.MatchProcessorTests.str;
 import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
@@ -51,13 +48,13 @@ public class GeoMatchProcessorTests extends ESTestCase {
 
     public void testBasics() {
         Point expectedPoint = new Point(-122.084110, 37.386637);
-        testBasicsForFieldValue(mapOf("lat", 37.386637, "lon", -122.084110), expectedPoint);
+        testBasicsForFieldValue(Map.of("lat", 37.386637, "lon", -122.084110), expectedPoint);
         testBasicsForFieldValue("37.386637, -122.084110", expectedPoint);
         testBasicsForFieldValue("POINT (-122.084110 37.386637)", expectedPoint);
-        testBasicsForFieldValue(Arrays.asList(-122.084110, 37.386637), expectedPoint);
+        testBasicsForFieldValue(List.of(-122.084110, 37.386637), expectedPoint);
         testBasicsForFieldValue(
-            Arrays.asList(Arrays.asList(-122.084110, 37.386637), "37.386637, -122.084110", "POINT (-122.084110 37.386637)"),
-            new MultiPoint(Arrays.asList(expectedPoint, expectedPoint, expectedPoint))
+            List.of(List.of(-122.084110, 37.386637), "37.386637, -122.084110", "POINT (-122.084110 37.386637)"),
+            new MultiPoint(List.of(expectedPoint, expectedPoint, expectedPoint))
         );
 
         testBasicsForFieldValue("not a point", null);
@@ -65,13 +62,13 @@ public class GeoMatchProcessorTests extends ESTestCase {
 
     private void testBasicsForFieldValue(Object fieldValue, Geometry expectedGeometry) {
         int maxMatches = randomIntBetween(1, 8);
-        MockSearchFunction mockSearch = mockedSearchFunction(mapOf("key", mapOf("shape", "object", "zipcode", 94040)));
+        MockSearchFunction mockSearch = mockedSearchFunction(Map.of("key", Map.of("shape", "object", "zipcode", 94040)));
         GeoMatchProcessor processor = new GeoMatchProcessor(
             "_tag",
             mockSearch,
             "_name",
-            "location",
-            "entry",
+            str("location"),
+            str("entry"),
             false,
             false,
             "shape",
@@ -80,12 +77,11 @@ public class GeoMatchProcessorTests extends ESTestCase {
         );
         IngestDocument ingestDocument = new IngestDocument(
             "_index",
-            "_type",
             "_id",
             "_routing",
             1L,
             VersionType.INTERNAL,
-            mapOf("location", fieldValue)
+            Map.of("location", fieldValue)
         );
         // Run
         IngestDocument[] holder = new IngestDocument[1];
@@ -171,12 +167,7 @@ public class GeoMatchProcessorTests extends ESTestCase {
 
     public SearchResponse mockResponse(Map<String, Map<String, ?>> documents) {
         SearchHit[] searchHits = documents.entrySet().stream().map(e -> {
-            SearchHit searchHit = new SearchHit(
-                randomInt(100),
-                e.getKey(),
-                new Text(MapperService.SINGLE_MAPPING_NAME),
-                Collections.emptyMap()
-            );
+            SearchHit searchHit = new SearchHit(randomInt(100), e.getKey(), Collections.emptyMap());
             try (XContentBuilder builder = XContentBuilder.builder(XContentType.SMILE.xContent())) {
                 builder.map(e.getValue());
                 builder.flush();

@@ -5,8 +5,6 @@
  */
 package org.elasticsearch.xpack.test.rest;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public final class XPackRestTestConstants {
@@ -28,15 +26,12 @@ public final class XPackRestTestConstants {
     public static final String STATE_INDEX_PREFIX = ".ml-state";
     public static final String RESULTS_INDEX_DEFAULT = "shared";
 
-    public static final List<String> ML_PRE_V660_TEMPLATES = Collections.unmodifiableList(Arrays.asList(
-        ML_META_INDEX_NAME, STATE_INDEX_PREFIX, RESULTS_INDEX_PREFIX));
-
     public static final List<String> ML_POST_V660_TEMPLATES =
-        Collections.unmodifiableList(Arrays.asList(
+        List.of(
             ML_META_INDEX_NAME,
             STATE_INDEX_PREFIX,
             RESULTS_INDEX_PREFIX,
-            CONFIG_INDEX));
+            CONFIG_INDEX);
 
     // Transform constants:
     public static final String TRANSFORM_TASK_NAME = "data_frame/transforms";

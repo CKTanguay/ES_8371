@@ -19,7 +19,6 @@
 
 package org.elasticsearch.action.admin.indices.validate.query;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -45,7 +44,7 @@ public class QueryExplanation implements Writeable, ToXContentFragment {
 
     public static final int RANDOM_SHARD = -1;
 
-    static ConstructingObjectParser<QueryExplanation, Void> PARSER = new ConstructingObjectParser<>(
+    static final ConstructingObjectParser<QueryExplanation, Void> PARSER = new ConstructingObjectParser<>(
         "query_explanation",
         true,
         a -> {
@@ -81,11 +80,7 @@ public class QueryExplanation implements Writeable, ToXContentFragment {
     private String error;
 
     public QueryExplanation(StreamInput in) throws IOException {
-        if (in.getVersion().onOrAfter(Version.V_6_4_0)) {
-            index = in.readOptionalString();
-        } else {
-            index = in.readString();
-        }
+        index = in.readOptionalString();
         shard = in.readInt();
         valid = in.readBoolean();
         explanation = in.readOptionalString();
@@ -123,11 +118,7 @@ public class QueryExplanation implements Writeable, ToXContentFragment {
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        if (out.getVersion().onOrAfter(Version.V_6_4_0)) {
-            out.writeOptionalString(index);
-        } else {
-            out.writeString(index);
-        }
+        out.writeOptionalString(index);
         out.writeInt(shard);
         out.writeBoolean(valid);
         out.writeOptionalString(explanation);

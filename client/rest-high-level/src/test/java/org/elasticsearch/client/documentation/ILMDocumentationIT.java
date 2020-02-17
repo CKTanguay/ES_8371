@@ -19,7 +19,6 @@
 
 package org.elasticsearch.client.documentation;
 
-import org.apache.http.util.EntityUtils;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.LatchedActionListener;
 import org.elasticsearch.action.admin.cluster.repositories.put.PutRepositoryRequest;
@@ -28,31 +27,30 @@ import org.elasticsearch.action.admin.cluster.snapshots.get.GetSnapshotsResponse
 import org.elasticsearch.action.admin.indices.alias.Alias;
 import org.elasticsearch.client.ESRestHighLevelClientTestCase;
 import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.core.AcknowledgedResponse;
-import org.elasticsearch.client.indexlifecycle.DeleteAction;
-import org.elasticsearch.client.indexlifecycle.DeleteLifecyclePolicyRequest;
-import org.elasticsearch.client.indexlifecycle.ExplainLifecycleRequest;
-import org.elasticsearch.client.indexlifecycle.ExplainLifecycleResponse;
-import org.elasticsearch.client.indexlifecycle.GetLifecyclePolicyRequest;
-import org.elasticsearch.client.indexlifecycle.GetLifecyclePolicyResponse;
-import org.elasticsearch.client.indexlifecycle.IndexLifecycleExplainResponse;
-import org.elasticsearch.client.indexlifecycle.LifecycleAction;
-import org.elasticsearch.client.indexlifecycle.LifecycleManagementStatusRequest;
-import org.elasticsearch.client.indexlifecycle.LifecycleManagementStatusResponse;
-import org.elasticsearch.client.indexlifecycle.LifecyclePolicy;
-import org.elasticsearch.client.indexlifecycle.LifecyclePolicyMetadata;
-import org.elasticsearch.client.indexlifecycle.OperationMode;
-import org.elasticsearch.client.indexlifecycle.Phase;
-import org.elasticsearch.client.indexlifecycle.PutLifecyclePolicyRequest;
-import org.elasticsearch.client.indexlifecycle.RemoveIndexLifecyclePolicyRequest;
-import org.elasticsearch.client.indexlifecycle.RemoveIndexLifecyclePolicyResponse;
-import org.elasticsearch.client.indexlifecycle.RetryLifecyclePolicyRequest;
-import org.elasticsearch.client.indexlifecycle.RolloverAction;
-import org.elasticsearch.client.indexlifecycle.ShrinkAction;
-import org.elasticsearch.client.indexlifecycle.StartILMRequest;
-import org.elasticsearch.client.indexlifecycle.StopILMRequest;
+import org.elasticsearch.client.ilm.DeleteAction;
+import org.elasticsearch.client.ilm.DeleteLifecyclePolicyRequest;
+import org.elasticsearch.client.ilm.ExplainLifecycleRequest;
+import org.elasticsearch.client.ilm.ExplainLifecycleResponse;
+import org.elasticsearch.client.ilm.GetLifecyclePolicyRequest;
+import org.elasticsearch.client.ilm.GetLifecyclePolicyResponse;
+import org.elasticsearch.client.ilm.IndexLifecycleExplainResponse;
+import org.elasticsearch.client.ilm.LifecycleAction;
+import org.elasticsearch.client.ilm.LifecycleManagementStatusRequest;
+import org.elasticsearch.client.ilm.LifecycleManagementStatusResponse;
+import org.elasticsearch.client.ilm.LifecyclePolicy;
+import org.elasticsearch.client.ilm.LifecyclePolicyMetadata;
+import org.elasticsearch.client.ilm.OperationMode;
+import org.elasticsearch.client.ilm.Phase;
+import org.elasticsearch.client.ilm.PutLifecyclePolicyRequest;
+import org.elasticsearch.client.ilm.RemoveIndexLifecyclePolicyRequest;
+import org.elasticsearch.client.ilm.RemoveIndexLifecyclePolicyResponse;
+import org.elasticsearch.client.ilm.RetryLifecyclePolicyRequest;
+import org.elasticsearch.client.ilm.RolloverAction;
+import org.elasticsearch.client.ilm.ShrinkAction;
+import org.elasticsearch.client.ilm.StartILMRequest;
+import org.elasticsearch.client.ilm.StopILMRequest;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.slm.DeleteSnapshotLifecyclePolicyRequest;
 import org.elasticsearch.client.slm.ExecuteSnapshotLifecyclePolicyRequest;
@@ -78,8 +76,6 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentHelper;
-import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.repositories.fs.FsRepository;
 import org.elasticsearch.snapshots.SnapshotInfo;
 import org.elasticsearch.snapshots.SnapshotState;
@@ -803,7 +799,7 @@ public class ILMDocumentationIT extends ESRestHighLevelClientTestCase {
 
         // tag::slm-put-snapshot-lifecycle-policy-execute-listener
         ActionListener<AcknowledgedResponse> putListener =
-                new ActionListener<AcknowledgedResponse>() {
+                new ActionListener<>() {
             @Override
             public void onResponse(AcknowledgedResponse resp) {
                 boolean acknowledged = resp.isAcknowledged(); // <1>
@@ -838,7 +834,7 @@ public class ILMDocumentationIT extends ESRestHighLevelClientTestCase {
 
         // tag::slm-get-snapshot-lifecycle-policy-execute-listener
         ActionListener<GetSnapshotLifecyclePolicyResponse> getListener =
-                new ActionListener<GetSnapshotLifecyclePolicyResponse>() {
+                new ActionListener<>() {
             @Override
             public void onResponse(GetSnapshotLifecyclePolicyResponse resp) {
                 Map<String, SnapshotLifecyclePolicyMetadata> policies =
@@ -902,7 +898,7 @@ public class ILMDocumentationIT extends ESRestHighLevelClientTestCase {
 
         // tag::slm-execute-snapshot-lifecycle-policy-execute-listener
         ActionListener<ExecuteSnapshotLifecyclePolicyResponse> executeListener =
-                new ActionListener<ExecuteSnapshotLifecyclePolicyResponse>() {
+                new ActionListener<>() {
             @Override
             public void onResponse(ExecuteSnapshotLifecyclePolicyResponse r) {
                 String snapshotName = r.getSnapshotName(); // <1>
@@ -918,7 +914,7 @@ public class ILMDocumentationIT extends ESRestHighLevelClientTestCase {
         // We need a listener that will actually wait for the snapshot to be created
         CountDownLatch latch = new CountDownLatch(1);
         executeListener =
-            new ActionListener<ExecuteSnapshotLifecyclePolicyResponse>() {
+            new ActionListener<>() {
                 @Override
                 public void onResponse(ExecuteSnapshotLifecyclePolicyResponse r) {
                     try {
@@ -979,7 +975,7 @@ public class ILMDocumentationIT extends ESRestHighLevelClientTestCase {
 
         // tag::slm-delete-snapshot-lifecycle-policy-execute-listener
         ActionListener<AcknowledgedResponse> deleteListener =
-            new ActionListener<AcknowledgedResponse>() {
+            new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse resp) {
                     boolean deleteAcknowledged = resp.isAcknowledged(); // <1>
@@ -1019,7 +1015,7 @@ public class ILMDocumentationIT extends ESRestHighLevelClientTestCase {
 
         // tag::slm-execute-snapshot-lifecycle-retention-execute-listener
         ActionListener<AcknowledgedResponse> retentionListener =
-            new ActionListener<AcknowledgedResponse>() {
+            new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse r) {
                     assert r.isAcknowledged(); // <1>
@@ -1041,10 +1037,10 @@ public class ILMDocumentationIT extends ESRestHighLevelClientTestCase {
 
     private void assertSnapshotExists(final RestHighLevelClient client, final String repo, final String snapshotName) throws Exception {
         assertBusy(() -> {
-            GetSnapshotsRequest getSnapshotsRequest = new GetSnapshotsRequest(repo, new String[]{snapshotName});
+            GetSnapshotsRequest getSnapshotsRequest = new GetSnapshotsRequest(new String[]{repo}, new String[]{snapshotName});
             try {
                 final GetSnapshotsResponse snaps = client.snapshot().get(getSnapshotsRequest, RequestOptions.DEFAULT);
-                Optional<SnapshotInfo> info = snaps.getSnapshots().stream().findFirst();
+                Optional<SnapshotInfo> info = snaps.getSnapshots(repo).stream().findFirst();
                 if (info.isPresent()) {
                     info.ifPresent(si -> {
                         assertThat(si.snapshotId().getName(), equalTo(snapshotName));
@@ -1208,10 +1204,6 @@ public class ILMDocumentationIT extends ESRestHighLevelClientTestCase {
         // end::slm-start-slm-execute-async
 
         assertTrue(latch.await(30L, TimeUnit.SECONDS));
-    }
-
-    static Map<String, Object> toMap(Response response) throws IOException {
-        return XContentHelper.convertToMap(JsonXContent.jsonXContent, EntityUtils.toString(response.getEntity()), false);
     }
 
 }

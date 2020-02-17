@@ -24,8 +24,8 @@ import org.elasticsearch.common.xcontent.ObjectParser;
 import org.elasticsearch.common.xcontent.ToXContentObject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.persistent.PersistentTaskParams;
 import org.elasticsearch.tasks.Task;
-import org.elasticsearch.xpack.core.XPackPlugin;
 import org.elasticsearch.xpack.core.ml.MlTasks;
 import org.elasticsearch.xpack.core.ml.dataframe.DataFrameAnalyticsConfig;
 import org.elasticsearch.xpack.core.ml.job.messages.Messages;
@@ -150,14 +150,14 @@ public class StartDataFrameAnalyticsAction extends ActionType<AcknowledgedRespon
         }
     }
 
-    public static class TaskParams implements XPackPlugin.XPackPersistentTaskParams {
+    public static class TaskParams implements PersistentTaskParams {
 
         public static final Version VERSION_INTRODUCED = Version.V_7_3_0;
 
         private static final ParseField PROGRESS_ON_START = new ParseField("progress_on_start");
 
         @SuppressWarnings("unchecked")
-        public static ConstructingObjectParser<TaskParams, Void> PARSER = new ConstructingObjectParser<>(
+        public static final ConstructingObjectParser<TaskParams, Void> PARSER = new ConstructingObjectParser<>(
             MlTasks.DATA_FRAME_ANALYTICS_TASK_NAME, true,
             a -> new TaskParams((String) a[0], (String) a[1], (List<PhaseProgress>) a[2], (Boolean) a[3]));
 

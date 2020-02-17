@@ -190,9 +190,9 @@ public class NodeJoinTests extends ESTestCase {
     protected DiscoveryNode newNode(int i, boolean master) {
         final Set<DiscoveryNodeRole> roles;
         if (master) {
-            roles = Collections.singleton(DiscoveryNodeRole.MASTER_ROLE);
+            roles = Set.of(DiscoveryNodeRole.MASTER_ROLE);
         } else {
-            roles = Collections.emptySet();
+            roles = Set.of();
         }
         final String prefix = master ? "master_" : "data_";
         return new DiscoveryNode(prefix + i, i + "", buildNewFakeTransportAddress(), emptyMap(), roles, Version.CURRENT);

@@ -14,6 +14,7 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.xpack.core.watcher.history.HistoryStoreField;
+import org.elasticsearch.xpack.core.watcher.transport.actions.put.PutWatchRequestBuilder;
 import org.elasticsearch.xpack.watcher.test.AbstractWatcherIntegrationTestCase;
 
 import java.util.Map;
@@ -32,7 +33,7 @@ public class TimeThrottleIntegrationTests extends AbstractWatcherIntegrationTest
 
     public void testTimeThrottle(){
         String id = randomAlphaOfLength(20);
-        PutWatchResponse putWatchResponse = watcherClient().preparePutWatch()
+        PutWatchResponse putWatchResponse = new PutWatchRequestBuilder(client())
                 .setId(id)
                 .setSource(watchBuilder()
                         .trigger(schedule(interval("5s")))
@@ -58,7 +59,7 @@ public class TimeThrottleIntegrationTests extends AbstractWatcherIntegrationTest
 
     public void testTimeThrottleDefaults() {
         String id = randomAlphaOfLength(30);
-        PutWatchResponse putWatchResponse = watcherClient().preparePutWatch()
+        PutWatchResponse putWatchResponse = new PutWatchRequestBuilder(client())
                 .setId(id)
                 .setSource(watchBuilder()
                         .trigger(schedule(interval("1s")))

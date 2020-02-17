@@ -44,10 +44,8 @@ public class DiskThresholdSettingsTests extends ESTestCase {
         assertEquals(15.0D, diskThresholdSettings.getFreeDiskThresholdLow(), 0.0D);
         assertEquals(60L, diskThresholdSettings.getRerouteInterval().seconds());
         assertTrue(diskThresholdSettings.isEnabled());
-        assertTrue(diskThresholdSettings.includeRelocations());
         assertEquals(zeroBytes, diskThresholdSettings.getFreeBytesThresholdFloodStage());
         assertEquals(5.0D, diskThresholdSettings.getFreeDiskThresholdFloodStage(), 0.0D);
-        assertTrue(diskThresholdSettings.isAutoReleaseIndexEnabled());
     }
 
     public void testUpdate() {
@@ -56,7 +54,6 @@ public class DiskThresholdSettingsTests extends ESTestCase {
 
         Settings newSettings = Settings.builder()
             .put(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_DISK_THRESHOLD_ENABLED_SETTING.getKey(), false)
-            .put(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_INCLUDE_RELOCATIONS_SETTING.getKey(), false)
             .put(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_HIGH_DISK_WATERMARK_SETTING.getKey(), "500mb")
             .put(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_LOW_DISK_WATERMARK_SETTING.getKey(), "1000mb")
             .put(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_DISK_FLOOD_STAGE_WATERMARK_SETTING.getKey(), "250mb")
@@ -72,10 +69,6 @@ public class DiskThresholdSettingsTests extends ESTestCase {
         assertEquals(0.0D, diskThresholdSettings.getFreeDiskThresholdFloodStage(), 0.0D);
         assertEquals(30L, diskThresholdSettings.getRerouteInterval().seconds());
         assertFalse(diskThresholdSettings.isEnabled());
-        assertFalse(diskThresholdSettings.includeRelocations());
-
-        assertWarnings("[cluster.routing.allocation.disk.include_relocations] setting was deprecated in Elasticsearch and " +
-            "will be removed in a future release! See the breaking changes documentation for the next major version.");
     }
 
     public void testInvalidConstruction() {
@@ -254,6 +247,35 @@ public class DiskThresholdSettingsTests extends ESTestCase {
             assertThat(target.get(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_DISK_FLOOD_STAGE_WATERMARK_SETTING.getKey()),
                 equalTo("99%"));
         }
+    }
+
+    public void testThresholdDescriptions() {
+        final ClusterSettings clusterSettings = new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS);
+
+        DiskThresholdSettings diskThresholdSettings = new DiskThresholdSettings(Settings.EMPTY, clusterSettings);
+        assertThat(diskThresholdSettings.describeLowThreshold(), equalTo("85%"));
+        assertThat(diskThresholdSettings.describeHighThreshold(), equalTo("90%"));
+        assertThat(diskThresholdSettings.describeFloodStageThreshold(), equalTo("95%"));
+
+        diskThresholdSettings = new DiskThresholdSettings(Settings.builder()
+            .put(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_LOW_DISK_WATERMARK_SETTING.getKey(), "91.2%")
+            .put(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_HIGH_DISK_WATERMARK_SETTING.getKey(), "91.3%")
+            .put(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_DISK_FLOOD_STAGE_WATERMARK_SETTING.getKey(), "91.4%")
+            .build(), clusterSettings);
+
+        assertThat(diskThresholdSettings.describeLowThreshold(), equalTo("91.2%"));
+        assertThat(diskThresholdSettings.describeHighThreshold(), equalTo("91.3%"));
+        assertThat(diskThresholdSettings.describeFloodStageThreshold(), equalTo("91.4%"));
+
+        diskThresholdSettings = new DiskThresholdSettings(Settings.builder()
+            .put(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_LOW_DISK_WATERMARK_SETTING.getKey(), "1GB")
+            .put(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_HIGH_DISK_WATERMARK_SETTING.getKey(), "10MB")
+            .put(DiskThresholdSettings.CLUSTER_ROUTING_ALLOCATION_DISK_FLOOD_STAGE_WATERMARK_SETTING.getKey(), "1B")
+            .build(), clusterSettings);
+
+        assertThat(diskThresholdSettings.describeLowThreshold(), equalTo("1gb"));
+        assertThat(diskThresholdSettings.describeHighThreshold(), equalTo("10mb"));
+        assertThat(diskThresholdSettings.describeFloodStageThreshold(), equalTo("1b"));
     }
 
 }

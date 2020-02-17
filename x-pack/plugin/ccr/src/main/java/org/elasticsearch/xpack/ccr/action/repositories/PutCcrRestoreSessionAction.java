@@ -36,7 +36,7 @@ public class PutCcrRestoreSessionAction extends ActionType<PutCcrRestoreSessionA
     public static final String NAME = "internal:admin/ccr/restore/session/put";
 
     private PutCcrRestoreSessionAction() {
-        super(NAME, PutCcrRestoreSessionAction.PutCcrRestoreSessionResponse::new);
+        super(NAME, PutCcrRestoreSessionResponse::new);
     }
 
     public static class TransportPutCcrRestoreSessionAction

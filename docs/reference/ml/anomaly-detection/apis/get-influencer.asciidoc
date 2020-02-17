@@ -57,7 +57,6 @@ equal to this value.
 
 `page`.`from`::
 (Optional, integer) Skips the specified number of influencers.
-
 `page`.`size`::
 (Optional, integer) Specifies the maximum number of influencers to obtain.
 
@@ -79,8 +78,8 @@ properties:
 include::{docdir}/ml/ml-shared.asciidoc[tag=bucket-span-results]
 
 `influencer_score`::
-(number) A normalized score between 0-100, which is based on the probability
-of the influencer in this bucket aggregated across detectors. Unlike
+(number) A normalized score between 0-100, which is based on the probability of
+the influencer in this bucket aggregated across detectors. Unlike
 `initial_influencer_score`, this value will be updated by a re-normalization
 process as new data is analyzed.
 
@@ -105,10 +104,10 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=is-interim]
 include::{docdir}/ml/ml-shared.asciidoc[tag=job-id-anomaly-detection]
 
 `probability`::
-(number) The probability that the influencer has this behavior, in the range `0`
-to `1`. This value can be held to a high precision of over 300 decimal places,
-so the `influencer_score` is provided as a human-readable and friendly
-interpretation of this.
+(number) The probability that the influencer has this behavior, in the range 0
+to 1. For example, 0.0000109783. This value can be held to a high precision of
+over 300 decimal places, so the `influencer_score` is provided as a
+human-readable and friendly interpretation of this.
 
 `result_type`::
 (string) Internal. This value is always set to `influencer`.

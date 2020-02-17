@@ -73,26 +73,18 @@ public class PingAndInfoIT extends ESRestHighLevelClientTestCase {
         FeatureSet graph = info.getFeatureSetsInfo().getFeatureSets().get("graph");
         assertTrue(graph.available());
         assertTrue(graph.enabled());
-        assertNull(graph.nativeCodeInfo());
         FeatureSet monitoring = info.getFeatureSetsInfo().getFeatureSets().get("monitoring");
         assertTrue(monitoring.available());
         assertTrue(monitoring.enabled());
-        assertNull(monitoring.nativeCodeInfo());
         FeatureSet ml = info.getFeatureSetsInfo().getFeatureSets().get("ml");
         assertTrue(ml.available());
         assertTrue(ml.enabled());
-        assertEquals(mainResponse.getVersion().getNumber(), ml.nativeCodeInfo().get("version").toString());
     }
 
     public void testXPackInfoEmptyRequest() throws IOException {
         XPackInfoResponse info = highLevelClient().xpack().info(new XPackInfoRequest(), RequestOptions.DEFAULT);
 
-        /*
-         * The default in the transport client is non-verbose and returning
-         * no categories which is the opposite of the default when you use
-         * the API over REST. We don't want to break the transport client
-         * even though it doesn't feel like a good default.
-         */
+        // TODO: reconsider this leniency now that the transport client is gone
         assertNull(info.getBuildInfo());
         assertNull(info.getLicenseInfo());
         assertNull(info.getFeatureSetsInfo());

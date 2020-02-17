@@ -81,6 +81,7 @@ public class RestClientBuilderIntegTests extends RestClientTestCase {
     }
 
     public void testBuilderUsesDefaultSSLContext() throws Exception {
+        assumeFalse("https://github.com/elastic/elasticsearch/issues/49094", inFipsJvm());
         final SSLContext defaultSSLContext = SSLContext.getDefault();
         try {
             try (RestClient client = buildRestClient()) {
@@ -109,7 +110,8 @@ public class RestClientBuilderIntegTests extends RestClientTestCase {
 
     private static SSLContext getSslContext() throws Exception {
         SSLContext sslContext = SSLContext.getInstance(getProtocol());
-        try (InputStream certFile = RestClientBuilderIntegTests.class.getResourceAsStream("/test.crt")) {
+        try (InputStream certFile = RestClientBuilderIntegTests.class.getResourceAsStream("/test.crt");
+             InputStream keyStoreFile = RestClientBuilderIntegTests.class.getResourceAsStream("/test_truststore.jks")) {
             // Build a keystore of default type programmatically since we can't use JKS keystores to
             // init a KeyManagerFactory in FIPS 140 JVMs.
             KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -122,16 +124,18 @@ public class RestClientBuilderIntegTests extends RestClientTestCase {
                 new Certificate[]{certFactory.generateCertificate(certFile)});
             KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
             kmf.init(keyStore, "password".toCharArray());
+            KeyStore trustStore = KeyStore.getInstance("JKS");
+            trustStore.load(keyStoreFile, "password".toCharArray());
             TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmf.init(keyStore);
+            tmf.init(trustStore);
             sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
         }
         return sslContext;
     }
 
     /**
-     * The {@link HttpsServer} in the JDK has issues with TLSv1.3 when running in a JDK that supports TLSv1.3 prior to
-     * 12.0.1 so we pin to TLSv1.2 when running on an earlier JDK.
+     * The {@link HttpsServer} in the JDK has issues with TLSv1.3 when running in a JDK prior to
+     * 12.0.1 so we pin to TLSv1.2 when running on an earlier JDK
      */
     private static String getProtocol() {
         String version = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("java.version"));
@@ -146,9 +150,6 @@ public class RestClientBuilderIntegTests extends RestClientTestCase {
         }
         if (numericComponents.length > 0) {
             final int major = Integer.valueOf(numericComponents[0]);
-            if (major < 11) {
-                return "TLS";
-            }
             if (major > 12) {
                 return "TLS";
             } else if (major == 12 && numericComponents.length > 2) {

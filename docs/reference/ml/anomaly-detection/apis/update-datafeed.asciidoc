@@ -54,7 +54,7 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=aggregations]
 `chunking_config`::
 (Optional, object)
 include::{docdir}/ml/ml-shared.asciidoc[tag=chunking-config]
-  
+
 `delayed_data_check_config`::
 (Optional, object)
 include::{docdir}/ml/ml-shared.asciidoc[tag=delayed-data-check-config]
@@ -101,7 +101,6 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=script-fields]
 (Optional, unsigned integer)
 include::{docdir}/ml/ml-shared.asciidoc[tag=scroll-size]
 
-
 [[ml-update-datafeed-example]]
 ==== {api-examples-title}
 
@@ -117,7 +116,6 @@ POST _ml/datafeeds/datafeed-total-requests/_update
 }
 --------------------------------------------------
 // TEST[skip:setup:server_metrics_datafeed]
-
 
 When the {dfeed} is updated, you receive the full {dfeed} configuration with
 with the updated values:

@@ -9,8 +9,6 @@ import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.ResourceNotFoundException;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
-import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.search.MultiSearchAction;
 import org.elasticsearch.action.search.MultiSearchRequest;
 import org.elasticsearch.action.search.MultiSearchRequestBuilder;
@@ -19,26 +17,18 @@ import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.cluster.AckedClusterStateUpdateTask;
-import org.elasticsearch.cluster.ClusterName;
-import org.elasticsearch.cluster.ClusterState;
-import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
-import org.elasticsearch.cluster.metadata.MetaData;
-import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.document.DocumentField;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.text.Text;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.index.Index;
+import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.test.ESTestCase;
@@ -47,17 +37,14 @@ import org.elasticsearch.xpack.core.action.util.QueryPage;
 import org.elasticsearch.xpack.core.ml.datafeed.DatafeedTimingStats;
 import org.elasticsearch.xpack.core.ml.job.config.Job;
 import org.elasticsearch.xpack.core.ml.job.persistence.AnomalyDetectorsIndex;
-import org.elasticsearch.xpack.core.ml.job.persistence.AnomalyDetectorsIndexFields;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSnapshot;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.TimingStats;
 import org.elasticsearch.xpack.core.ml.job.results.AnomalyRecord;
 import org.elasticsearch.xpack.core.ml.job.results.Bucket;
 import org.elasticsearch.xpack.core.ml.job.results.CategoryDefinition;
 import org.elasticsearch.xpack.core.ml.job.results.Influencer;
-import org.elasticsearch.xpack.core.ml.job.results.Result;
 import org.elasticsearch.xpack.core.ml.utils.ExponentialAverageCalculationContext;
 import org.elasticsearch.xpack.ml.job.persistence.InfluencersQueryBuilder.InfluencersQuery;
-import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -68,182 +55,20 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static org.elasticsearch.xpack.core.ml.job.config.JobTests.buildJobBuilder;
 import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 public class JobResultsProviderTests extends ESTestCase {
-    private static final String CLUSTER_NAME = "myCluster";
-
-    @SuppressWarnings("unchecked")
-    public void testCreateJobResultsIndex() {
-        String resultsIndexName = AnomalyDetectorsIndexFields.RESULTS_INDEX_PREFIX + AnomalyDetectorsIndexFields.RESULTS_INDEX_DEFAULT;
-        QueryBuilder jobFilter = QueryBuilders.termQuery("job_id", "foo");
-
-        MockClientBuilder clientBuilder = new MockClientBuilder(CLUSTER_NAME);
-        ArgumentCaptor<CreateIndexRequest> captor = ArgumentCaptor.forClass(CreateIndexRequest.class);
-        clientBuilder.createIndexRequest(captor, resultsIndexName);
-        clientBuilder.prepareAlias(resultsIndexName, AnomalyDetectorsIndex.jobResultsAliasedName("foo"), jobFilter);
-        clientBuilder.prepareAlias(resultsIndexName, AnomalyDetectorsIndex.resultsWriteAlias("foo"));
-
-        Job.Builder job = buildJobBuilder("foo");
-        JobResultsProvider provider = createProvider(clientBuilder.build());
-        AtomicReference<Boolean> resultHolder = new AtomicReference<>();
-
-        ClusterState cs = ClusterState.builder(new ClusterName("_name"))
-                .metaData(MetaData.builder().indices(ImmutableOpenMap.of()))
-                .build();
-
-        ClusterService clusterService = mock(ClusterService.class);
-
-        doAnswer(invocationOnMock -> {
-            AckedClusterStateUpdateTask<Boolean> task = (AckedClusterStateUpdateTask<Boolean>) invocationOnMock.getArguments()[1];
-            task.execute(cs);
-            return null;
-        }).when(clusterService).submitStateUpdateTask(eq("put-job-foo"), any(AckedClusterStateUpdateTask.class));
-
-        provider.createJobResultIndex(job.build(), cs, new ActionListener<Boolean>() {
-            @Override
-            public void onResponse(Boolean aBoolean) {
-                CreateIndexRequest request = captor.getValue();
-                assertNotNull(request);
-                assertEquals(resultsIndexName, request.index());
-                clientBuilder.verifyIndexCreated(resultsIndexName);
-                resultHolder.set(aBoolean);
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                fail(e.toString());
-            }
-        });
-
-        assertNotNull(resultHolder.get());
-        assertTrue(resultHolder.get());
-    }
-
-    @SuppressWarnings("unchecked")
-    public void testCreateJobWithExistingIndex() {
-        QueryBuilder jobFilter = QueryBuilders.termQuery("job_id", "foo");
-        MockClientBuilder clientBuilder = new MockClientBuilder(CLUSTER_NAME);
-        clientBuilder.prepareAlias(AnomalyDetectorsIndex.jobResultsAliasedName("foo"),
-                AnomalyDetectorsIndex.jobResultsAliasedName("foo123"), jobFilter);
-        clientBuilder.preparePutMapping(mock(AcknowledgedResponse.class), Result.TYPE.getPreferredName());
-
-        GetMappingsResponse getMappingsResponse = mock(GetMappingsResponse.class);
-        ImmutableOpenMap<String, MappingMetaData> typeMappings = ImmutableOpenMap.<String, MappingMetaData>of();
-
-        ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappings =
-                ImmutableOpenMap.<String, ImmutableOpenMap<String, MappingMetaData>>builder()
-                        .fPut(AnomalyDetectorsIndex.jobResultsAliasedName("foo"), typeMappings).build();
-        when(getMappingsResponse.mappings()).thenReturn(mappings);
-        clientBuilder.prepareGetMapping(getMappingsResponse);
-
-        Job.Builder job = buildJobBuilder("foo123");
-        job.setResultsIndexName("foo");
-        JobResultsProvider provider = createProvider(clientBuilder.build());
-
-        Index index = mock(Index.class);
-        when(index.getName()).thenReturn(AnomalyDetectorsIndex.jobResultsAliasedName("foo"));
-        IndexMetaData indexMetaData = mock(IndexMetaData.class);
-        when(indexMetaData.getIndex()).thenReturn(index);
-
-        ImmutableOpenMap<String, AliasMetaData> aliases = ImmutableOpenMap.of();
-        when(indexMetaData.getAliases()).thenReturn(aliases);
-
-        ImmutableOpenMap<String, IndexMetaData> indexMap = ImmutableOpenMap.<String, IndexMetaData>builder()
-                .fPut(AnomalyDetectorsIndex.jobResultsAliasedName("foo"), indexMetaData).build();
-
-        ClusterState cs2 = ClusterState.builder(new ClusterName("_name"))
-                .metaData(MetaData.builder().indices(indexMap)).build();
-
-        ClusterService clusterService = mock(ClusterService.class);
-
-        doAnswer(invocationOnMock -> {
-            AckedClusterStateUpdateTask<Boolean> task = (AckedClusterStateUpdateTask<Boolean>) invocationOnMock.getArguments()[1];
-            task.execute(cs2);
-            return null;
-        }).when(clusterService).submitStateUpdateTask(eq("put-job-foo123"), any(AckedClusterStateUpdateTask.class));
-
-        doAnswer(invocationOnMock -> {
-            AckedClusterStateUpdateTask<Boolean> task = (AckedClusterStateUpdateTask<Boolean>) invocationOnMock.getArguments()[1];
-            task.execute(cs2);
-            return null;
-        }).when(clusterService).submitStateUpdateTask(eq("index-aliases"), any(AckedClusterStateUpdateTask.class));
-
-        provider.createJobResultIndex(job.build(), cs2, new ActionListener<Boolean>() {
-            @Override
-            public void onResponse(Boolean aBoolean) {
-                assertTrue(aBoolean);
-                verify(clientBuilder.build().admin().indices(), times(1)).preparePutMapping(any());
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                fail(e.toString());
-            }
-        });
-    }
-
-    @SuppressWarnings("unchecked")
-    public void testCreateJobRelatedIndicies_createsAliasBecauseIndexNameIsSet() {
-        String indexName = AnomalyDetectorsIndexFields.RESULTS_INDEX_PREFIX + "custom-bar";
-        String readAliasName = AnomalyDetectorsIndex.jobResultsAliasedName("foo");
-        String writeAliasName = AnomalyDetectorsIndex.resultsWriteAlias("foo");
-        QueryBuilder jobFilter = QueryBuilders.termQuery("job_id", "foo");
-
-        MockClientBuilder clientBuilder = new MockClientBuilder(CLUSTER_NAME);
-        ArgumentCaptor<CreateIndexRequest> captor = ArgumentCaptor.forClass(CreateIndexRequest.class);
-        clientBuilder.createIndexRequest(captor, indexName);
-        clientBuilder.prepareAlias(indexName, readAliasName, jobFilter);
-        clientBuilder.prepareAlias(indexName, writeAliasName);
-        clientBuilder.preparePutMapping(mock(AcknowledgedResponse.class), Result.TYPE.getPreferredName());
-
-        Job.Builder job = buildJobBuilder("foo");
-        job.setResultsIndexName("bar");
-        Client client = clientBuilder.build();
-        JobResultsProvider provider = createProvider(client);
-
-        ImmutableOpenMap<String, IndexMetaData> indexMap = ImmutableOpenMap.<String, IndexMetaData>builder().build();
-
-        ClusterState cs = ClusterState.builder(new ClusterName("_name"))
-                .metaData(MetaData.builder().indices(indexMap)).build();
-
-        ClusterService clusterService = mock(ClusterService.class);
-
-        doAnswer(invocationOnMock -> {
-            AckedClusterStateUpdateTask<Boolean> task = (AckedClusterStateUpdateTask<Boolean>) invocationOnMock.getArguments()[1];
-            task.execute(cs);
-            return null;
-        }).when(clusterService).submitStateUpdateTask(eq("put-job-foo"), any(AckedClusterStateUpdateTask.class));
-
-        provider.createJobResultIndex(job.build(), cs, new ActionListener<Boolean>() {
-            @Override
-            public void onResponse(Boolean aBoolean) {
-                verify(client.admin().indices(), times(1)).prepareAliases();
-                verify(client.admin().indices().prepareAliases(), times(1)).addAlias(indexName, readAliasName, jobFilter);
-                verify(client.admin().indices().prepareAliases(), times(1)).addAlias(indexName, writeAliasName);
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                fail(e.toString());
-            }
-        });
-    }
 
     public void testBuckets_OneBucketNoInterim() throws IOException {
         String jobId = "TestJobIdentification";
@@ -839,21 +664,19 @@ public class JobResultsProviderTests extends ESTestCase {
 
     public void testTimingStats_Ok() throws IOException {
         String indexName = AnomalyDetectorsIndex.jobResultsAliasedName("foo");
-
-        Map<String, Object> timingStatsMap = new HashMap<>();
-        timingStatsMap.put(Job.ID.getPreferredName(), "foo");
-        timingStatsMap.put(TimingStats.BUCKET_COUNT.getPreferredName(), 7);
-        timingStatsMap.put(TimingStats.MIN_BUCKET_PROCESSING_TIME_MS.getPreferredName(), 1.0);
-        timingStatsMap.put(TimingStats.MAX_BUCKET_PROCESSING_TIME_MS.getPreferredName(), 1000.0);
-        timingStatsMap.put(TimingStats.AVG_BUCKET_PROCESSING_TIME_MS.getPreferredName(), 666.0);
-        timingStatsMap.put(TimingStats.EXPONENTIAL_AVG_BUCKET_PROCESSING_TIME_MS.getPreferredName(), 777.0);
-        Map<String, Object> contextMap = new HashMap<>();
-        contextMap.put(ExponentialAverageCalculationContext.INCREMENTAL_METRIC_VALUE_MS.getPreferredName(), 100.0);
-        contextMap.put(ExponentialAverageCalculationContext.LATEST_TIMESTAMP.getPreferredName(), Instant.ofEpochMilli(1000_000_000));
-        contextMap.put(ExponentialAverageCalculationContext.PREVIOUS_EXPONENTIAL_AVERAGE_MS.getPreferredName(), 200.0);
-        timingStatsMap.put(DatafeedTimingStats.EXPONENTIAL_AVG_CALCULATION_CONTEXT.getPreferredName(), contextMap);
-        
-        List<Map<String, Object>> source = Arrays.asList(timingStatsMap);
+        List<Map<String, Object>> source =
+            Arrays.asList(
+                Map.of(
+                    Job.ID.getPreferredName(), "foo",
+                    TimingStats.BUCKET_COUNT.getPreferredName(), 7,
+                    TimingStats.MIN_BUCKET_PROCESSING_TIME_MS.getPreferredName(), 1.0,
+                    TimingStats.MAX_BUCKET_PROCESSING_TIME_MS.getPreferredName(), 1000.0,
+                    TimingStats.AVG_BUCKET_PROCESSING_TIME_MS.getPreferredName(), 666.0,
+                    TimingStats.EXPONENTIAL_AVG_BUCKET_PROCESSING_TIME_MS.getPreferredName(), 777.0,
+                    TimingStats.EXPONENTIAL_AVG_CALCULATION_CONTEXT.getPreferredName(), Map.of(
+                        ExponentialAverageCalculationContext.INCREMENTAL_METRIC_VALUE_MS.getPreferredName(), 100.0,
+                        ExponentialAverageCalculationContext.LATEST_TIMESTAMP.getPreferredName(), Instant.ofEpochMilli(1000_000_000),
+                        ExponentialAverageCalculationContext.PREVIOUS_EXPONENTIAL_AVERAGE_MS.getPreferredName(), 200.0)));
         SearchResponse response = createSearchResponse(source);
         Client client = getMockedClient(
             queryBuilder -> assertThat(queryBuilder.getName(), equalTo("ids")),
@@ -866,7 +689,7 @@ public class JobResultsProviderTests extends ESTestCase {
         provider.timingStats(
             "foo",
             stats -> assertThat(stats, equalTo(new TimingStats("foo", 7, 1.0, 1000.0, 666.0, 777.0, context))),
-            e -> { throw new AssertionError(); });
+            e -> { throw new AssertionError("Failure getting timing stats", e); });
 
         verify(client).prepareSearch(indexName);
         verify(client).threadPool();
@@ -887,7 +710,7 @@ public class JobResultsProviderTests extends ESTestCase {
         provider.timingStats(
             "foo",
             stats -> assertThat(stats, equalTo(new TimingStats("foo"))),
-            e -> { throw new AssertionError(); });
+            e -> { throw new AssertionError("Failure getting timing stats", e); });
 
         verify(client).prepareSearch(indexName);
         verify(client).threadPool();
@@ -900,39 +723,37 @@ public class JobResultsProviderTests extends ESTestCase {
 
         JobResultsProvider provider = createProvider(client);
         provider.datafeedTimingStats(
-            Arrays.asList(),
-            statsByJobId -> assertThat(statsByJobId, anEmptyMap()),
-            e -> { throw new AssertionError(); });
+            List.of(),
+            ActionListener.wrap(
+                statsByJobId -> assertThat(statsByJobId, anEmptyMap()),
+                e -> { throw new AssertionError("Failure getting datafeed timing stats", e); }));
 
         verifyZeroInteractions(client);
     }
 
     public void testDatafeedTimingStats_MultipleDocumentsAtOnce() throws IOException {
-        Map<String, Object> sourceFooMap = new HashMap<>();
-        sourceFooMap.put(Job.ID.getPreferredName(), "foo");
-        sourceFooMap.put(DatafeedTimingStats.SEARCH_COUNT.getPreferredName(), 6);
-        sourceFooMap.put(DatafeedTimingStats.BUCKET_COUNT.getPreferredName(), 66);
-        sourceFooMap.put(DatafeedTimingStats.TOTAL_SEARCH_TIME_MS.getPreferredName(), 666.0);
-        Map<String, Object> contextFooMap = new HashMap<>();
-        contextFooMap.put(ExponentialAverageCalculationContext.INCREMENTAL_METRIC_VALUE_MS.getPreferredName(), 600.0);
-        contextFooMap.put(ExponentialAverageCalculationContext.LATEST_TIMESTAMP.getPreferredName(), Instant.ofEpochMilli(100000600));
-        contextFooMap.put(ExponentialAverageCalculationContext.PREVIOUS_EXPONENTIAL_AVERAGE_MS.getPreferredName(), 60.0);
-        sourceFooMap.put(DatafeedTimingStats.EXPONENTIAL_AVG_CALCULATION_CONTEXT.getPreferredName(), contextFooMap);
-
-        Map<String, Object> sourceBarMap = new HashMap<>();
-        sourceBarMap.put(Job.ID.getPreferredName(), "bar");
-        sourceBarMap.put(DatafeedTimingStats.SEARCH_COUNT.getPreferredName(), 7);
-        sourceBarMap.put(DatafeedTimingStats.BUCKET_COUNT.getPreferredName(), 77);
-        sourceBarMap.put(DatafeedTimingStats.TOTAL_SEARCH_TIME_MS.getPreferredName(), 777.0);
-        Map<String, Object> contextBarMap = new HashMap<>();
-        contextBarMap.put(ExponentialAverageCalculationContext.INCREMENTAL_METRIC_VALUE_MS.getPreferredName(), 700.0);
-        contextBarMap.put(ExponentialAverageCalculationContext.LATEST_TIMESTAMP.getPreferredName(), Instant.ofEpochMilli(100000700));
-        contextBarMap.put(ExponentialAverageCalculationContext.PREVIOUS_EXPONENTIAL_AVERAGE_MS.getPreferredName(), 70.0);
-        sourceBarMap.put(DatafeedTimingStats.EXPONENTIAL_AVG_CALCULATION_CONTEXT.getPreferredName(), contextBarMap);
-
-        List<Map<String, Object>> sourceFoo = Arrays.asList(sourceFooMap);
-        List<Map<String, Object>> sourceBar = Arrays.asList(sourceBarMap);
-
+        List<Map<String, Object>> sourceFoo =
+            Arrays.asList(
+                Map.of(
+                    Job.ID.getPreferredName(), "foo",
+                    DatafeedTimingStats.SEARCH_COUNT.getPreferredName(), 6,
+                    DatafeedTimingStats.BUCKET_COUNT.getPreferredName(), 66,
+                    DatafeedTimingStats.TOTAL_SEARCH_TIME_MS.getPreferredName(), 666.0,
+                    DatafeedTimingStats.EXPONENTIAL_AVG_CALCULATION_CONTEXT.getPreferredName(), Map.of(
+                        ExponentialAverageCalculationContext.INCREMENTAL_METRIC_VALUE_MS.getPreferredName(), 600.0,
+                        ExponentialAverageCalculationContext.LATEST_TIMESTAMP.getPreferredName(), Instant.ofEpochMilli(100000600),
+                        ExponentialAverageCalculationContext.PREVIOUS_EXPONENTIAL_AVERAGE_MS.getPreferredName(), 60.0)));
+        List<Map<String, Object>> sourceBar =
+            Arrays.asList(
+                Map.of(
+                    Job.ID.getPreferredName(), "bar",
+                    DatafeedTimingStats.SEARCH_COUNT.getPreferredName(), 7,
+                    DatafeedTimingStats.BUCKET_COUNT.getPreferredName(), 77,
+                    DatafeedTimingStats.TOTAL_SEARCH_TIME_MS.getPreferredName(), 777.0,
+                    DatafeedTimingStats.EXPONENTIAL_AVG_CALCULATION_CONTEXT.getPreferredName(), Map.of(
+                        ExponentialAverageCalculationContext.INCREMENTAL_METRIC_VALUE_MS.getPreferredName(), 700.0,
+                        ExponentialAverageCalculationContext.LATEST_TIMESTAMP.getPreferredName(), Instant.ofEpochMilli(100000700),
+                        ExponentialAverageCalculationContext.PREVIOUS_EXPONENTIAL_AVERAGE_MS.getPreferredName(), 70.0)));
         SearchResponse responseFoo = createSearchResponse(sourceFoo);
         SearchResponse responseBar = createSearchResponse(sourceBar);
         MultiSearchResponse multiSearchResponse = new MultiSearchResponse(
@@ -965,13 +786,18 @@ public class JobResultsProviderTests extends ESTestCase {
             new ExponentialAverageCalculationContext(600.0, Instant.ofEpochMilli(100000600), 60.0);
         ExponentialAverageCalculationContext contextBar =
             new ExponentialAverageCalculationContext(700.0, Instant.ofEpochMilli(100000700), 70.0);
-        Map<String, DatafeedTimingStats> expectedStatsByJobId = new HashMap<>();
-        expectedStatsByJobId.put("foo", new DatafeedTimingStats("foo", 6, 66, 666.0, contextFoo));
-        expectedStatsByJobId.put("bar", new DatafeedTimingStats("bar", 7, 77, 777.0, contextBar));
         provider.datafeedTimingStats(
-            Arrays.asList("foo", "bar"),
-            statsByJobId -> assertThat(statsByJobId, equalTo(expectedStatsByJobId)),
-            e -> { throw new AssertionError(); });
+            List.of("foo", "bar"),
+            ActionListener.wrap(
+                statsByJobId ->
+                    assertThat(
+                        statsByJobId,
+                        equalTo(
+                            Map.of(
+                                "foo", new DatafeedTimingStats("foo", 6, 66, 666.0, contextFoo),
+                                "bar", new DatafeedTimingStats("bar", 7, 77, 777.0, contextBar)))),
+                e -> fail(e.getMessage())
+            ));
 
         verify(client).threadPool();
         verify(client).prepareMultiSearch();
@@ -983,19 +809,17 @@ public class JobResultsProviderTests extends ESTestCase {
 
     public void testDatafeedTimingStats_Ok() throws IOException {
         String indexName = AnomalyDetectorsIndex.jobResultsAliasedName("foo");
-
-        Map<String, Object> sourceFooMap = new HashMap<>();
-        sourceFooMap.put(Job.ID.getPreferredName(), "foo");
-        sourceFooMap.put(DatafeedTimingStats.SEARCH_COUNT.getPreferredName(), 6);
-        sourceFooMap.put(DatafeedTimingStats.BUCKET_COUNT.getPreferredName(), 66);
-        sourceFooMap.put(DatafeedTimingStats.TOTAL_SEARCH_TIME_MS.getPreferredName(), 666.0);
-        Map<String, Object> contextFooMap = new HashMap<>();
-        contextFooMap.put(ExponentialAverageCalculationContext.INCREMENTAL_METRIC_VALUE_MS.getPreferredName(), 600.0);
-        contextFooMap.put(ExponentialAverageCalculationContext.LATEST_TIMESTAMP.getPreferredName(), Instant.ofEpochMilli(100000600));
-        contextFooMap.put(ExponentialAverageCalculationContext.PREVIOUS_EXPONENTIAL_AVERAGE_MS.getPreferredName(), 60.0);
-        sourceFooMap.put(DatafeedTimingStats.EXPONENTIAL_AVG_CALCULATION_CONTEXT.getPreferredName(), contextFooMap);
-
-        List<Map<String, Object>> source = Arrays.asList(sourceFooMap);
+        List<Map<String, Object>> source =
+            Arrays.asList(
+                Map.of(
+                    Job.ID.getPreferredName(), "foo",
+                    DatafeedTimingStats.SEARCH_COUNT.getPreferredName(), 6,
+                    DatafeedTimingStats.BUCKET_COUNT.getPreferredName(), 66,
+                    DatafeedTimingStats.TOTAL_SEARCH_TIME_MS.getPreferredName(), 666.0,
+                    DatafeedTimingStats.EXPONENTIAL_AVG_CALCULATION_CONTEXT.getPreferredName(), Map.of(
+                        ExponentialAverageCalculationContext.INCREMENTAL_METRIC_VALUE_MS.getPreferredName(), 600.0,
+                        ExponentialAverageCalculationContext.LATEST_TIMESTAMP.getPreferredName(), Instant.ofEpochMilli(100000600),
+                        ExponentialAverageCalculationContext.PREVIOUS_EXPONENTIAL_AVERAGE_MS.getPreferredName(), 60.0)));
         SearchResponse response = createSearchResponse(source);
         Client client = getMockedClient(
             queryBuilder -> assertThat(queryBuilder.getName(), equalTo("ids")),
@@ -1008,7 +832,7 @@ public class JobResultsProviderTests extends ESTestCase {
         provider.datafeedTimingStats(
             "foo",
             stats -> assertThat(stats, equalTo(new DatafeedTimingStats("foo", 6, 66, 666.0, contextFoo))),
-            e -> { throw new AssertionError(); });
+            e -> { throw new AssertionError("Failure getting datafeed timing stats", e); });
 
         verify(client).prepareSearch(indexName);
         verify(client).threadPool();
@@ -1029,12 +853,37 @@ public class JobResultsProviderTests extends ESTestCase {
         provider.datafeedTimingStats(
             "foo",
             stats -> assertThat(stats, equalTo(new DatafeedTimingStats("foo"))),
-            e -> { throw new AssertionError(); });
+            e -> { throw new AssertionError("Failure getting datafeed timing stats", e); });
 
         verify(client).prepareSearch(indexName);
         verify(client).threadPool();
         verify(client).search(any(SearchRequest.class), any());
         verifyNoMoreInteractions(client);
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testCreateTermFieldsMapping() throws IOException {
+
+        XContentBuilder termFieldsMapping = JsonXContent.contentBuilder();
+        JobResultsProvider.createTermFieldsMapping(termFieldsMapping, Arrays.asList("apple", "strawberry",
+                AnomalyRecord.BUCKET_SPAN.getPreferredName()));
+
+        XContentParser parser = createParser(termFieldsMapping);
+        Map<String, Object> properties = (Map<String, Object>) parser.map().get("properties");
+
+        Map<String, Object> instanceMapping = (Map<String, Object>) properties.get("apple");
+        assertNotNull(instanceMapping);
+        String dataType = (String)instanceMapping.get("type");
+        assertEquals("keyword", dataType);
+
+        instanceMapping = (Map<String, Object>) properties.get("strawberry");
+        assertNotNull(instanceMapping);
+        dataType = (String)instanceMapping.get("type");
+        assertEquals("keyword", dataType);
+
+        // check no mapping for the reserved field
+        instanceMapping = (Map<String, Object>) properties.get(AnomalyRecord.BUCKET_SPAN.getPreferredName());
+        assertNull(instanceMapping);
     }
 
     private JobResultsProvider createProvider(Client client) {
@@ -1052,7 +901,7 @@ public class JobResultsProviderTests extends ESTestCase {
             fields.put("field_1", new DocumentField("field_1", Collections.singletonList("foo")));
             fields.put("field_2", new DocumentField("field_2", Collections.singletonList("foo")));
 
-            SearchHit hit = new SearchHit(123, String.valueOf(map.hashCode()), new Text("foo"), fields)
+            SearchHit hit = new SearchHit(123, String.valueOf(map.hashCode()), fields)
                     .sourceRef(BytesReference.bytes(XContentFactory.jsonBuilder().map(_source)));
 
             list.add(hit);

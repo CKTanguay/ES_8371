@@ -5,24 +5,25 @@
  */
 package org.elasticsearch.xpack.ml.job.process.autodetect;
 
-import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.env.TestEnvironment;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.xpack.core.ml.job.config.Job;
 import org.elasticsearch.xpack.ml.MachineLearning;
 import org.elasticsearch.xpack.ml.job.process.autodetect.params.AutodetectParams;
+import org.elasticsearch.xpack.ml.notifications.AnomalyDetectionAuditor;
 import org.elasticsearch.xpack.ml.process.NativeController;
 import org.elasticsearch.xpack.ml.process.ProcessPipes;
+import org.elasticsearch.xpack.ml.utils.persistence.ResultsPersisterService;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Set;
 
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -41,9 +42,10 @@ public class NativeAutodetectProcessFactoryTests extends ESTestCase {
             .build();
         Environment env = TestEnvironment.newEnvironment(settings);
         NativeController nativeController = mock(NativeController.class);
-        Client client = mock(Client.class);
+        ResultsPersisterService resultsPersisterService = mock(ResultsPersisterService.class);
+        AnomalyDetectionAuditor anomalyDetectionAuditor = mock(AnomalyDetectionAuditor.class);
         ClusterSettings clusterSettings = new ClusterSettings(settings,
-            Sets.newHashSet(MachineLearning.PROCESS_CONNECT_TIMEOUT, AutodetectBuilder.MAX_ANOMALY_RECORDS_SETTING_DYNAMIC));
+            Set.of(MachineLearning.PROCESS_CONNECT_TIMEOUT, AutodetectBuilder.MAX_ANOMALY_RECORDS_SETTING_DYNAMIC));
         ClusterService clusterService = mock(ClusterService.class);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
         Job job = mock(Job.class);
@@ -51,8 +53,13 @@ public class NativeAutodetectProcessFactoryTests extends ESTestCase {
         AutodetectParams autodetectParams = mock(AutodetectParams.class);
         ProcessPipes processPipes = mock(ProcessPipes.class);
 
-        NativeAutodetectProcessFactory nativeAutodetectProcessFactory =
-            new NativeAutodetectProcessFactory(env, settings, nativeController, client, clusterService);
+        NativeAutodetectProcessFactory nativeAutodetectProcessFactory = new NativeAutodetectProcessFactory(
+            env,
+            settings,
+            nativeController,
+            clusterService,
+            resultsPersisterService,
+            anomalyDetectionAuditor);
         nativeAutodetectProcessFactory.setProcessConnectTimeout(TimeValue.timeValueSeconds(timeoutSeconds));
         nativeAutodetectProcessFactory.createNativeProcess(job, autodetectParams, processPipes, Collections.emptyList());
 

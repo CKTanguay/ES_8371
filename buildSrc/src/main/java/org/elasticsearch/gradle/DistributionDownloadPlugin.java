@@ -22,7 +22,7 @@ package org.elasticsearch.gradle;
 import org.elasticsearch.gradle.ElasticsearchDistribution.Flavor;
 import org.elasticsearch.gradle.ElasticsearchDistribution.Platform;
 import org.elasticsearch.gradle.ElasticsearchDistribution.Type;
-import org.elasticsearch.gradle.tool.ClasspathUtils;
+import org.elasticsearch.gradle.info.BuildParams;
 import org.elasticsearch.gradle.info.GlobalBuildInfoPlugin;
 import org.gradle.api.GradleException;
 import org.gradle.api.NamedDomainObjectContainer;
@@ -36,19 +36,19 @@ import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.repositories.IvyArtifactRepository;
 import org.gradle.api.credentials.HttpHeaderCredentials;
 import org.gradle.api.file.FileTree;
-import org.gradle.api.file.RelativePath;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.tasks.Sync;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.authentication.http.HttpHeaderAuthentication;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
+
+import static org.elasticsearch.gradle.Util.capitalize;
 
 /**
  * A plugin to manage getting and extracting distributions of Elasticsearch.
@@ -81,7 +81,7 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
 
         setupDownloadServiceRepo(project);
 
-        if (ClasspathUtils.isElasticsearchProject(project)) {
+        if (BuildParams.isInternal()) {
             ExtraPropertiesExtension extraProperties = project.getExtensions().getExtraProperties();
             this.bwcVersions = (BwcVersions) extraProperties.get("bwcVersions");
         }
@@ -103,12 +103,14 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
             // for the distribution as a file, just depend on the artifact directly
             dependencies.add(distribution.configuration.getName(), dependencyNotation(project, distribution));
 
-            // no extraction allowed for rpm or deb
-            if (distribution.getType() != Type.RPM && distribution.getType() != Type.DEB) {
+            // no extraction allowed for rpm, deb or docker
+            if (distribution.getType().shouldExtract()) {
                 // for the distribution extracted, add a root level task that does the extraction, and depend on that
                 // extracted configuration as an artifact consisting of the extracted distribution directory
-                dependencies.add(distribution.getExtracted().configuration.getName(),
-                    projectDependency(project, ":", configName("extracted_elasticsearch", distribution)));
+                dependencies.add(
+                    distribution.getExtracted().configuration.getName(),
+                    projectDependency(project, ":", configName("extracted_elasticsearch", distribution))
+                );
                 // ensure a root level download task exists
                 setupRootDownload(project.getRootProject(), distribution);
             }
@@ -141,7 +143,7 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
             TaskProvider<Sync> extractTask = rootProject.getTasks().register(extractTaskName, Sync.class, syncTask -> {
                 syncTask.dependsOn(downloadConfig);
                 syncTask.into(extractDir);
-                syncTask.from((Callable<FileTree>)() -> {
+                syncTask.from((Callable<FileTree>) () -> {
                     File archiveFile = archiveGetter.get();
                     String archivePath = archiveFile.toString();
                     if (archivePath.endsWith(".zip")) {
@@ -151,18 +153,13 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
                     }
                     throw new IllegalStateException("unexpected file extension on [" + archivePath + "]");
                 });
-
-                // Workaround for https://github.com/elastic/elasticsearch/issues/49417
-                syncTask.eachFile(details -> {
-                    String[] segments = details.getRelativePath().getSegments();
-                    if (segments[0].equals(".")) {
-                        details.setRelativePath(new RelativePath(true, Arrays.copyOfRange(segments, 1, segments.length)));
-                    }
-                });
             });
-            rootProject.getArtifacts().add(extractedConfigName,
-                rootProject.getLayout().getProjectDirectory().dir(extractDir),
-                artifact -> artifact.builtBy(extractTask));
+            rootProject.getArtifacts()
+                .add(
+                    extractedConfigName,
+                    rootProject.getLayout().getProjectDirectory().dir(extractDir),
+                    artifact -> artifact.builtBy(extractTask)
+                );
         }
     }
 
@@ -193,7 +190,7 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
             return;
         }
         addIvyRepo(project, DOWNLOAD_REPO_NAME, "https://artifacts.elastic.co", FAKE_IVY_GROUP);
-        if (ClasspathUtils.isElasticsearchProject(project) == false) {
+        if (BuildParams.isInternal() == false) {
             // external, so add snapshot repo as well
             addIvyRepo(project, SNAPSHOT_REPO_NAME, "https://snapshots.elastic.co", FAKE_SNAPSHOT_IVY_GROUP);
         }
@@ -212,7 +209,7 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
      */
     private Object dependencyNotation(Project project, ElasticsearchDistribution distribution) {
 
-        if (ClasspathUtils.isElasticsearchProject(project)) {
+        if (BuildParams.isInternal()) {
             // non-external project, so depend on local build
 
             if (VersionProperties.getElasticsearch().equals(distribution.getVersion())) {
@@ -229,7 +226,6 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
             return "org.elasticsearch.distribution.integ-test-zip:elasticsearch:" + distribution.getVersion() + "@zip";
         }
 
-
         Version distroVersion = Version.fromString(distribution.getVersion());
         String extension = distribution.getType().toString();
         String classifier = ":x86_64";
@@ -241,13 +237,7 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
                 classifier = "";
             }
         } else if (distribution.getType() == Type.DEB) {
-            if (distroVersion.onOrAfter("7.0.0")) {
-                classifier = ":amd64";
-            } else {
-                classifier = "";
-            }
-        } else if (distribution.getType() == Type.RPM && distroVersion.before("7.0.0")) {
-            classifier = "";
+            classifier = ":amd64";
         }
         String flavor = "";
         if (distribution.getFlavor() == Flavor.OSS && distroVersion.onOrAfter("6.3.0")) {
@@ -259,7 +249,6 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
     }
 
     private static Dependency projectDependency(Project project, String projectPath, String projectConfig) {
-
         if (project.findProject(projectPath) == null) {
             throw new GradleException("no project [" + projectPath + "], project names: " + project.getRootProject().getAllprojects());
         }
@@ -271,11 +260,20 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
 
     private static String distributionProjectPath(ElasticsearchDistribution distribution) {
         String projectPath = ":distribution";
-        if (distribution.getType() == Type.INTEG_TEST_ZIP) {
-            projectPath += ":archives:integ-test-zip";
-        } else {
-            projectPath += distribution.getType() == Type.ARCHIVE ? ":archives:" : ":packages:";
-            projectPath += distributionProjectName(distribution);
+        switch (distribution.getType()) {
+            case INTEG_TEST_ZIP:
+                projectPath += ":archives:integ-test-zip";
+                break;
+
+            case DOCKER:
+                projectPath += ":docker:";
+                projectPath += distributionProjectName(distribution);
+                break;
+
+            default:
+                projectPath += distribution.getType() == Type.ARCHIVE ? ":archives:" : ":packages:";
+                projectPath += distributionProjectName(distribution);
+                break;
         }
         return projectPath;
     }
@@ -288,13 +286,12 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
         if (distribution.getBundledJdk() == false) {
             projectName += "no-jdk-";
         }
+
         if (distribution.getType() == Type.ARCHIVE) {
-            if (Version.fromString(distribution.getVersion()).onOrAfter("7.0.0")) {
-                Platform platform = distribution.getPlatform();
-                projectName += platform.toString() + (platform == Platform.WINDOWS ? "-zip" : "-tar");
-            } else {
-                projectName = distribution.getFlavor().equals(Flavor.DEFAULT) ?"zip" : "oss-zip";
-            }
+            Platform platform = distribution.getPlatform();
+            projectName += platform.toString() + (platform == Platform.WINDOWS ? "-zip" : "-tar");
+        } else if (distribution.getType() == Type.DOCKER) {
+            projectName += "docker-export";
         } else {
             projectName += distribution.getType();
         }
@@ -302,13 +299,16 @@ public class DistributionDownloadPlugin implements Plugin<Project> {
     }
 
     private static String configName(String prefix, ElasticsearchDistribution distribution) {
-        return prefix + "_" + distribution.getVersion() + "_" + distribution.getType() + "_" +
-            (distribution.getPlatform() == null ? "" : distribution.getPlatform() + "_")
-            + distribution.getFlavor() + (distribution.getBundledJdk() ? "" : "_nojdk");
-    }
-
-    private static String capitalize(String s) {
-        return s.substring(0, 1).toUpperCase(Locale.ROOT) + s.substring(1);
+        return String.format(
+            Locale.ROOT,
+            "%s_%s_%s_%s%s%s",
+            prefix,
+            distribution.getVersion(),
+            distribution.getType(),
+            distribution.getPlatform() == null ? "" : distribution.getPlatform() + "_",
+            distribution.getFlavor(),
+            distribution.getBundledJdk() ? "" : "_nojdk"
+        );
     }
 
     private static String extractTaskName(ElasticsearchDistribution distribution) {

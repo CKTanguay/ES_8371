@@ -39,15 +39,15 @@ abstract class TrustConfig {
 
     /**
      * Creates a {@link X509ExtendedTrustManager} based on the provided configuration
-     * @param environment the environment to resolve files against or null in the case of running in a transport client
+     * @param environment the environment to resolve files against
      */
-    abstract X509ExtendedTrustManager createTrustManager(@Nullable Environment environment);
+    abstract X509ExtendedTrustManager createTrustManager(Environment environment);
 
-    abstract Collection<CertificateInfo> certificates(@Nullable Environment environment) throws GeneralSecurityException, IOException;
+    abstract Collection<CertificateInfo> certificates(Environment environment) throws GeneralSecurityException, IOException;
 
     /**
      * Returns a list of files that should be monitored for changes
-     * @param environment the environment to resolve files against or null in the case of running in a transport client
+     * @param environment the environment to resolve files against
      */
     abstract List<Path> filesToMonitor(@Nullable Environment environment);
 
@@ -70,7 +70,7 @@ abstract class TrustConfig {
      * @deprecated Use {@link #getStore(Path, String, SecureString)} instead
      */
     @Deprecated
-    KeyStore getStore(@Nullable Environment environment, @Nullable String storePath, String storeType, SecureString storePassword)
+    KeyStore getStore(Environment environment, @Nullable String storePath, String storeType, SecureString storePassword)
         throws GeneralSecurityException, IOException {
         return getStore(CertParsingUtils.resolvePath(storePath, environment), storeType, storePassword);
     }
@@ -90,7 +90,7 @@ abstract class TrustConfig {
      * @throws NoSuchAlgorithmException if the algorithm used to check the integrity of the keystore cannot be found
      * @throws IOException              if there is an I/O issue with the KeyStore data or the password is incorrect
      */
-    KeyStore getStore(@Nullable Path storePath, String storeType, SecureString storePassword) throws IOException, GeneralSecurityException {
+    KeyStore getStore(Path storePath, String storeType, SecureString storePassword) throws IOException, GeneralSecurityException {
         if (null != storePath) {
             try (InputStream in = Files.newInputStream(storePath)) {
                 KeyStore ks = KeyStore.getInstance(storeType);
@@ -165,9 +165,8 @@ abstract class TrustConfig {
 
             try {
                 return CertParsingUtils.trustManager(trustConfigs.stream()
-                        .flatMap((tc) -> Arrays.stream(tc.createTrustManager(environment).getAcceptedIssuers()))
-                        .collect(Collectors.toList())
-                        .toArray(new X509Certificate[0]));
+                    .flatMap((tc) -> Arrays.stream(tc.createTrustManager(environment).getAcceptedIssuers()))
+                    .toArray(X509Certificate[]::new));
             } catch (Exception e) {
                 throw new ElasticsearchException("failed to create trust manager", e);
             }
@@ -183,7 +182,7 @@ abstract class TrustConfig {
         }
 
         @Override
-        List<Path> filesToMonitor(@Nullable Environment environment) {
+        List<Path> filesToMonitor(Environment environment) {
             return trustConfigs.stream().flatMap((tc) -> tc.filesToMonitor(environment).stream()).collect(Collectors.toList());
         }
 

@@ -5,7 +5,6 @@
  */
 package org.elasticsearch.xpack.core.ml.action;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionType;
 import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.support.tasks.BaseTasksRequest;
@@ -41,7 +40,7 @@ public class CloseJobAction extends ActionType<CloseJobAction.Response> {
         public static final ParseField TIMEOUT = new ParseField("timeout");
         public static final ParseField FORCE = new ParseField("force");
         public static final ParseField ALLOW_NO_JOBS = new ParseField("allow_no_jobs");
-        public static ObjectParser<Request, Void> PARSER = new ObjectParser<>(NAME, Request::new);
+        public static final ObjectParser<Request, Void> PARSER = new ObjectParser<>(NAME, Request::new);
 
         static {
             PARSER.declareString(Request::setJobId, Job.ID);
@@ -81,9 +80,7 @@ public class CloseJobAction extends ActionType<CloseJobAction.Response> {
             force = in.readBoolean();
             openJobIds = in.readStringArray();
             local = in.readBoolean();
-            if (in.getVersion().onOrAfter(Version.V_6_1_0)) {
-                allowNoJobs = in.readBoolean();
-            }
+            allowNoJobs = in.readBoolean();
         }
 
         @Override
@@ -94,9 +91,7 @@ public class CloseJobAction extends ActionType<CloseJobAction.Response> {
             out.writeBoolean(force);
             out.writeStringArray(openJobIds);
             out.writeBoolean(local);
-            if (out.getVersion().onOrAfter(Version.V_6_1_0)) {
-                out.writeBoolean(allowNoJobs);
-            }
+            out.writeBoolean(allowNoJobs);
         }
 
         public Request(String jobId) {

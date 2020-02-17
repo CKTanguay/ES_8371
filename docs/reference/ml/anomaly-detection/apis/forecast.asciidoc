@@ -59,7 +59,7 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=job-id-anomaly-detection]
 
 [source,console]
 --------------------------------------------------
-POST _ml/anomaly_detectors/total-requests/_forecast
+POST _ml/anomaly_detectors/low_request_rate/_forecast
 {
   "duration": "10d"
 }
@@ -77,4 +77,3 @@ When the forecast is created, you receive the following results:
 // NOTCONSOLE
 
 You can subsequently see the forecast in the *Single Metric Viewer* in {kib}.
-

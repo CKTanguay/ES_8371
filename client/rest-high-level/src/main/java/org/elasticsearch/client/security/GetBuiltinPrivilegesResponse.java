@@ -25,8 +25,6 @@ import org.elasticsearch.common.xcontent.XContentParser;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -41,8 +39,8 @@ public final class GetBuiltinPrivilegesResponse {
     private final Set<String> indexPrivileges;
 
     public GetBuiltinPrivilegesResponse(Collection<String> cluster, Collection<String> index) {
-        this.clusterPrivileges = Collections.unmodifiableSet(new HashSet<>(cluster));
-        this.indexPrivileges = Collections.unmodifiableSet(new HashSet<>(index));
+        this.clusterPrivileges = Set.copyOf(cluster);
+        this.indexPrivileges = Set.copyOf(index);
     }
 
     public Set<String> getClusterPrivileges() {

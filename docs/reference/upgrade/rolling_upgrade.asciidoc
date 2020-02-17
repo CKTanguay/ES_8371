@@ -17,9 +17,10 @@ Rolling upgrades are supported:
 
 * Between minor versions
 * {stack-ref-68}/upgrading-elastic-stack.html[From 5.6 to 6.8]
-* From 6.8 to {version}
+* {stack-ref-70}/upgrading-elastic-stack.html[From 6.8 to 7.0]
+* From {prev-major-version} to {version}
 
-Upgrading directly to {version} from 6.7 or earlier requires a
+Upgrading directly to {version} from 6.6 or earlier requires a
 <<restart-upgrade, full cluster restart>>.
 
 include::preparing_to_upgrade.asciidoc[]
@@ -35,15 +36,17 @@ To perform a rolling upgrade to {version}:
 include::disable-shard-alloc.asciidoc[]
 --
 
-. *Stop non-essential indexing and perform a synced flush.* (Optional)
+. *Stop non-essential indexing and perform a flush.* (Optional)
 +
 --
 While you can continue indexing during the upgrade, shard recovery
 is much faster if you temporarily stop non-essential indexing and perform a
-<<indices-synced-flush-api, synced-flush>>.
+<<indices-flush, flush>>.
 
-include::synced-flush.asciidoc[]
-
+[source,console]
+--------------------------------------------------
+POST /_flush
+--------------------------------------------------
 --
 
 . *Temporarily stop the tasks associated with active {ml} jobs and {dfeeds}.* (Optional)
@@ -147,7 +150,7 @@ As soon as another node is upgraded, the replicas can be assigned and the
 status will change to `green`.
 ====================================================
 
-Shards that were not <<indices-synced-flush-api,sync-flushed>> might take longer to
+Shards that were not <<indices-flush,flushed>> might take longer to
 recover.  You can monitor the recovery status of individual shards by
 submitting a <<cat-recovery,`_cat/recovery`>> request:
 
@@ -211,5 +214,12 @@ all of the stopped master-eligible nodes to allow the cluster to form again, as
 if performing a <<restart-upgrade,full-cluster restart upgrade>>. It may also
 be necessary to upgrade all of the remaining old nodes before they can join the
 cluster after it re-forms.
+
+Similarly, if you run a testing/development environment with only one master
+node, the master node should be upgraded last. Restarting a single master node
+forces the cluster to be reformed. The new cluster will initially only have the
+upgraded master node and will thus reject the older nodes when they re-join the
+cluster. Nodes that have already been upgraded will successfully re-join the
+upgraded master.
 
 ====================================================

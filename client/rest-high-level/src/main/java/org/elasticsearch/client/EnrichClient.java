@@ -80,8 +80,8 @@ public final class EnrichClient {
      * @return cancellable that may be used to cancel the request
      */
     public Cancellable putPolicyAsync(PutPolicyRequest request,
-                               RequestOptions options,
-                               ActionListener<AcknowledgedResponse> listener) {
+                                      RequestOptions options,
+                                      ActionListener<AcknowledgedResponse> listener) {
         return restHighLevelClient.performRequestAsyncAndParseEntity(
             request,
             EnrichRequestConverters::putPolicy,
@@ -125,8 +125,8 @@ public final class EnrichClient {
      * @return cancellable that may be used to cancel the request
      */
     public Cancellable deletePolicyAsync(DeletePolicyRequest request,
-                                  RequestOptions options,
-                                  ActionListener<AcknowledgedResponse> listener) {
+                                         RequestOptions options,
+                                         ActionListener<AcknowledgedResponse> listener) {
         return restHighLevelClient.performRequestAsyncAndParseEntity(
             request,
             EnrichRequestConverters::deletePolicy,

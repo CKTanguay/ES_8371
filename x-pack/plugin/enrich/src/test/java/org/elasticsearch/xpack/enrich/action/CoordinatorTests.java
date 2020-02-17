@@ -30,7 +30,6 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -222,7 +221,7 @@ public class CoordinatorTests extends ESTestCase {
 
     public void testLookupFunction() {
         MultiSearchRequest multiSearchRequest = new MultiSearchRequest();
-        List<String> indices = Arrays.asList("index1", "index2", "index3");
+        List<String> indices = List.of("index1", "index2", "index3");
         for (String index : indices) {
             multiSearchRequest.add(new SearchRequest(index));
             multiSearchRequest.add(new SearchRequest(index));
@@ -272,15 +271,15 @@ public class CoordinatorTests extends ESTestCase {
         Map<String, Tuple<MultiSearchResponse, Exception>> shardResponses = new HashMap<>();
 
         MultiSearchResponse.Item item1 = new MultiSearchResponse.Item(emptySearchResponse(), null);
-        itemsPerIndex.put("index1", Arrays.asList(new Tuple<>(0, null), new Tuple<>(1, null), new Tuple<>(2, null)));
+        itemsPerIndex.put("index1", List.of(new Tuple<>(0, null), new Tuple<>(1, null), new Tuple<>(2, null)));
         shardResponses.put("index1", new Tuple<>(new MultiSearchResponse(new MultiSearchResponse.Item[] { item1, item1, item1 }, 1), null));
 
         Exception failure = new RuntimeException();
-        itemsPerIndex.put("index2", Arrays.asList(new Tuple<>(3, null), new Tuple<>(4, null), new Tuple<>(5, null)));
+        itemsPerIndex.put("index2", List.of(new Tuple<>(3, null), new Tuple<>(4, null), new Tuple<>(5, null)));
         shardResponses.put("index2", new Tuple<>(null, failure));
 
         MultiSearchResponse.Item item2 = new MultiSearchResponse.Item(emptySearchResponse(), null);
-        itemsPerIndex.put("index3", Arrays.asList(new Tuple<>(6, null), new Tuple<>(7, null), new Tuple<>(8, null)));
+        itemsPerIndex.put("index3", List.of(new Tuple<>(6, null), new Tuple<>(7, null), new Tuple<>(8, null)));
         shardResponses.put("index3", new Tuple<>(new MultiSearchResponse(new MultiSearchResponse.Item[] { item2, item2, item2 }, 1), null));
 
         MultiSearchResponse result = Coordinator.reduce(9, itemsPerIndex, shardResponses);

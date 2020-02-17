@@ -10,8 +10,6 @@ import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
 import net.shibboleth.utilities.java.support.resolver.ResolverException;
 import net.shibboleth.utilities.java.support.xml.BasicParserPool;
 import org.apache.http.client.HttpClient;
-import org.apache.http.conn.ssl.DefaultHostnameVerifier;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.logging.log4j.Logger;
@@ -52,7 +50,7 @@ import org.elasticsearch.xpack.core.ssl.X509KeyPairSettings;
 import org.elasticsearch.xpack.security.authc.Realms;
 import org.elasticsearch.xpack.security.authc.TokenService;
 import org.elasticsearch.xpack.security.authc.support.DelegatedAuthorizationSupport;
-import org.elasticsearch.xpack.security.authc.support.UserRoleMapper;
+import org.elasticsearch.xpack.core.security.authc.support.UserRoleMapper;
 import org.opensaml.core.criterion.EntityIdCriterion;
 import org.opensaml.saml.common.xml.SAMLConstants;
 import org.opensaml.saml.criterion.EntityRoleCriterion;
@@ -218,7 +216,7 @@ public final class SamlRealm extends Realm implements Releasable {
         this.idpDescriptor = idpDescriptor;
         this.serviceProvider = spConfiguration;
 
-        this.nameIdPolicy = new SamlAuthnRequestBuilder.NameIDPolicySettings(require(config, NAMEID_FORMAT),
+        this.nameIdPolicy = new SamlAuthnRequestBuilder.NameIDPolicySettings(config.getSetting(NAMEID_FORMAT),
                 config.getSetting(NAMEID_ALLOW_CREATE), config.getSetting(NAMEID_SP_QUALIFIER));
         this.forceAuthn = config.getSetting(FORCE_AUTHN, () -> null);
         this.useSingleLogout = config.getSetting(IDP_SINGLE_LOGOUT);
@@ -447,22 +445,22 @@ public final class SamlRealm extends Realm implements Releasable {
             return;
         }
 
-        final Map<String, Object> userMeta = new HashMap<>();
+        final Map<String, Object> userMetaBuilder = new HashMap<>();
         if (populateUserMetadata) {
             for (SamlAttributes.SamlAttribute a : attributes.attributes()) {
-                userMeta.put("saml(" + a.name + ")", a.values);
+                userMetaBuilder.put("saml(" + a.name + ")", a.values);
                 if (Strings.hasText(a.friendlyName)) {
-                    userMeta.put("saml_" + a.friendlyName, a.values);
+                    userMetaBuilder.put("saml_" + a.friendlyName, a.values);
                 }
             }
         }
         if (attributes.name() != null) {
-            userMeta.put(USER_METADATA_NAMEID_VALUE, attributes.name().value);
+            userMetaBuilder.put(USER_METADATA_NAMEID_VALUE, attributes.name().value);
             if (attributes.name().format != null) {
-                userMeta.put(USER_METADATA_NAMEID_FORMAT, attributes.name().format);
+                userMetaBuilder.put(USER_METADATA_NAMEID_FORMAT, attributes.name().format);
             }
         }
-
+        final Map<String, Object> userMeta = Map.copyOf(userMetaBuilder);
 
         final List<String> groups = groupsAttribute.getAttribute(attributes);
         final String dn = resolveSingleValueAttribute(attributes, dnAttribute, DN_ATTRIBUTE.name(config));
@@ -538,8 +536,7 @@ public final class SamlRealm extends Realm implements Releasable {
         // ssl setup
         final String sslKey = RealmSettings.realmSslPrefix(config.identifier());
         final SSLConfiguration sslConfiguration = sslService.getSSLConfiguration(sslKey);
-        boolean isHostnameVerificationEnabled = sslConfiguration.verificationMode().isHostnameVerificationEnabled();
-        HostnameVerifier verifier = isHostnameVerificationEnabled ? new DefaultHostnameVerifier() : NoopHostnameVerifier.INSTANCE;
+        final HostnameVerifier verifier = SSLService.getHostnameVerifier(sslConfiguration);
         SSLConnectionSocketFactory factory = new SSLConnectionSocketFactory(sslService.sslSocketFactory(sslConfiguration), verifier);
         builder.setSSLSocketFactory(factory);
 
@@ -729,7 +726,7 @@ public final class SamlRealm extends Realm implements Releasable {
             try {
                 onChange.run();
             } catch (Exception e) {
-                logger.warn(new ParameterizedMessage("An error occurred while reloading file {}", file), e);
+                logger.warn(new ParameterizedMessage("An error occurred while reloading file [{}]", file), e);
             }
         }
     }
@@ -774,7 +771,7 @@ public final class SamlRealm extends Realm implements Releasable {
                                     return null;
                                 }
                                 return value;
-                            }).filter(Objects::nonNull).collect(Collectors.toList())
+                            }).filter(Objects::nonNull).collect(Collectors.toUnmodifiableList())
                     );
                 } else {
                     return new AttributeParser(
@@ -790,7 +787,7 @@ public final class SamlRealm extends Realm implements Releasable {
                         + "] is also set");
             } else {
                 return new AttributeParser("No SAML attribute for [" + setting.name(realmConfig) + "]",
-                        attributes -> Collections.emptyList());
+                        attributes -> List.of());
             }
         }
 

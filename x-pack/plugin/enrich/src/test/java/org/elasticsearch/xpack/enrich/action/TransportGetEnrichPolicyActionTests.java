@@ -7,6 +7,7 @@
 package org.elasticsearch.xpack.enrich.action;
 
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.support.ActionTestUtils;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.xpack.core.enrich.EnrichPolicy;
@@ -32,7 +33,7 @@ public class TransportGetEnrichPolicyActionTests extends AbstractEnrichTestCase 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<GetEnrichPolicyAction.Response> reference = new AtomicReference<>();
         final TransportGetEnrichPolicyAction transportAction = node().injector().getInstance(TransportGetEnrichPolicyAction.class);
-        transportAction.execute(null, new GetEnrichPolicyAction.Request(), new ActionListener<GetEnrichPolicyAction.Response>() {
+        ActionTestUtils.execute(transportAction, null, new GetEnrichPolicyAction.Request(), new ActionListener<>() {
             @Override
             public void onResponse(GetEnrichPolicyAction.Response response) {
                 reference.set(response);
@@ -72,15 +73,17 @@ public class TransportGetEnrichPolicyActionTests extends AbstractEnrichTestCase 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<GetEnrichPolicyAction.Response> reference = new AtomicReference<>();
         final TransportGetEnrichPolicyAction transportAction = node().injector().getInstance(TransportGetEnrichPolicyAction.class);
-        transportAction.execute(
+        ActionTestUtils.execute(
+            transportAction,
             null,
             // empty or null should return the same
             randomBoolean() ? new GetEnrichPolicyAction.Request() : new GetEnrichPolicyAction.Request(new String[] {}),
-            new ActionListener<GetEnrichPolicyAction.Response>() {
+            new ActionListener<>() {
                 @Override
                 public void onResponse(GetEnrichPolicyAction.Response response) {
                     reference.set(response);
                     latch.countDown();
+
                 }
 
                 public void onFailure(final Exception e) {
@@ -103,7 +106,7 @@ public class TransportGetEnrichPolicyActionTests extends AbstractEnrichTestCase 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<GetEnrichPolicyAction.Response> reference = new AtomicReference<>();
         final TransportGetEnrichPolicyAction transportAction = node().injector().getInstance(TransportGetEnrichPolicyAction.class);
-        transportAction.execute(null, new GetEnrichPolicyAction.Request(), new ActionListener<GetEnrichPolicyAction.Response>() {
+        ActionTestUtils.execute(transportAction, null, new GetEnrichPolicyAction.Request(), new ActionListener<>() {
             @Override
             public void onResponse(GetEnrichPolicyAction.Response response) {
                 reference.set(response);
@@ -137,21 +140,17 @@ public class TransportGetEnrichPolicyActionTests extends AbstractEnrichTestCase 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<GetEnrichPolicyAction.Response> reference = new AtomicReference<>();
         final TransportGetEnrichPolicyAction transportAction = node().injector().getInstance(TransportGetEnrichPolicyAction.class);
-        transportAction.execute(
-            null,
-            new GetEnrichPolicyAction.Request(new String[] { name }),
-            new ActionListener<GetEnrichPolicyAction.Response>() {
-                @Override
-                public void onResponse(GetEnrichPolicyAction.Response response) {
-                    reference.set(response);
-                    latch.countDown();
-                }
-
-                public void onFailure(final Exception e) {
-                    fail();
-                }
+        ActionTestUtils.execute(transportAction, null, new GetEnrichPolicyAction.Request(new String[] { name }), new ActionListener<>() {
+            @Override
+            public void onResponse(GetEnrichPolicyAction.Response response) {
+                reference.set(response);
+                latch.countDown();
             }
-        );
+
+            public void onFailure(final Exception e) {
+                fail();
+            }
+        });
         latch.await();
         assertNotNull(reference.get());
         GetEnrichPolicyAction.Response response = reference.get();
@@ -182,10 +181,11 @@ public class TransportGetEnrichPolicyActionTests extends AbstractEnrichTestCase 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<GetEnrichPolicyAction.Response> reference = new AtomicReference<>();
         final TransportGetEnrichPolicyAction transportAction = node().injector().getInstance(TransportGetEnrichPolicyAction.class);
-        transportAction.execute(
+        ActionTestUtils.execute(
+            transportAction,
             null,
             new GetEnrichPolicyAction.Request(new String[] { name, anotherName }),
-            new ActionListener<GetEnrichPolicyAction.Response>() {
+            new ActionListener<>() {
                 @Override
                 public void onResponse(GetEnrichPolicyAction.Response response) {
                     reference.set(response);
@@ -215,10 +215,11 @@ public class TransportGetEnrichPolicyActionTests extends AbstractEnrichTestCase 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<GetEnrichPolicyAction.Response> reference = new AtomicReference<>();
         final TransportGetEnrichPolicyAction transportAction = node().injector().getInstance(TransportGetEnrichPolicyAction.class);
-        transportAction.execute(
+        ActionTestUtils.execute(
+            transportAction,
             null,
             new GetEnrichPolicyAction.Request(new String[] { "non-exists" }),
-            new ActionListener<GetEnrichPolicyAction.Response>() {
+            new ActionListener<>() {
                 @Override
                 public void onResponse(GetEnrichPolicyAction.Response response) {
                     reference.set(response);

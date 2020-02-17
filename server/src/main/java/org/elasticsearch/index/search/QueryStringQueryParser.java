@@ -429,7 +429,7 @@ public class QueryStringQueryParser extends XQueryParser {
         if (fuzzySlop.image.length() == 1) {
             return getFuzzyQuery(field, termImage, fuzziness.asDistance(termImage));
         }
-        float distance = Fuzziness.build(fuzzySlop.image.substring(1)).asDistance(termImage);
+        float distance = Fuzziness.fromString(fuzzySlop.image.substring(1)).asDistance(termImage);
         return getFuzzyQuery(field, termImage, distance);
     }
 
@@ -441,7 +441,7 @@ public class QueryStringQueryParser extends XQueryParser {
         }
         List<Query> queries = new ArrayList<>();
         for (Map.Entry<String, Float> entry : fields.entrySet()) {
-            Query q = getFuzzyQuerySingle(entry.getKey(), termStr, minSimilarity);
+            Query q = getFuzzyQuerySingle(entry.getKey(), termStr, (int) minSimilarity);
             assert q != null;
             queries.add(applyBoost(q, entry.getValue()));
         }
@@ -454,7 +454,7 @@ public class QueryStringQueryParser extends XQueryParser {
         }
     }
 
-    private Query getFuzzyQuerySingle(String field, String termStr, float minSimilarity) throws ParseException {
+    private Query getFuzzyQuerySingle(String field, String termStr, int minSimilarity) throws ParseException {
         currentFieldType = context.fieldMapper(field);
         if (currentFieldType == null) {
             return newUnmappedFieldQuery(field);
@@ -462,8 +462,8 @@ public class QueryStringQueryParser extends XQueryParser {
         try {
             Analyzer normalizer = forceAnalyzer == null ? queryBuilder.context.getSearchAnalyzer(currentFieldType) : forceAnalyzer;
             BytesRef term = termStr == null ? null : normalizer.normalize(field, termStr);
-            return currentFieldType.fuzzyQuery(term, Fuzziness.fromEdits((int) minSimilarity),
-                getFuzzyPrefixLength(), fuzzyMaxExpansions, fuzzyTranspositions);
+            return currentFieldType.fuzzyQuery(term, Fuzziness.fromEdits(minSimilarity),
+                getFuzzyPrefixLength(), fuzzyMaxExpansions, fuzzyTranspositions, context);
         } catch (RuntimeException e) {
             if (lenient) {
                 return newLenientFieldQuery(field, e);
@@ -474,7 +474,7 @@ public class QueryStringQueryParser extends XQueryParser {
 
     @Override
     protected Query newFuzzyQuery(Term term, float minimumSimilarity, int prefixLength) {
-        int numEdits = Fuzziness.build(minimumSimilarity).asDistance(term.text());
+        int numEdits = Fuzziness.fromEdits((int) minimumSimilarity).asDistance(term.text());
         FuzzyQuery query = new FuzzyQuery(term, numEdits, prefixLength,
             fuzzyMaxExpansions, fuzzyTranspositions);
         QueryParsers.setRewriteMethod(query, fuzzyRewriteMethod);
@@ -613,7 +613,7 @@ public class QueryStringQueryParser extends XQueryParser {
 
     private Query existsQuery(String fieldName) {
         final FieldNamesFieldMapper.FieldNamesFieldType fieldNamesFieldType =
-            (FieldNamesFieldMapper.FieldNamesFieldType) context.getMapperService().fullName(FieldNamesFieldMapper.NAME);
+            (FieldNamesFieldMapper.FieldNamesFieldType) context.getMapperService().fieldType(FieldNamesFieldMapper.NAME);
         if (fieldNamesFieldType == null) {
             return new MatchNoDocsQuery("No mappings yet");
         }

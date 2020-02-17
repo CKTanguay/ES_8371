@@ -24,9 +24,9 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.repositories.RepositoryOperation;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -58,7 +58,7 @@ public final class RepositoryCleanupInProgress extends AbstractNamedDiffable<Clu
     }
 
     public List<Entry> entries() {
-        return new ArrayList<>(entries);
+        return List.copyOf(entries);
     }
 
     @Override
@@ -95,7 +95,7 @@ public final class RepositoryCleanupInProgress extends AbstractNamedDiffable<Clu
         return Version.V_7_4_0;
     }
 
-    public static final class Entry implements Writeable {
+    public static final class Entry implements Writeable, RepositoryOperation {
 
         private final String repository;
 
@@ -111,6 +111,12 @@ public final class RepositoryCleanupInProgress extends AbstractNamedDiffable<Clu
             this.repositoryStateId = repositoryStateId;
         }
 
+        @Override
+        public long repositoryStateId() {
+            return repositoryStateId;
+        }
+
+        @Override
         public String repository() {
             return repository;
         }

@@ -21,6 +21,7 @@ package org.elasticsearch.common.network;
 
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
+import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.BoundTransportAddress;
 import org.elasticsearch.common.util.BigArrays;
@@ -99,14 +100,8 @@ public class NetworkModuleTests extends ESTestCase {
                 return Collections.singletonMap("custom", custom);
             }
         };
-        NetworkModule module = newNetworkModule(settings, false, plugin);
-        assertFalse(module.isTransportClient());
+        NetworkModule module = newNetworkModule(settings, plugin);
         assertSame(custom, module.getTransportSupplier());
-
-        // check it works with transport only as well
-        module = newNetworkModule(settings, true, plugin);
-        assertSame(custom, module.getTransportSupplier());
-        assertTrue(module.isTransportClient());
     }
 
     public void testRegisterHttpTransport() {
@@ -115,7 +110,7 @@ public class NetworkModuleTests extends ESTestCase {
             .put(NetworkModule.TRANSPORT_TYPE_KEY, "local").build();
         Supplier<HttpServerTransport> custom = FakeHttpTransport::new;
 
-        NetworkModule module = newNetworkModule(settings, false, new NetworkPlugin() {
+        NetworkModule module = newNetworkModule(settings, new NetworkPlugin() {
             @Override
             public Map<String, Supplier<HttpServerTransport>> getHttpTransports(Settings settings, ThreadPool threadPool,
                                                                                 BigArrays bigArrays,
@@ -123,16 +118,15 @@ public class NetworkModuleTests extends ESTestCase {
                                                                                 CircuitBreakerService circuitBreakerService,
                                                                                 NamedXContentRegistry xContentRegistry,
                                                                                 NetworkService networkService,
-                                                                                HttpServerTransport.Dispatcher requestDispatcher) {
+                                                                                HttpServerTransport.Dispatcher requestDispatcher,
+                                                                                ClusterSettings clusterSettings) {
                 return Collections.singletonMap("custom", custom);
             }
         });
         assertSame(custom, module.getHttpServerTransportSupplier());
-        assertFalse(module.isTransportClient());
 
         settings = Settings.builder().put(NetworkModule.TRANSPORT_TYPE_KEY, "local").build();
-        NetworkModule newModule = newNetworkModule(settings, false);
-        assertFalse(newModule.isTransportClient());
+        NetworkModule newModule = newNetworkModule(settings);
         expectThrows(IllegalStateException.class, () -> newModule.getHttpServerTransportSupplier());
     }
 
@@ -145,7 +139,7 @@ public class NetworkModuleTests extends ESTestCase {
         Supplier<Transport> customTransport = () -> null;  // content doesn't matter we check reference equality
         Supplier<HttpServerTransport> custom = FakeHttpTransport::new;
         Supplier<HttpServerTransport> def = FakeHttpTransport::new;
-        NetworkModule module = newNetworkModule(settings, false, new NetworkPlugin() {
+        NetworkModule module = newNetworkModule(settings, new NetworkPlugin() {
             @Override
             public Map<String, Supplier<Transport>> getTransports(Settings settings, ThreadPool threadPool,
                                                                   PageCacheRecycler pageCacheRecycler,
@@ -162,7 +156,8 @@ public class NetworkModuleTests extends ESTestCase {
                                                                                 CircuitBreakerService circuitBreakerService,
                                                                                 NamedXContentRegistry xContentRegistry,
                                                                                 NetworkService networkService,
-                                                                                HttpServerTransport.Dispatcher requestDispatcher) {
+                                                                                HttpServerTransport.Dispatcher requestDispatcher,
+                                                                                ClusterSettings clusterSettings) {
                 Map<String, Supplier<HttpServerTransport>> supplierMap = new HashMap<>();
                 supplierMap.put("custom", custom);
                 supplierMap.put("default_custom", def);
@@ -180,7 +175,7 @@ public class NetworkModuleTests extends ESTestCase {
         Supplier<HttpServerTransport> custom = FakeHttpTransport::new;
         Supplier<HttpServerTransport> def = FakeHttpTransport::new;
         Supplier<Transport> customTransport = () -> null;
-        NetworkModule module = newNetworkModule(settings, false, new NetworkPlugin() {
+        NetworkModule module = newNetworkModule(settings, new NetworkPlugin() {
             @Override
             public Map<String, Supplier<Transport>> getTransports(Settings settings, ThreadPool threadPool,
                                                                   PageCacheRecycler pageCacheRecycler,
@@ -197,7 +192,8 @@ public class NetworkModuleTests extends ESTestCase {
                                                                                 CircuitBreakerService circuitBreakerService,
                                                                                 NamedXContentRegistry xContentRegistry,
                                                                                 NetworkService networkService,
-                                                                                HttpServerTransport.Dispatcher requestDispatcher) {
+                                                                                HttpServerTransport.Dispatcher requestDispatcher,
+                                                                                ClusterSettings clusterSettings) {
                 Map<String, Supplier<HttpServerTransport>> supplierMap = new HashMap<>();
                 supplierMap.put("custom", custom);
                 supplierMap.put("default_custom", def);
@@ -228,7 +224,7 @@ public class NetworkModuleTests extends ESTestCase {
                 return actualHandler;
             }
         };
-        NetworkModule module = newNetworkModule(settings, false, new NetworkPlugin() {
+        NetworkModule module = newNetworkModule(settings, new NetworkPlugin() {
                 @Override
                 public List<TransportInterceptor> getTransportInterceptors(NamedWriteableRegistry namedWriteableRegistry,
                                                                            ThreadContext threadContext) {
@@ -248,7 +244,7 @@ public class NetworkModuleTests extends ESTestCase {
         assertSame(((NetworkModule.CompositeTransportInterceptor)transportInterceptor).transportInterceptors.get(0), interceptor);
 
         NullPointerException nullPointerException = expectThrows(NullPointerException.class, () -> {
-            newNetworkModule(settings, false, new NetworkPlugin() {
+            newNetworkModule(settings, new NetworkPlugin() {
                 @Override
                 public List<TransportInterceptor> getTransportInterceptors(NamedWriteableRegistry namedWriteableRegistry,
                                                                            ThreadContext threadContext) {
@@ -260,8 +256,9 @@ public class NetworkModuleTests extends ESTestCase {
         assertEquals("interceptor must not be null", nullPointerException.getMessage());
     }
 
-    private NetworkModule newNetworkModule(Settings settings, boolean transportClient, NetworkPlugin... plugins) {
-        return new NetworkModule(settings, transportClient, Arrays.asList(plugins), threadPool, null, null, null, null,
-            xContentRegistry(), null, new NullDispatcher());
+    private NetworkModule newNetworkModule(Settings settings, NetworkPlugin... plugins) {
+        return new NetworkModule(settings, Arrays.asList(plugins), threadPool, null, null, null, null,
+            xContentRegistry(), null, new NullDispatcher(),
+            new ClusterSettings(Settings.EMPTY, ClusterSettings.BUILT_IN_CLUSTER_SETTINGS));
     }
 }

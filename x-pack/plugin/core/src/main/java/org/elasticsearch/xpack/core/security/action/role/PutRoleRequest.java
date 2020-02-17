@@ -5,7 +5,6 @@
  */
 package org.elasticsearch.xpack.core.security.action.role;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.support.WriteRequest;
@@ -14,7 +13,6 @@ import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 import org.elasticsearch.xpack.core.security.authz.privilege.ApplicationPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilegeResolver;
@@ -29,6 +27,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.elasticsearch.action.ValidateActions.addValidationError;
 
@@ -55,10 +54,8 @@ public class PutRoleRequest extends ActionRequest implements WriteRequest<PutRol
         for (int i = 0; i < indicesSize; i++) {
             indicesPrivileges.add(new RoleDescriptor.IndicesPrivileges(in));
         }
-        if (in.getVersion().onOrAfter(Version.V_6_4_0)) {
-            applicationPrivileges = in.readList(RoleDescriptor.ApplicationResourcePrivileges::new);
-            configurableClusterPrivileges = ConfigurableClusterPrivileges.readArray(in);
-        }
+        applicationPrivileges = in.readList(RoleDescriptor.ApplicationResourcePrivileges::new);
+        configurableClusterPrivileges = ConfigurableClusterPrivileges.readArray(in);
         runAs = in.readStringArray();
         refreshPolicy = RefreshPolicy.readFrom(in);
         metadata = in.readMap();
@@ -85,7 +82,7 @@ public class PutRoleRequest extends ActionRequest implements WriteRequest<PutRol
         if (indicesPrivileges != null) {
             for (RoleDescriptor.IndicesPrivileges idp : indicesPrivileges) {
                 try {
-                    IndexPrivilege.get(Sets.newHashSet(idp.getPrivileges()));
+                    IndexPrivilege.get(Set.of(idp.getPrivileges()));
                 } catch (IllegalArgumentException ile) {
                     validationException = addValidationError(ile.getMessage(), validationException);
                 }
@@ -206,10 +203,8 @@ public class PutRoleRequest extends ActionRequest implements WriteRequest<PutRol
         for (RoleDescriptor.IndicesPrivileges index : indicesPrivileges) {
             index.writeTo(out);
         }
-        if (out.getVersion().onOrAfter(Version.V_6_4_0)) {
-            out.writeList(applicationPrivileges);
-            ConfigurableClusterPrivileges.writeArray(out, this.configurableClusterPrivileges);
-        }
+        out.writeList(applicationPrivileges);
+        ConfigurableClusterPrivileges.writeArray(out, this.configurableClusterPrivileges);
         out.writeStringArray(runAs);
         refreshPolicy.writeTo(out);
         out.writeMap(metadata);

@@ -34,6 +34,7 @@ privileges:
   
 For more information, see <<security-privileges>> and <<built-in-roles>>.
 
+
 [[ml-get-dfanalytics-desc]]
 ==== {api-description-title}
 
@@ -69,8 +70,8 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=from]
 `size`::
 (Optional, integer) 
 include::{docdir}/ml/ml-shared.asciidoc[tag=size]
-  
-  
+
+
 [[ml-get-dfanalytics-results]]
 ==== {api-response-body-title}
 

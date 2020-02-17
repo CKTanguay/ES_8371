@@ -35,13 +35,12 @@ import org.elasticsearch.cluster.routing.allocation.FailedShard;
 import org.elasticsearch.common.UUIDs;
 import org.elasticsearch.common.io.stream.ByteBufferStreamInput;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
-import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.Index;
+import org.elasticsearch.repositories.IndexId;
 import org.elasticsearch.snapshots.Snapshot;
 import org.elasticsearch.snapshots.SnapshotId;
-import org.elasticsearch.test.VersionUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -105,28 +104,6 @@ public class UnassignedInfoTests extends ESAllocationTestCase {
         assertThat(read.getFailedNodeIds(), equalTo(meta.getFailedNodeIds()));
     }
 
-    public void testBwcSerialization() throws Exception {
-        final UnassignedInfo unassignedInfo = new UnassignedInfo(UnassignedInfo.Reason.INDEX_CLOSED, "message");
-        BytesStreamOutput out = new BytesStreamOutput();
-        Version version = VersionUtils.randomVersionBetween(random(), Version.V_6_0_0, Version.CURRENT);
-        out.setVersion(version);
-        unassignedInfo.writeTo(out);
-        out.close();
-
-        StreamInput in = out.bytes().streamInput();
-        in.setVersion(version);
-        UnassignedInfo read = new UnassignedInfo(in);
-        if (version.before(Version.V_7_0_0)) {
-            assertThat(read.getReason(), equalTo(UnassignedInfo.Reason.REINITIALIZED));
-        } else {
-            assertThat(read.getReason(), equalTo(UnassignedInfo.Reason.INDEX_CLOSED));
-        }
-        assertThat(read.getUnassignedTimeInMillis(), equalTo(unassignedInfo.getUnassignedTimeInMillis()));
-        assertThat(read.getMessage(), equalTo(unassignedInfo.getMessage()));
-        assertThat(read.getDetails(), equalTo(unassignedInfo.getDetails()));
-        assertThat(read.getNumFailedAllocations(), equalTo(unassignedInfo.getNumFailedAllocations()));
-    }
-
     public void testIndexCreated() {
         MetaData metaData = MetaData.builder()
                 .put(IndexMetaData.builder("test").settings(settings(Version.CURRENT))
@@ -175,7 +152,8 @@ public class UnassignedInfoTests extends ESAllocationTestCase {
                 .metaData(metaData)
                 .routingTable(RoutingTable.builder().addAsNewRestore(metaData.index("test"), new SnapshotRecoverySource(
                     UUIDs.randomBase64UUID(),
-                    new Snapshot("rep1", new SnapshotId("snp1", UUIDs.randomBase64UUID())), Version.CURRENT, "test"),
+                    new Snapshot("rep1", new SnapshotId("snp1", UUIDs.randomBase64UUID())), Version.CURRENT,
+                        new IndexId("test", UUIDs.randomBase64UUID(random()))),
                     new IntHashSet()).build()).build();
         for (ShardRouting shard : clusterState.getRoutingNodes().shardsWithState(UNASSIGNED)) {
             assertThat(shard.unassignedInfo().getReason(), equalTo(UnassignedInfo.Reason.NEW_INDEX_RESTORED));
@@ -192,7 +170,8 @@ public class UnassignedInfoTests extends ESAllocationTestCase {
                 .routingTable(RoutingTable.builder().addAsRestore(metaData.index("test"),
                     new SnapshotRecoverySource(
                         UUIDs.randomBase64UUID(), new Snapshot("rep1",
-                        new SnapshotId("snp1", UUIDs.randomBase64UUID())), Version.CURRENT, "test")).build()).build();
+                        new SnapshotId("snp1", UUIDs.randomBase64UUID())), Version.CURRENT,
+                        new IndexId("test", UUIDs.randomBase64UUID(random())))).build()).build();
         for (ShardRouting shard : clusterState.getRoutingNodes().shardsWithState(UNASSIGNED)) {
             assertThat(shard.unassignedInfo().getReason(), equalTo(UnassignedInfo.Reason.EXISTING_INDEX_RESTORED));
         }

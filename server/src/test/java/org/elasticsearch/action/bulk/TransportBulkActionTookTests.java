@@ -21,10 +21,10 @@
 package org.elasticsearch.action.bulk;
 
 import org.apache.lucene.util.Constants;
-import org.elasticsearch.action.ActionType;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionResponse;
+import org.elasticsearch.action.ActionType;
 import org.elasticsearch.action.IndicesRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.support.ActionFilters;
@@ -38,7 +38,6 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.AtomicArray;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexNotFoundException;
-import org.elasticsearch.rest.action.document.RestBulkAction;
 import org.elasticsearch.tasks.Task;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.transport.CapturingTransport;
@@ -115,7 +114,6 @@ public class TransportBulkActionTookTests extends ESTestCase {
                     threadPool,
                     transportService,
                     clusterService,
-                    null,
                     client,
                     actionFilters,
                     resolver,
@@ -139,7 +137,6 @@ public class TransportBulkActionTookTests extends ESTestCase {
                     threadPool,
                     transportService,
                     clusterService,
-                    null,
                     client,
                     actionFilters,
                     resolver,
@@ -201,8 +198,6 @@ public class TransportBulkActionTookTests extends ESTestCase {
 
             }
         });
-        //This test's JSON contains outdated references to types
-        assertWarnings(RestBulkAction.TYPES_DEPRECATION_MESSAGE);
     }
 
     static class Resolver extends IndexNameExpressionResolver {
@@ -218,7 +213,6 @@ public class TransportBulkActionTookTests extends ESTestCase {
                 ThreadPool threadPool,
                 TransportService transportService,
                 ClusterService clusterService,
-                TransportShardBulkAction shardBulkAction,
                 NodeClient client,
                 ActionFilters actionFilters,
                 IndexNameExpressionResolver indexNameExpressionResolver,
@@ -229,7 +223,6 @@ public class TransportBulkActionTookTests extends ESTestCase {
                     transportService,
                     clusterService,
                     null,
-                    shardBulkAction,
                     client,
                     actionFilters,
                     indexNameExpressionResolver,

@@ -16,7 +16,6 @@ import org.elasticsearch.xpack.core.security.authz.RoleDescriptor;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
@@ -78,7 +77,7 @@ public class CreateApiKeyRequestTests extends ESTestCase {
         boolean nullOrEmptyRoleDescriptors = randomBoolean();
         final List<RoleDescriptor> descriptorList;
         if (nullOrEmptyRoleDescriptors) {
-            descriptorList = randomBoolean() ? null : Collections.emptyList();
+            descriptorList = randomBoolean() ? null : List.of();
         } else {
             final int numDescriptors = randomIntBetween(1, 4);
             descriptorList = new ArrayList<>();

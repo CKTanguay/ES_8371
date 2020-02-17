@@ -275,9 +275,7 @@ public class AzureDiscoveryClusterFormationTests extends ESIntegTestCase {
      * 12.0.1 so we pin to TLSv1.2 when running on an earlier JDK
      */
     private static String getProtocol() {
-        if (JavaVersion.current().compareTo(JavaVersion.parse("11")) < 0) {
-            return "TLS";
-        } else if (JavaVersion.current().compareTo(JavaVersion.parse("12")) < 0) {
+        if (JavaVersion.current().compareTo(JavaVersion.parse("12")) < 0) {
             return "TLSv1.2";
         } else {
             JavaVersion full =

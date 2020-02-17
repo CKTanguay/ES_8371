@@ -57,7 +57,7 @@ populated in the user's _metadata_:
 |=======================
 
 This metadata is returned in the
-{ref}/security-api-authenticate.html[authenticate API], and can be used with
+<<security-api-authenticate,authenticate API>>, and can be used with
 <<templating-role-query, templated queries>> in roles.
 
 Additional fields can be included in the user's metadata by  configuring

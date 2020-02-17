@@ -14,7 +14,6 @@ import org.elasticsearch.xpack.core.deprecation.DeprecationInfoAction;
 import org.elasticsearch.xpack.core.deprecation.DeprecationIssue;
 import org.elasticsearch.xpack.core.ml.datafeed.DatafeedConfig;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -32,35 +31,15 @@ public class DeprecationChecks {
     }
 
     static List<Function<ClusterState, DeprecationIssue>> CLUSTER_SETTINGS_CHECKS =
-        Collections.unmodifiableList(Arrays.asList(
-            ClusterDeprecationChecks::checkUserAgentPipelines,
-            ClusterDeprecationChecks::checkTemplatesWithTooManyFields,
-            ClusterDeprecationChecks::checkPollIntervalTooLow,
-            ClusterDeprecationChecks::checkTemplatesWithFieldNamesDisabled
-        ));
+        Collections.emptyList();
 
-
-    static List<BiFunction<Settings, PluginsAndModules, DeprecationIssue>> NODE_SETTINGS_CHECKS =
-        Collections.unmodifiableList(Arrays.asList(
-            NodeDeprecationChecks::checkPidfile,
-            NodeDeprecationChecks::checkProcessors
-        ));
+    static List<BiFunction<Settings, PluginsAndModules, DeprecationIssue>> NODE_SETTINGS_CHECKS = Collections.emptyList();
 
     static List<Function<IndexMetaData, DeprecationIssue>> INDEX_SETTINGS_CHECKS =
-        Collections.unmodifiableList(Arrays.asList(
-            IndexDeprecationChecks::oldIndicesCheck,
-            IndexDeprecationChecks::tooManyFieldsCheck,
-            IndexDeprecationChecks::chainedMultiFieldsCheck,
-            IndexDeprecationChecks::deprecatedDateTimeFormat,
-            IndexDeprecationChecks::translogRetentionSettingCheck,
-            IndexDeprecationChecks::fieldNamesDisabledCheck
-        ));
+            List.of(IndexDeprecationChecks::oldIndicesCheck, IndexDeprecationChecks::translogRetentionSettingCheck);
 
     static List<BiFunction<DatafeedConfig, NamedXContentRegistry, DeprecationIssue>> ML_SETTINGS_CHECKS =
-            Collections.unmodifiableList(Arrays.asList(
-                    MlDeprecationChecks::checkDataFeedAggregations,
-                    MlDeprecationChecks::checkDataFeedQuery
-            ));
+            List.of(MlDeprecationChecks::checkDataFeedAggregations, MlDeprecationChecks::checkDataFeedQuery);
 
     /**
      * helper utility function to reduce repeat of running a specific {@link List} of checks.

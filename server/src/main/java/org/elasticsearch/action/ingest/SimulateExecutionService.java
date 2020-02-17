@@ -54,7 +54,7 @@ class SimulateExecutionService {
                 handler.accept(new SimulateDocumentVerboseResult(processorResultList), e);
             });
         } else {
-            pipeline.execute(ingestDocument, (result, e) -> {
+            ingestDocument.executePipeline(pipeline, (result, e) -> {
                 if (e == null) {
                     handler.accept(new SimulateDocumentBaseResult(result), null);
                 } else {
@@ -77,7 +77,7 @@ class SimulateExecutionService {
                         responses.set(index, response);
                     }
                     if (counter.incrementAndGet() == request.getDocuments().size()) {
-                        listener.onResponse(new SimulatePipelineResponse(request.getPipeline().getId(),
+                        l.onResponse(new SimulatePipelineResponse(request.getPipeline().getId(),
                             request.isVerbose(), responses));
                     }
                 });

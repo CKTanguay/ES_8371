@@ -52,13 +52,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class SeedHostsResolver extends AbstractLifecycleComponent implements ConfiguredHostsResolver {
-    public static final Setting<Integer> LEGACY_DISCOVERY_ZEN_PING_UNICAST_CONCURRENT_CONNECTS_SETTING =
-        Setting.intSetting("discovery.zen.ping.unicast.concurrent_connects", 10, 0, Setting.Property.NodeScope,
-            Setting.Property.Deprecated);
-    public static final Setting<TimeValue> LEGACY_DISCOVERY_ZEN_PING_UNICAST_HOSTS_RESOLVE_TIMEOUT =
-        Setting.positiveTimeSetting("discovery.zen.ping.unicast.hosts.resolve_timeout", TimeValue.timeValueSeconds(5),
-            Setting.Property.NodeScope, Setting.Property.Deprecated);
+public class SeedHostsResolver extends AbstractLifecycleComponent implements ConfiguredHostsResolver, SeedHostsProvider.HostsResolver {
     public static final Setting<Integer> DISCOVERY_SEED_RESOLVER_MAX_CONCURRENT_RESOLVERS_SETTING =
         Setting.intSetting("discovery.seed_resolver.max_concurrent_resolvers", 10, 0, Setting.Property.NodeScope);
     public static final Setting<TimeValue> DISCOVERY_SEED_RESOLVER_TIMEOUT_SETTING =
@@ -87,53 +81,16 @@ public class SeedHostsResolver extends AbstractLifecycleComponent implements Con
     }
 
     public static int getMaxConcurrentResolvers(Settings settings) {
-        if (LEGACY_DISCOVERY_ZEN_PING_UNICAST_CONCURRENT_CONNECTS_SETTING.exists(settings)) {
-            if (DISCOVERY_SEED_RESOLVER_MAX_CONCURRENT_RESOLVERS_SETTING.exists(settings)) {
-                throw new IllegalArgumentException("it is forbidden to set both ["
-                    + DISCOVERY_SEED_RESOLVER_MAX_CONCURRENT_RESOLVERS_SETTING.getKey() + "] and ["
-                    + LEGACY_DISCOVERY_ZEN_PING_UNICAST_CONCURRENT_CONNECTS_SETTING.getKey() + "]");
-            }
-            return LEGACY_DISCOVERY_ZEN_PING_UNICAST_CONCURRENT_CONNECTS_SETTING.get(settings);
-        }
         return DISCOVERY_SEED_RESOLVER_MAX_CONCURRENT_RESOLVERS_SETTING.get(settings);
     }
 
     public static TimeValue getResolveTimeout(Settings settings) {
-        if (LEGACY_DISCOVERY_ZEN_PING_UNICAST_HOSTS_RESOLVE_TIMEOUT.exists(settings)) {
-            if (DISCOVERY_SEED_RESOLVER_TIMEOUT_SETTING.exists(settings)) {
-                throw new IllegalArgumentException("it is forbidden to set both ["
-                    + DISCOVERY_SEED_RESOLVER_TIMEOUT_SETTING.getKey() + "] and ["
-                    + LEGACY_DISCOVERY_ZEN_PING_UNICAST_HOSTS_RESOLVE_TIMEOUT.getKey() + "]");
-            }
-            return LEGACY_DISCOVERY_ZEN_PING_UNICAST_HOSTS_RESOLVE_TIMEOUT.get(settings);
-        }
         return DISCOVERY_SEED_RESOLVER_TIMEOUT_SETTING.get(settings);
     }
 
-    /**
-     * Resolves a list of hosts to a list of transport addresses. Each host is resolved into a transport address (or a collection of
-     * addresses if the number of ports is greater than one). Host lookups are done in parallel using specified executor service up
-     * to the specified resolve timeout.
-     *
-     * @param executorService  the executor service used to parallelize hostname lookups
-     * @param logger           logger used for logging messages regarding hostname lookups
-     * @param hosts            the hosts to resolve
-     * @param transportService the transport service
-     * @param resolveTimeout   the timeout before returning from hostname lookups
-     * @return a list of resolved transport addresses
-     */
-    public static List<TransportAddress> resolveHostsLists(
-        final CancellableThreads cancellableThreads,
-        final ExecutorService executorService,
-        final Logger logger,
-        final List<String> hosts,
-        final TransportService transportService,
-        final TimeValue resolveTimeout) {
-        Objects.requireNonNull(executorService);
-        Objects.requireNonNull(logger);
+    @Override
+    public List<TransportAddress> resolveHosts(final List<String> hosts) {
         Objects.requireNonNull(hosts);
-        Objects.requireNonNull(transportService);
-        Objects.requireNonNull(resolveTimeout);
         if (resolveTimeout.nanos() < 0) {
             throw new IllegalArgumentException("resolve timeout must be non-negative but was [" + resolveTimeout + "]");
         }
@@ -146,7 +103,7 @@ public class SeedHostsResolver extends AbstractLifecycleComponent implements Con
         final SetOnce<List<Future<TransportAddress[]>>> futures = new SetOnce<>();
         try {
             cancellableThreads.execute(() ->
-                futures.set(executorService.invokeAll(callables, resolveTimeout.nanos(), TimeUnit.NANOSECONDS)));
+                futures.set(executorService.get().invokeAll(callables, resolveTimeout.nanos(), TimeUnit.NANOSECONDS)));
         } catch (CancellableThreads.ExecutionCancelledException e) {
             return Collections.emptyList();
         }
@@ -225,9 +182,7 @@ public class SeedHostsResolver extends AbstractLifecycleComponent implements Con
                         return;
                     }
 
-                    List<TransportAddress> providedAddresses
-                        = hostsProvider.getSeedAddresses(hosts ->
-                            resolveHostsLists(cancellableThreads, executorService.get(), logger, hosts, transportService, resolveTimeout));
+                    List<TransportAddress> providedAddresses = hostsProvider.getSeedAddresses(SeedHostsResolver.this);
 
                     consumer.accept(providedAddresses);
                 }
@@ -243,9 +198,5 @@ public class SeedHostsResolver extends AbstractLifecycleComponent implements Con
                 }
             });
         }
-    }
-
-    List<TransportAddress> resolveHosts(List<String> hosts) {
-        return resolveHostsLists(cancellableThreads, executorService.get(), logger, hosts, transportService, resolveTimeout);
     }
 }

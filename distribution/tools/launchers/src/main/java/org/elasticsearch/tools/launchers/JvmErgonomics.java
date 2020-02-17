@@ -19,16 +19,13 @@
 
 package org.elasticsearch.tools.launchers;
 
-import org.elasticsearch.tools.java_version_checker.JavaVersion;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -59,33 +56,22 @@ final class JvmErgonomics {
         final Map<String, Optional<String>> finalJvmOptions = finalJvmOptions(userDefinedJvmOptions);
         final long heapSize = extractHeapSize(finalJvmOptions);
         final long maxDirectMemorySize = extractMaxDirectMemorySize(finalJvmOptions);
-
-        if (System.getProperty("os.name").startsWith("Windows") && JavaVersion.majorVersion(JavaVersion.CURRENT) == 8) {
-            Launchers.errPrintln("Warning: with JDK 8 on Windows, Elasticsearch may be unable to derive correct");
-            Launchers.errPrintln("  ergonomic settings due to a JDK issue (JDK-8074459). Please use a newer");
-            Launchers.errPrintln("  version of Java.");
-        }
-
-        if (maxDirectMemorySize == 0 && userDefinedJvmOptions.stream().noneMatch(s -> s.startsWith("-XX:MaxDirectMemorySize"))) {
-
-            if (System.getProperty("os.name").startsWith("Windows") && JavaVersion.majorVersion(JavaVersion.CURRENT) == 8) {
-                Launchers.errPrintln("Warning: MaxDirectMemorySize may have been miscalculated due to JDK-8074459.");
-                Launchers.errPrintln("  Please use a newer version of Java or set MaxDirectMemorySize explicitly.");
-            }
-
+        if (maxDirectMemorySize == 0) {
             ergonomicChoices.add("-XX:MaxDirectMemorySize=" + heapSize / 2);
         }
         return ergonomicChoices;
     }
 
-    private static final Pattern OPTION =
-            Pattern.compile("^\\s*\\S+\\s+(?<flag>\\S+)\\s+:?=\\s+(?<value>\\S+)?\\s+\\{[^}]+?\\}(\\s+\\{[^}]+})?");
+    private static final Pattern OPTION = Pattern.compile(
+        "^\\s*\\S+\\s+(?<flag>\\S+)\\s+:?=\\s+(?<value>\\S+)?\\s+\\{[^}]+?\\}\\s+\\{[^}]+}"
+    );
 
-    static Map<String, Optional<String>> finalJvmOptions(
-            final List<String> userDefinedJvmOptions) throws InterruptedException, IOException {
-        return Collections.unmodifiableMap(flagsFinal(userDefinedJvmOptions).stream()
-                .map(OPTION::matcher).filter(Matcher::matches)
-                .collect(Collectors.toMap(m -> m.group("flag"), m -> Optional.ofNullable(m.group("value")))));
+    static Map<String, Optional<String>> finalJvmOptions(final List<String> userDefinedJvmOptions) throws InterruptedException,
+        IOException {
+        return flagsFinal(userDefinedJvmOptions).stream()
+            .map(OPTION::matcher)
+            .filter(Matcher::matches)
+            .collect(Collectors.toUnmodifiableMap(m -> m.group("flag"), m -> Optional.ofNullable(m.group("value"))));
     }
 
     private static List<String> flagsFinal(final List<String> userDefinedJvmOptions) throws InterruptedException, IOException {
@@ -97,24 +83,25 @@ final class JvmErgonomics {
          * lightweight. By doing this, we get the JVM options parsed exactly as the JVM that we are going to execute would parse them
          * without having to implement our own JVM option parsing logic.
          */
-        final String java = Paths.get(System.getProperty("java.home"), "bin", "java").toString();
-        final List<String> command =
-                Collections.unmodifiableList(
-                        Stream.of(Stream.of(java), userDefinedJvmOptions.stream(), Stream.of("-XX:+PrintFlagsFinal"), Stream.of("-version"))
-                                .reduce(Stream::concat)
-                                .get()
-                                .collect(Collectors.toList()));
+        final String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
+        final List<String> command = Stream.of(
+            Stream.of(java),
+            userDefinedJvmOptions.stream(),
+            Stream.of("-XX:+PrintFlagsFinal"),
+            Stream.of("-version")
+        ).reduce(Stream::concat).get().collect(Collectors.toUnmodifiableList());
         final Process process = new ProcessBuilder().command(command).start();
         final List<String> output = readLinesFromInputStream(process.getInputStream());
         final List<String> error = readLinesFromInputStream(process.getErrorStream());
         final int status = process.waitFor();
         if (status != 0) {
             final String message = String.format(
-                    Locale.ROOT,
-                    "starting java failed with [%d]\noutput:\n%s\nerror:\n%s",
-                    status,
-                    String.join("\n", output),
-                    String.join("\n", error));
+                Locale.ROOT,
+                "starting java failed with [%d]\noutput:\n%s\nerror:\n%s",
+                status,
+                String.join("\n", output),
+                String.join("\n", error)
+            );
             throw new RuntimeException(message);
         } else {
             return output;
@@ -122,9 +109,8 @@ final class JvmErgonomics {
     }
 
     private static List<String> readLinesFromInputStream(final InputStream is) throws IOException {
-        try (InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8);
-             BufferedReader br = new BufferedReader(isr)) {
-            return Collections.unmodifiableList(br.lines().collect(Collectors.toList()));
+        try (InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8); BufferedReader br = new BufferedReader(isr)) {
+            return br.lines().collect(Collectors.toUnmodifiableList());
         }
     }
 

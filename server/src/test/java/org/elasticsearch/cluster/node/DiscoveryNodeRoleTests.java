@@ -23,8 +23,7 @@ import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.EqualsHashCodeTestUtils;
 
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasToString;
@@ -34,7 +33,7 @@ public class DiscoveryNodeRoleTests extends ESTestCase {
     public void testDiscoveryNodeSetPossibleRolesRejectsDuplicateRoleNames() {
         final IllegalStateException e = expectThrows(
                 IllegalStateException.class,
-                () -> DiscoveryNode.setPossibleRoles(new HashSet<>(Arrays.asList(
+                () -> DiscoveryNode.setPossibleRoles(Set.of(
                         new DiscoveryNodeRole("foo", "f") {
 
                             @Override
@@ -50,14 +49,14 @@ public class DiscoveryNodeRoleTests extends ESTestCase {
                                 return null;
                             }
 
-                        }))));
+                        })));
         assertThat(e, hasToString(containsString("Duplicate key")));
     }
 
     public void testDiscoveryNodeSetPossibleRolesRejectsDuplicateRoleNameAbbreviations() {
         final IllegalStateException e = expectThrows(
                 IllegalStateException.class,
-                () -> DiscoveryNode.setPossibleRoles(new HashSet<>(Arrays.asList(
+                () -> DiscoveryNode.setPossibleRoles(Set.of(
                         new DiscoveryNodeRole("foo_1", "f") {
 
                             @Override
@@ -73,7 +72,7 @@ public class DiscoveryNodeRoleTests extends ESTestCase {
                                 return null;
                             }
 
-                        }))));
+                        })));
         assertThat(e, hasToString(containsString("Duplicate key")));
     }
 

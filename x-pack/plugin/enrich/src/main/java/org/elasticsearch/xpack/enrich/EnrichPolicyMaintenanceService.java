@@ -19,13 +19,11 @@ import org.elasticsearch.cluster.LocalNodeMasterListener;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.cluster.service.ClusterService;
-import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.component.LifecycleListener;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.concurrent.EsRejectedExecutionException;
 import org.elasticsearch.common.xcontent.ObjectPath;
-import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.threadpool.Scheduler;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.xpack.core.enrich.EnrichPolicy;
@@ -145,7 +143,7 @@ public class EnrichPolicyMaintenanceService implements LocalNodeMasterListener {
         // Check that no enrich policies are being executed
         final EnrichPolicyLocks.EnrichPolicyExecutionState executionState = enrichPolicyLocks.captureExecutionState();
         if (executionState.isAnyPolicyInFlight() == false) {
-            client.admin().indices().getIndex(indices, new ActionListener<GetIndexResponse>() {
+            client.admin().indices().getIndex(indices, new ActionListener<>() {
                 @Override
                 public void onResponse(GetIndexResponse getIndexResponse) {
                     // Ensure that no enrich policy executions started while we were retrieving the snapshot of index data
@@ -176,8 +174,7 @@ public class EnrichPolicyMaintenanceService implements LocalNodeMasterListener {
     private boolean shouldRemoveIndex(GetIndexResponse getIndexResponse, Map<String, EnrichPolicy> policies, String indexName) {
         // Find the policy on the index
         logger.debug("Checking if should remove enrich index [{}]", indexName);
-        ImmutableOpenMap<String, MappingMetaData> indexMapping = getIndexResponse.getMappings().get(indexName);
-        MappingMetaData mappingMetaData = indexMapping.get(MapperService.SINGLE_MAPPING_NAME);
+        MappingMetaData mappingMetaData = getIndexResponse.getMappings().get(indexName);
         Map<String, Object> mapping = mappingMetaData.getSourceAsMap();
         String policyName = ObjectPath.eval(MAPPING_POLICY_FIELD_PATH, mapping);
         // Check if index has a corresponding policy
@@ -211,7 +208,7 @@ public class EnrichPolicyMaintenanceService implements LocalNodeMasterListener {
     private void deleteIndices(String[] removeIndices) {
         if (removeIndices.length != 0) {
             DeleteIndexRequest deleteIndices = new DeleteIndexRequest().indices(removeIndices).indicesOptions(IGNORE_UNAVAILABLE);
-            client.admin().indices().delete(deleteIndices, new ActionListener<AcknowledgedResponse>() {
+            client.admin().indices().delete(deleteIndices, new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                     logger.debug("Completed deletion of stale enrich indices [{}]", () -> Arrays.toString(removeIndices));

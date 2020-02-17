@@ -27,7 +27,6 @@ import org.elasticsearch.xpack.spatial.SpatialUtils;
 
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
@@ -68,9 +67,9 @@ public final class CircleProcessor extends AbstractProcessor {
             throw new IllegalArgumentException("field [" + field + "] is null, cannot process it.");
         }
 
-        final Map<String, Object> valueWrapper = new HashMap<>();
+        final Map<String, Object> valueWrapper;
         if (obj instanceof Map || obj instanceof String) {
-            valueWrapper.put("shape", obj);
+            valueWrapper = Map.of("shape", obj);
         } else {
             throw new IllegalArgumentException("field [" + field + "] must be a WKT Circle or a GeoJSON Circle value");
         }

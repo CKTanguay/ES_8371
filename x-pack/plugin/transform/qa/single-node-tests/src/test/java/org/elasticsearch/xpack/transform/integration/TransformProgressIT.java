@@ -44,7 +44,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
 public class TransformProgressIT extends ESRestTestCase {
-
     protected void createReviewsIndex() throws Exception {
         final int numDocs = 1000;
         final RestHighLevelClient restClient = new TestRestHighLevelClient();

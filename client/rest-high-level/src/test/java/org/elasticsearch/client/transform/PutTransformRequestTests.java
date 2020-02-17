@@ -71,7 +71,7 @@ public class PutTransformRequestTests extends AbstractXContentTestCase<PutTransf
 
     @Override
     protected NamedXContentRegistry xContentRegistry() {
-        SearchModule searchModule = new SearchModule(Settings.EMPTY, false, Collections.emptyList());
+        SearchModule searchModule = new SearchModule(Settings.EMPTY, Collections.emptyList());
         List<NamedXContentRegistry.Entry> namedXContents = searchModule.getNamedXContents();
         namedXContents.addAll(new TransformNamedXContentProvider().getNamedXContentParsers());
 

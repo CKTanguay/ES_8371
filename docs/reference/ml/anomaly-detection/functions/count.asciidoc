@@ -164,7 +164,7 @@ These functions support the following properties:
 * `by_field_name` (optional)
 * `partition_field_name` (optional)
 
-For more information about those properties, see the 
+For more information about those properties, see the
 {ref}/ml-put-job.html#ml-put-job-request-body[create {anomaly-jobs} API].
 
 For example, if you have the following number of events per bucket:
@@ -233,7 +233,7 @@ These functions support the following properties:
 * `over_field_name` (optional)
 * `partition_field_name` (optional)
 
-For more information about those properties, see the 
+For more information about those properties, see the
 {ref}/ml-put-job.html#ml-put-job-request-body[create {anomaly-jobs} API].
 
 .Example 6: Analyzing users with the distinct_count function

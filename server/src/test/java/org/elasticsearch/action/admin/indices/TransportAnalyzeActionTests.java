@@ -38,6 +38,7 @@ import org.elasticsearch.index.analysis.AbstractTokenFilterFactory;
 import org.elasticsearch.index.analysis.AnalysisRegistry;
 import org.elasticsearch.index.analysis.CharFilterFactory;
 import org.elasticsearch.index.analysis.IndexAnalyzers;
+import org.elasticsearch.index.analysis.NormalizingTokenFilterFactory;
 import org.elasticsearch.index.analysis.PreConfiguredCharFilter;
 import org.elasticsearch.index.analysis.TokenFilterFactory;
 import org.elasticsearch.index.analysis.TokenizerFactory;
@@ -50,7 +51,6 @@ import org.elasticsearch.test.IndexSettingsModule;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -109,6 +109,25 @@ public class TransportAnalyzeActionTests extends ESTestCase {
                 }
             }
 
+            class DeprecatedTokenFilterFactory extends AbstractTokenFilterFactory implements NormalizingTokenFilterFactory {
+
+                DeprecatedTokenFilterFactory(IndexSettings indexSettings, Environment env, String name, Settings settings) {
+                    super(indexSettings, name, settings);
+                }
+
+                @Override
+                public TokenStream create(TokenStream tokenStream) {
+                    deprecationLogger.deprecated("Using deprecated token filter [deprecated]");
+                    return tokenStream;
+                }
+
+                @Override
+                public TokenStream normalize(TokenStream tokenStream) {
+                    deprecationLogger.deprecated("Using deprecated token filter [deprecated]");
+                    return tokenStream;
+                }
+            }
+
             class AppendCharFilterFactory extends AbstractCharFilterFactory {
 
                 final String suffix;
@@ -137,7 +156,7 @@ public class TransportAnalyzeActionTests extends ESTestCase {
 
             @Override
             public Map<String, AnalysisProvider<TokenFilterFactory>> getTokenFilters() {
-                return singletonMap("mock", MockFactory::new);
+                return Map.of("mock", MockFactory::new, "deprecated", DeprecatedTokenFilterFactory::new);
             }
 
             @Override
@@ -198,19 +217,12 @@ public class TransportAnalyzeActionTests extends ESTestCase {
         assertEquals("brown", tokens.get(1).getTerm());
         assertEquals("fox", tokens.get(2).getTerm());
 
-        Map<String, Object> tokenFilterConfig = new HashMap<>();
-        tokenFilterConfig.put("type", "mock");
-        tokenFilterConfig.put("stopword", "brown");
-
-        Map<String, Object> charFilterConfig = new HashMap<>();
-        charFilterConfig.put("type", "append");
-
         // We can build a new char filter to get default values
         request = new AnalyzeAction.Request();
         request.text("the qu1ck brown fox");
         request.tokenizer("standard");
-        request.addTokenFilter(tokenFilterConfig);
-        request.addCharFilter(charFilterConfig);    // <-- basic config, uses defaults
+        request.addTokenFilter(Map.of("type", "mock", "stopword", "brown"));
+        request.addCharFilter(Map.of("type", "append"));    // <-- basic config, uses defaults
         analyze
             = TransportAnalyzeAction.analyze(request, registry, null, maxTokenCount);
         tokens = analyze.getTokens();
@@ -223,9 +235,8 @@ public class TransportAnalyzeActionTests extends ESTestCase {
         request = new AnalyzeAction.Request();
         request.text("the qu1ck brown fox");
         request.tokenizer("standard");
-        request.addTokenFilter(tokenFilterConfig);
-        charFilterConfig.put("suffix", "baz");
-        request.addCharFilter(charFilterConfig);
+        request.addTokenFilter(Map.of("type", "mock", "stopword", "brown"));
+        request.addCharFilter(Map.of("type", "append", "suffix", "baz"));
         analyze
             = TransportAnalyzeAction.analyze(request, registry, null, maxTokenCount);
         tokens = analyze.getTokens();
@@ -318,10 +329,7 @@ public class TransportAnalyzeActionTests extends ESTestCase {
         assertEquals("foxbaz", tokens.get(2).getTerm());
 
         // Apply a token filter with parameters
-        Map<String, Object> tokenFilterConfig = new HashMap<>();
-        tokenFilterConfig.put("type", "mock");
-        tokenFilterConfig.put("stopword", "brown");
-        request.addTokenFilter(tokenFilterConfig);
+        request.addTokenFilter(Map.of("type", "mock", "stopword", "brown"));
         analyze = TransportAnalyzeAction.analyze(request, registry, mockIndexService(), maxTokenCount);
         tokens = analyze.getTokens();
         assertEquals(2, tokens.size());
@@ -427,10 +435,7 @@ public class TransportAnalyzeActionTests extends ESTestCase {
     public void testCustomCharFilterWithParameters() throws IOException {
         AnalyzeAction.Request request = new AnalyzeAction.Request();
         request.tokenizer("standard");
-        Map<String, Object> charFilterConfig = new HashMap<>();
-        charFilterConfig.put("type", "append");
-        charFilterConfig.put("suffix", "foo");
-        request.addCharFilter(charFilterConfig);
+        request.addCharFilter(Map.of("type", "append", "suffix", "foo"));
         request.text("quick brown");
         AnalyzeAction.Response analyze =
             TransportAnalyzeAction.analyze(request, registry, mockIndexService(), maxTokenCount);
@@ -443,13 +448,14 @@ public class TransportAnalyzeActionTests extends ESTestCase {
     public void testNormalizerWithIndex() throws IOException {
         AnalyzeAction.Request request = new AnalyzeAction.Request("index");
         request.normalizer("my_normalizer");
-        request.text("ABc");
+        // this should be lowercased and only emit a single token
+        request.text("Wi-fi");
         AnalyzeAction.Response analyze
             = TransportAnalyzeAction.analyze(request, registry, mockIndexService(), maxTokenCount);
         List<AnalyzeAction.AnalyzeToken> tokens = analyze.getTokens();
 
         assertEquals(1, tokens.size());
-        assertEquals("abc", tokens.get(0).getTerm());
+        assertEquals("wi-fi", tokens.get(0).getTerm());
     }
 
     /**
@@ -505,5 +511,29 @@ public class TransportAnalyzeActionTests extends ESTestCase {
             () -> TransportAnalyzeAction.analyze(request, registry, null, idxMaxTokenCount));
         assertEquals(e.getMessage(), "The number of tokens produced by calling _analyze has exceeded the allowed maximum of ["
             + idxMaxTokenCount + "]." + " This limit can be set by changing the [index.analyze.max_token_count] index level setting.");
+    }
+
+    public void testDeprecationWarnings() throws IOException {
+        AnalyzeAction.Request req = new AnalyzeAction.Request();
+        req.tokenizer("standard");
+        req.addTokenFilter("lowercase");
+        req.addTokenFilter("deprecated");
+        req.text("test text");
+
+        AnalyzeAction.Response analyze =
+            TransportAnalyzeAction.analyze(req, registry, mockIndexService(), maxTokenCount);
+        assertEquals(2, analyze.getTokens().size());
+        assertWarnings("Using deprecated token filter [deprecated]");
+
+        // normalizer
+        req = new AnalyzeAction.Request();
+        req.addTokenFilter("lowercase");
+        req.addTokenFilter("deprecated");
+        req.text("text");
+
+        analyze =
+            TransportAnalyzeAction.analyze(req, registry, mockIndexService(), maxTokenCount);
+        assertEquals(1, analyze.getTokens().size());
+        assertWarnings("Using deprecated token filter [deprecated]");
     }
 }

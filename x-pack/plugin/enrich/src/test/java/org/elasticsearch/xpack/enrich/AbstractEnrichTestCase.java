@@ -15,7 +15,7 @@ import org.elasticsearch.test.ESSingleNodeTestCase;
 import org.elasticsearch.xpack.core.enrich.EnrichPolicy;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -23,7 +23,7 @@ public abstract class AbstractEnrichTestCase extends ESSingleNodeTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> getPlugins() {
-        return Collections.singletonList(LocalStateEnrich.class);
+        return List.of(LocalStateEnrich.class);
     }
 
     protected AtomicReference<Exception> saveEnrichPolicy(String name, EnrichPolicy policy, ClusterService clusterService)
@@ -62,7 +62,7 @@ public abstract class AbstractEnrichTestCase extends ESSingleNodeTestCase {
     protected static void createSourceIndices(Client client, EnrichPolicy policy) {
         for (String sourceIndex : policy.getIndices()) {
             CreateIndexRequest createIndexRequest = new CreateIndexRequest(sourceIndex);
-            createIndexRequest.mapping("_doc", policy.getMatchField(), "type=keyword");
+            createIndexRequest.simpleMapping(policy.getMatchField(), "type=keyword");
             try {
                 client.admin().indices().create(createIndexRequest).actionGet();
             } catch (ResourceAlreadyExistsException e) {

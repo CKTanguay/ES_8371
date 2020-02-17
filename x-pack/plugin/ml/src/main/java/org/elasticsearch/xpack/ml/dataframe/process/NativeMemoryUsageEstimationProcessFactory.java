@@ -68,6 +68,7 @@ public class NativeMemoryUsageEstimationProcessFactory implements AnalyticsProce
 
         NativeMemoryUsageEstimationProcess process = new NativeMemoryUsageEstimationProcess(
             config.getId(),
+            nativeController,
             processPipes.getLogStream().get(),
             // Memory estimation process does not use the input pipe, hence null.
             null,
@@ -75,7 +76,8 @@ public class NativeMemoryUsageEstimationProcessFactory implements AnalyticsProce
             null,
             0,
             filesToDelete,
-            onProcessCrash);
+            onProcessCrash,
+            processConnectTimeout);
 
         try {
             process.start(executorService);

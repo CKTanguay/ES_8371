@@ -40,7 +40,7 @@ public class CloseIndexRequest extends AcknowledgedRequest<CloseIndexRequest> im
 
     private String[] indices;
     private IndicesOptions indicesOptions = IndicesOptions.strictExpandOpen();
-    private ActiveShardCount waitForActiveShards = ActiveShardCount.NONE;
+    private ActiveShardCount waitForActiveShards = ActiveShardCount.DEFAULT;
 
     public CloseIndexRequest(StreamInput in) throws IOException {
         super(in);

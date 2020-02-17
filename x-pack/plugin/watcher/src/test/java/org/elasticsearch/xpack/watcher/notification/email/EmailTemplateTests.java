@@ -5,8 +5,6 @@
  */
 package org.elasticsearch.xpack.watcher.notification.email;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -22,6 +20,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -185,14 +184,13 @@ public class EmailTemplateTests extends ESTestCase {
         ArgumentCaptor<String> htmlSanitizeArguments = ArgumentCaptor.forClass(String.class);
 
         //4 attachments, zero warning, one warning, two warnings, and one with html that should be stripped
-        Map<String, Attachment> attachments = ImmutableMap.of(
+        Map<String, Attachment> attachments = Map.of(
             "one", new Attachment.Bytes("one", "one", randomByteArrayOfLength(100), randomAlphaOfLength(5), false, Collections.emptySet()),
-            "two", new Attachment.Bytes("two", "two", randomByteArrayOfLength(100), randomAlphaOfLength(5), false,
-                ImmutableSet.of("warning0")),
+            "two", new Attachment.Bytes("two", "two", randomByteArrayOfLength(100), randomAlphaOfLength(5), false, Set.of("warning0")),
             "thr", new Attachment.Bytes("thr", "thr", randomByteArrayOfLength(100), randomAlphaOfLength(5), false,
-                ImmutableSet.of("warning1", "warning2")),
+                Set.of("warning1", "warning2")),
             "for", new Attachment.Bytes("for", "for", randomByteArrayOfLength(100), randomAlphaOfLength(5), false,
-                ImmutableSet.of("<script>warning3</script>")));
+                Set.of("<script>warning3</script>")));
         Email.Builder emailBuilder = parsedEmailTemplate.render(new MockTextTemplateEngine(), model, htmlSanitizer, attachments);
 
         emailBuilder.id("_id");

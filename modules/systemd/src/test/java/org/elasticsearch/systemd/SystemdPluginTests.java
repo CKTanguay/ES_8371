@@ -46,8 +46,8 @@ import static org.mockito.Mockito.when;
 
 public class SystemdPluginTests extends ESTestCase {
 
-    private final Build.Type randomPackageBuildType = randomFrom(Build.Type.DEB, Build.Type.RPM);
-    private final Build.Type randomNonPackageBuildType =
+    private Build.Type randomPackageBuildType = randomFrom(Build.Type.DEB, Build.Type.RPM);
+    private Build.Type randomNonPackageBuildType =
         randomValueOtherThanMany(t -> t == Build.Type.DEB || t == Build.Type.RPM, () -> randomFrom(Build.Type.values()));
 
     final Scheduler.Cancellable extender = mock(Scheduler.Cancellable.class);

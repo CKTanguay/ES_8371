@@ -93,10 +93,11 @@ public class PluginsServiceTests extends ESTestCase {
         Settings newSettings = service.updatedSettings();
         assertEquals("test", newSettings.get("my.setting")); // previous settings still exist
         assertEquals("1", newSettings.get("foo.bar")); // added setting exists
+        // does not override pre existing settings
         assertEquals(
             IndexModule.Type.SIMPLEFS.getSettingsKey(),
             newSettings.get(IndexModule.INDEX_STORE_TYPE_SETTING.getKey())
-        ); // does not override pre existing settings
+        );
     }
 
     public void testAdditionalSettingsClash() {
@@ -609,7 +610,7 @@ public class PluginsServiceTests extends ESTestCase {
     }
 
     public void testIncompatibleElasticsearchVersion() throws Exception {
-        PluginInfo info = new PluginInfo("my_plugin", "desc", "1.0", Version.V_6_0_0,
+        PluginInfo info = new PluginInfo("my_plugin", "desc", "1.0", Version.fromId(6000099),
             "1.8", "FakePlugin", Collections.emptyList(), false);
         IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> PluginsService.verifyCompatibility(info));
         assertThat(e.getMessage(), containsString("was built for Elasticsearch version 6.0.0"));

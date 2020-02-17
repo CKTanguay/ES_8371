@@ -20,9 +20,8 @@ import org.elasticsearch.xpack.core.enrich.EnrichPolicy;
 import org.elasticsearch.xpack.core.enrich.action.ExecuteEnrichPolicyAction;
 import org.elasticsearch.xpack.core.enrich.action.PutEnrichPolicyAction;
 
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
 import static org.elasticsearch.xpack.enrich.AbstractEnrichTestCase.createSourceIndices;
@@ -33,20 +32,14 @@ public class EnrichPolicyUpdateTests extends ESSingleNodeTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> getPlugins() {
-        return Arrays.asList(LocalStateEnrich.class, ReindexPlugin.class, IngestCommonPlugin.class);
+        return List.of(LocalStateEnrich.class, ReindexPlugin.class, IngestCommonPlugin.class);
     }
 
     public void testUpdatePolicyOnly() {
         IngestService ingestService = getInstanceFromNode(IngestService.class);
         createIndex("index", Settings.EMPTY, "_doc", "key1", "type=keyword", "field1", "type=keyword");
 
-        EnrichPolicy instance1 = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList("index"),
-            "key1",
-            Collections.singletonList("field1")
-        );
+        EnrichPolicy instance1 = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of("index"), "key1", List.of("field1"));
         createSourceIndices(client(), instance1);
         PutEnrichPolicyAction.Request putPolicyRequest = new PutEnrichPolicyAction.Request("my_policy", instance1);
         assertAcked(client().execute(PutEnrichPolicyAction.INSTANCE, putPolicyRequest).actionGet());
@@ -66,13 +59,7 @@ public class EnrichPolicyUpdateTests extends ESSingleNodeTestCase {
         Pipeline pipelineInstance1 = ingestService.getPipeline("1");
         assertThat(pipelineInstance1.getProcessors().get(0), instanceOf(MatchProcessor.class));
 
-        EnrichPolicy instance2 = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList("index2"),
-            "key2",
-            Collections.singletonList("field2")
-        );
+        EnrichPolicy instance2 = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of("index2"), "key2", List.of("field2"));
         createSourceIndices(client(), instance2);
         ResourceAlreadyExistsException exc = expectThrows(
             ResourceAlreadyExistsException.class,

@@ -29,7 +29,8 @@ import org.elasticsearch.client.enrich.StatsRequest;
 import org.elasticsearch.client.enrich.StatsResponse;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 
-import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -40,13 +41,12 @@ public class EnrichIT extends ESRestHighLevelClientTestCase {
 
     public void testCRUD() throws Exception {
         CreateIndexRequest createIndexRequest = new CreateIndexRequest("my-index")
-            .mapping(Collections.singletonMap("properties", Collections.singletonMap("enrich_key",
-                Collections.singletonMap("type", "keyword"))));
+            .mapping(Map.of("properties", Map.of("enrich_key", Map.of("type", "keyword"))));
         highLevelClient().indices().create(createIndexRequest, RequestOptions.DEFAULT);
 
         final EnrichClient enrichClient = highLevelClient().enrich();
-        PutPolicyRequest putPolicyRequest = new PutPolicyRequest("my-policy", "match",
-            Collections.singletonList("my-index"), "enrich_key", Collections.singletonList("enrich_value"));
+        PutPolicyRequest putPolicyRequest =
+            new PutPolicyRequest("my-policy", "match", List.of("my-index"), "enrich_key", List.of("enrich_value"));
         AcknowledgedResponse putPolicyResponse = execute(putPolicyRequest, enrichClient::putPolicy, enrichClient::putPolicyAsync);
         assertThat(putPolicyResponse.isAcknowledged(), is(true));
 

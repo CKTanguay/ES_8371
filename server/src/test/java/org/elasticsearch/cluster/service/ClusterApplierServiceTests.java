@@ -48,6 +48,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -507,10 +508,7 @@ public class ClusterApplierServiceTests extends ESTestCase {
 
         @Override
         protected long currentTimeInMillis() {
-            if (currentTimeOverride != null) {
-                return currentTimeOverride;
-            }
-            return super.currentTimeInMillis();
+            return Objects.requireNonNullElseGet(currentTimeOverride, super::currentTimeInMillis);
         }
 
         @Override

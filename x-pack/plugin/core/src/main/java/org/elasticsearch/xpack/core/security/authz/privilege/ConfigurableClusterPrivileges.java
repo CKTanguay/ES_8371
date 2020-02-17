@@ -214,7 +214,7 @@ public final class ConfigurableClusterPrivileges {
 
         @Override
         public ClusterPermission.Builder buildPermission(final ClusterPermission.Builder builder) {
-            return builder.add(this, Collections.singleton("cluster:admin/xpack/security/privilege/*"), requestPredicate);
+            return builder.add(this, Set.of("cluster:admin/xpack/security/privilege/*"), requestPredicate);
         }
 
         private interface Fields {

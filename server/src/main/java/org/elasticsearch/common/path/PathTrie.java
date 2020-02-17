@@ -354,7 +354,7 @@ public class PathTrie<T> {
      * of parameters.
      */
     public Iterator<T> retrieveAll(String path, Supplier<Map<String, String>> paramSupplier) {
-        return new Iterator<T>() {
+        return new Iterator<>() {
 
             private int mode;
 

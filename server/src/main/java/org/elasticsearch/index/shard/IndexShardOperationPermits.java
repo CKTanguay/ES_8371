@@ -251,7 +251,7 @@ final class IndexShardOperationPermits implements Closeable {
                     final ActionListener<Releasable> wrappedListener;
                     if (executorOnDelay != null) {
                         wrappedListener = ActionListener.delegateFailure(new ContextPreservingActionListener<>(contextSupplier, onAcquired),
-                            (l, r) -> threadPool.executor(executorOnDelay).execute(new ActionRunnable<Releasable>(l) {
+                            (l, r) -> threadPool.executor(executorOnDelay).execute(new ActionRunnable<>(l) {
                                 @Override
                                 public boolean isForceExecution() {
                                     return forceExecution;

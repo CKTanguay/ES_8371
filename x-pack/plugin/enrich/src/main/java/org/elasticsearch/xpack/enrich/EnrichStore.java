@@ -22,7 +22,6 @@ import org.elasticsearch.xpack.core.enrich.EnrichPolicy;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -68,7 +67,7 @@ public final class EnrichStore {
         if (name.toLowerCase(Locale.ROOT).equals(name) == false) {
             throw new IllegalArgumentException("Invalid policy name [" + name + "], must be lowercase");
         }
-        Set<String> supportedPolicyTypes = new HashSet<>(Arrays.asList(EnrichPolicy.SUPPORTED_POLICY_TYPES));
+        Set<String> supportedPolicyTypes = Set.of(EnrichPolicy.SUPPORTED_POLICY_TYPES);
         if (supportedPolicyTypes.contains(policy.getType()) == false) {
             throw new IllegalArgumentException(
                 "unsupported policy type ["

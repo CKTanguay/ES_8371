@@ -16,7 +16,6 @@ import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.core.security.authz.permission.ClusterPermission;
 import org.elasticsearch.xpack.core.security.user.User;
 
-import java.util.Collections;
 import java.util.Map;
 
 import static org.mockito.Mockito.mock;
@@ -30,7 +29,7 @@ public class ManageOwnApiKeyClusterPrivilegeTests extends ESTestCase {
 
         final String apiKeyId = randomAlphaOfLengthBetween(4, 7);
         final Authentication authentication = createMockAuthentication("joe","_es_api_key", "_es_api_key",
-            Collections.singletonMap("_security_api_key_id", apiKeyId));
+            Map.of("_security_api_key_id", apiKeyId));
         final TransportRequest getApiKeyRequest = GetApiKeyRequest.usingApiKeyId(apiKeyId, randomBoolean());
         final TransportRequest invalidateApiKeyRequest = InvalidateApiKeyRequest.usingApiKeyId(apiKeyId, randomBoolean());
 
@@ -45,7 +44,7 @@ public class ManageOwnApiKeyClusterPrivilegeTests extends ESTestCase {
 
         final String apiKeyId = randomAlphaOfLengthBetween(4, 7);
         final Authentication authentication = createMockAuthentication("joe","_es_api_key", "_es_api_key",
-            Collections.singletonMap("_security_api_key_id", randomAlphaOfLength(7)));
+            Map.of("_security_api_key_id", randomAlphaOfLength(7)));
         final TransportRequest getApiKeyRequest = GetApiKeyRequest.usingApiKeyId(apiKeyId, randomBoolean());
         final TransportRequest invalidateApiKeyRequest = InvalidateApiKeyRequest.usingApiKeyId(apiKeyId, randomBoolean());
 
@@ -57,7 +56,7 @@ public class ManageOwnApiKeyClusterPrivilegeTests extends ESTestCase {
         final ClusterPermission clusterPermission =
             ManageOwnApiKeyClusterPrivilege.INSTANCE.buildPermission(ClusterPermission.builder()).build();
 
-        final Authentication authentication = createMockAuthentication("joe","realm1", "native", Collections.emptyMap());
+        final Authentication authentication = createMockAuthentication("joe","realm1", "native", Map.of());
         final TransportRequest getApiKeyRequest = GetApiKeyRequest.usingRealmAndUserName("realm1", "joe");
         final TransportRequest invalidateApiKeyRequest = InvalidateApiKeyRequest.usingRealmAndUserName("realm1", "joe");
 
@@ -70,7 +69,7 @@ public class ManageOwnApiKeyClusterPrivilegeTests extends ESTestCase {
         final ClusterPermission clusterPermission =
             ManageOwnApiKeyClusterPrivilege.INSTANCE.buildPermission(ClusterPermission.builder()).build();
 
-        final Authentication authentication = createMockAuthentication("joe","realm1", "native", Collections.emptyMap());
+        final Authentication authentication = createMockAuthentication("joe","realm1", "native", Map.of());
         final TransportRequest getApiKeyRequest = GetApiKeyRequest.forOwnedApiKeys();
         final TransportRequest invalidateApiKeyRequest = InvalidateApiKeyRequest.forOwnedApiKeys();
 
@@ -83,7 +82,7 @@ public class ManageOwnApiKeyClusterPrivilegeTests extends ESTestCase {
         final ClusterPermission clusterPermission =
             ManageOwnApiKeyClusterPrivilege.INSTANCE.buildPermission(ClusterPermission.builder()).build();
 
-        final Authentication authentication = createMockAuthentication("joe", "realm1", "native", Collections.emptyMap());
+        final Authentication authentication = createMockAuthentication("joe", "realm1", "native", Map.of());
         final TransportRequest getApiKeyRequest = randomFrom(
             GetApiKeyRequest.usingRealmAndUserName("realm1", randomAlphaOfLength(7)),
             GetApiKeyRequest.usingRealmAndUserName(randomAlphaOfLength(5), "joe"),

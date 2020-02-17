@@ -7,6 +7,7 @@
 package org.elasticsearch.xpack.enrich;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
@@ -34,7 +35,7 @@ public class EnrichPolicyExecutorTests extends ESTestCase {
 
     private static ThreadPool testThreadPool;
     private static TaskManager testTaskManager;
-    private static final ActionListener<ExecuteEnrichPolicyStatus> noOpListener = new ActionListener<ExecuteEnrichPolicyStatus>() {
+    private static final ActionListener<ExecuteEnrichPolicyStatus> noOpListener = new ActionListener<>() {
         @Override
         public void onResponse(ExecuteEnrichPolicyStatus ignored) {}
 
@@ -133,13 +134,7 @@ public class EnrichPolicyExecutorTests extends ESTestCase {
 
     public void testNonConcurrentPolicyExecution() throws InterruptedException {
         String testPolicyName = "test_policy";
-        EnrichPolicy testPolicy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList("some_index"),
-            "keyfield",
-            Collections.singletonList("valuefield")
-        );
+        EnrichPolicy testPolicy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of("some_index"), "keyfield", List.of("valuefield"));
         final EnrichPolicyTestExecutor testExecutor = new EnrichPolicyTestExecutor(
             Settings.EMPTY,
             null,
@@ -196,13 +191,7 @@ public class EnrichPolicyExecutorTests extends ESTestCase {
     public void testMaximumPolicyExecutionLimit() throws InterruptedException {
         String testPolicyBaseName = "test_policy_";
         Settings testSettings = Settings.builder().put(EnrichPlugin.ENRICH_MAX_CONCURRENT_POLICY_EXECUTIONS.getKey(), 2).build();
-        EnrichPolicy testPolicy = new EnrichPolicy(
-            EnrichPolicy.MATCH_TYPE,
-            null,
-            Collections.singletonList("some_index"),
-            "keyfield",
-            Collections.singletonList("valuefield")
-        );
+        EnrichPolicy testPolicy = new EnrichPolicy(EnrichPolicy.MATCH_TYPE, null, List.of("some_index"), "keyfield", List.of("valuefield"));
         final EnrichPolicyTestExecutor testExecutor = new EnrichPolicyTestExecutor(
             testSettings,
             null,

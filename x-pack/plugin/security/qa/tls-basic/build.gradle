@@ -9,8 +9,8 @@ dependencies {
 }
 
 forbiddenPatterns {
-    exclude '**/*.key'
-    exclude '**/*.p12'
+  exclude '**/*.key'
+  exclude '**/*.p12'
 }
 
 
@@ -38,4 +38,3 @@ testClusters.integTest {
   setting 'xpack.security.transport.ssl.key_passphrase', 'transport-password'
   setting 'xpack.security.transport.ssl.certificate_authorities', 'ca.crt'
 }
-

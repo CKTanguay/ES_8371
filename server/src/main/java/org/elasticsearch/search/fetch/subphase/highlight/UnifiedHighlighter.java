@@ -56,7 +56,7 @@ public class UnifiedHighlighter implements Highlighter {
     public boolean canHighlight(MappedFieldType fieldType) {
         return true;
     }
-    
+
     @Override
     public HighlightField highlight(HighlighterContext highlighterContext) {
         MappedFieldType fieldType = highlighterContext.fieldType;
@@ -67,11 +67,10 @@ public class UnifiedHighlighter implements Highlighter {
         final int maxAnalyzedOffset = context.getIndexSettings().getHighlightMaxAnalyzedOffset();
 
         List<Snippet> snippets = new ArrayList<>();
-        int numberOfFragments;
+        int numberOfFragments = field.fieldOptions().numberOfFragments();
         try {
 
-            final Analyzer analyzer = getAnalyzer(context.getMapperService().documentMapper(hitContext.hit().getType()),
-                    hitContext);
+            final Analyzer analyzer = getAnalyzer(context.getMapperService().documentMapper(), hitContext);
             List<Object> fieldValues = loadFieldValues(fieldType, field, context, hitContext,
                 highlighterContext.highlight.forceSource(field));
             if (fieldValues.size() == 0) {
@@ -90,14 +89,16 @@ public class UnifiedHighlighter implements Highlighter {
                         "This maximum can be set by changing the [" + IndexSettings.MAX_ANALYZED_OFFSET_SETTING.getKey() +
                         "] index level setting. " + "For large texts, indexing with offsets or term vectors is recommended!");
             }
-            if (field.fieldOptions().numberOfFragments() == 0) {
+            if (numberOfFragments == 0
+                    // non-tokenized fields should not use any break iterator (ignore boundaryScannerType)
+                    || fieldType.tokenized() == false) {
                 // we use a control char to separate values, which is the only char that the custom break iterator
                 // breaks the text on, so we don't lose the distinction between the different values of a field and we
                 // get back a snippet per value
                 CustomSeparatorBreakIterator breakIterator = new CustomSeparatorBreakIterator(MULTIVAL_SEP_CHAR);
                 highlighter = new CustomUnifiedHighlighter(searcher, analyzer, offsetSource, passageFormatter,
                     field.fieldOptions().boundaryScannerLocale(), breakIterator, fieldValue, field.fieldOptions().noMatchSize());
-                numberOfFragments = fieldValues.size(); // we are highlighting the whole content, one snippet per value
+                numberOfFragments = numberOfFragments == 0 ? fieldValues.size() : numberOfFragments;
             } else {
                 //using paragraph separator we make sure that each field value holds a discrete passage for highlighting
                 BreakIterator bi = getBreakIterator(field);
@@ -150,7 +151,7 @@ public class UnifiedHighlighter implements Highlighter {
         return passageFormatter;
     }
 
-    
+
     protected Analyzer getAnalyzer(DocumentMapper docMapper, HitContext hitContext) {
         return docMapper.mappers().indexAnalyzer();
     }

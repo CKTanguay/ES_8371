@@ -43,7 +43,6 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 @ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.SUITE, numDataNodes = 2)
 public class BulkProcessorRetryIT extends ESIntegTestCase {
     private static final String INDEX_NAME = "test";
-    private static final String TYPE_NAME = "type";
 
     @Override
     protected Settings nodeSettings(int nodeOrdinal) {
@@ -146,7 +145,6 @@ public class BulkProcessorRetryIT extends ESIntegTestCase {
 
         SearchResponse results = client()
                 .prepareSearch(INDEX_NAME)
-                .setTypes(TYPE_NAME)
                 .setQuery(QueryBuilders.matchAllQuery())
                 .setSize(0)
                 .get();
@@ -176,7 +174,6 @@ public class BulkProcessorRetryIT extends ESIntegTestCase {
             processor.add(client()
                     .prepareIndex()
                     .setIndex(INDEX_NAME)
-                    .setType(TYPE_NAME)
                     .setId(Integer.toString(i))
                     .setSource("field", randomRealisticUnicodeOfLengthBetween(1, 30))
                     .request());

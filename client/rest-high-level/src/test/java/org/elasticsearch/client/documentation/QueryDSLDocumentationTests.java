@@ -43,7 +43,6 @@ import java.util.Map;
 import static java.util.Collections.singletonMap;
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 import static org.elasticsearch.index.query.QueryBuilders.boostingQuery;
-import static org.elasticsearch.index.query.QueryBuilders.commonTermsQuery;
 import static org.elasticsearch.index.query.QueryBuilders.constantScoreQuery;
 import static org.elasticsearch.index.query.QueryBuilders.disMaxQuery;
 import static org.elasticsearch.index.query.QueryBuilders.existsQuery;
@@ -75,7 +74,6 @@ import static org.elasticsearch.index.query.QueryBuilders.spanTermQuery;
 import static org.elasticsearch.index.query.QueryBuilders.spanWithinQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
-import static org.elasticsearch.index.query.QueryBuilders.typeQuery;
 import static org.elasticsearch.index.query.QueryBuilders.wildcardQuery;
 import static org.elasticsearch.index.query.QueryBuilders.wrapperQuery;
 import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.exponentialDecayFunction;
@@ -106,13 +104,6 @@ public class QueryDSLDocumentationTests extends ESTestCase {
                     termQuery("name","dadoonet"))                    // <2>
                 .negativeBoost(0.2f);                                // <3>
         // end::boosting
-    }
-
-    public void testCommonTerms() {
-        // tag::common_terms
-        commonTermsQuery("name",                                     // <1>
-                         "kimchy");                                  // <2>
-        // end::common_terms
     }
 
     public void testConstantScore() {
@@ -434,12 +425,6 @@ public class QueryDSLDocumentationTests extends ESTestCase {
         // end::terms
     }
 
-    public void testType() {
-        // tag::type
-        typeQuery("my_type");                                        // <1>
-        // end::type
-    }
-
     public void testWildcard() {
         // tag::wildcard
         wildcardQuery(
@@ -456,26 +441,28 @@ public class QueryDSLDocumentationTests extends ESTestCase {
     }
 
     public void testRankFeatureSaturation() {
-        RankFeatureQueryBuilders.saturation(
-            "pagerank"); // <1>
+        RankFeatureQueryBuilders.saturation("pagerank");
     }
 
     public void testRankFeatureSaturationPivot() {
         RankFeatureQueryBuilders.saturation(
-            "pagerank",     // <1>
-            8);                 // <2>
+            "pagerank",
+            8
+        );
     }
 
     public void testRankFeatureLog() {
         RankFeatureQueryBuilders.log(
-            "pagerank",     // <1>
-            4f);          // <2>
+            "pagerank",
+            4f
+        );
     }
 
     public void testRankFeatureSigmoid() {
         RankFeatureQueryBuilders.sigmoid(
-            "pagerank",   // <1>
-            7,                // <2>
-            0.6f);             // <3>
+            "pagerank",
+            7,
+            0.6f
+        );
     }
 }

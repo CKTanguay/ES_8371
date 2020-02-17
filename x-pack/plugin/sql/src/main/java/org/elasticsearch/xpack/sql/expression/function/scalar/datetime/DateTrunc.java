@@ -5,19 +5,17 @@
  */
 package org.elasticsearch.xpack.sql.expression.function.scalar.datetime;
 
-import org.elasticsearch.xpack.sql.expression.Expression;
-import org.elasticsearch.xpack.sql.expression.function.scalar.BinaryScalarFunction;
-import org.elasticsearch.xpack.sql.expression.gen.pipeline.Pipe;
-import org.elasticsearch.xpack.sql.tree.NodeInfo;
-import org.elasticsearch.xpack.sql.tree.Source;
-import org.elasticsearch.xpack.sql.type.DataType;
+import org.elasticsearch.xpack.ql.expression.Expression;
+import org.elasticsearch.xpack.ql.expression.function.scalar.BinaryScalarFunction;
+import org.elasticsearch.xpack.ql.expression.gen.pipeline.Pipe;
+import org.elasticsearch.xpack.ql.tree.NodeInfo;
+import org.elasticsearch.xpack.ql.tree.Source;
+import org.elasticsearch.xpack.ql.type.DataType;
+import org.elasticsearch.xpack.ql.type.DataTypes;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoField;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -112,7 +110,7 @@ public class DateTrunc extends BinaryDateTimeFunction {
 
         Part(UnaryOperator<ZonedDateTime> truncateFunction, String... aliases) {
             this.truncateFunction = truncateFunction;
-            this.aliases = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(aliases)));
+            this.aliases = Set.of(aliases);
         }
 
         @Override
@@ -139,7 +137,7 @@ public class DateTrunc extends BinaryDateTimeFunction {
 
     @Override
     public DataType dataType() {
-        return DataType.DATETIME;
+        return DataTypes.DATETIME;
     }
 
     @Override

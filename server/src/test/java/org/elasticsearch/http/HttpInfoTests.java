@@ -45,7 +45,6 @@ public class HttpInfoTests extends ESTestCase {
         );
     }
 
-
     public void testCorrectDisplayPublishedIp() throws Exception {
         InetAddress localhost = InetAddress.getByName(NetworkAddress.format(InetAddress.getByName("localhost")));
         int port = 9200;

@@ -27,7 +27,6 @@ import org.elasticsearch.test.ESIntegTestCase;
 import org.hamcrest.Matcher;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -57,24 +56,19 @@ public class DiscoveryNodeRoleIT extends ESIntegTestCase {
 
         @Override
         public Set<DiscoveryNodeRole> getRoles() {
-            return Collections.singleton(ADDITIONAL_ROLE);
+            return Set.of(ADDITIONAL_ROLE);
         }
 
         @Override
         public List<Setting<?>> getSettings() {
-            return Collections.singletonList(NODE_ADDITIONAL_SETTING);
+            return List.of(NODE_ADDITIONAL_SETTING);
         }
 
     }
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        return Collections.singletonList(AdditionalRolePlugin.class);
-    }
-
-    @Override
-    protected Collection<Class<? extends Plugin>> transportClientPlugins() {
-        return Collections.singletonList(AdditionalRolePlugin.class);
+        return List.of(AdditionalRolePlugin.class);
     }
 
     public void testDefaultHasAdditionalRole() {

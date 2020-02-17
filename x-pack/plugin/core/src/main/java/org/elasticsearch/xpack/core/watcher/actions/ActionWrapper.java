@@ -36,7 +36,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -241,7 +240,7 @@ public class ActionWrapper implements ToXContentObject {
         if (ctx.payload().data() != null) {
             model.put("payload", ctx.payload().data());
         }
-        return Collections.singletonMap("ctx", model);
+        return Map.of("ctx", model);
     }
 
     @Override

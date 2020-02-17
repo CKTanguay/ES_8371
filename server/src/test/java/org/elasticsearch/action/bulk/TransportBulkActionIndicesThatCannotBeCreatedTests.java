@@ -60,7 +60,7 @@ public class TransportBulkActionIndicesThatCannotBeCreatedTests extends ESTestCa
         bulkRequest.add(new IndexRequest(randomAlphaOfLength(5)));
         bulkRequest.add(new IndexRequest(randomAlphaOfLength(5)));
         bulkRequest.add(new DeleteRequest(randomAlphaOfLength(5)));
-        bulkRequest.add(new UpdateRequest(randomAlphaOfLength(5), randomAlphaOfLength(5), randomAlphaOfLength(5)));
+        bulkRequest.add(new UpdateRequest(randomAlphaOfLength(5), randomAlphaOfLength(5)));
         // Test emulating auto_create_index=false
         indicesThatCannotBeCreatedTestCase(emptySet(), bulkRequest, null);
         // Test emulating auto_create_index=true
@@ -76,7 +76,7 @@ public class TransportBulkActionIndicesThatCannotBeCreatedTests extends ESTestCa
         bulkRequest.add(new IndexRequest("no"));
         bulkRequest.add(new IndexRequest("can't"));
         bulkRequest.add(new DeleteRequest("do").version(0).versionType(VersionType.EXTERNAL));
-        bulkRequest.add(new UpdateRequest("nothin", randomAlphaOfLength(5), randomAlphaOfLength(5)));
+        bulkRequest.add(new UpdateRequest("nothin", randomAlphaOfLength(5)));
         indicesThatCannotBeCreatedTestCase(new HashSet<>(Arrays.asList("no", "can't", "do", "nothin")), bulkRequest, index -> {
             throw new IndexNotFoundException("Can't make it because I say so");
         });
@@ -119,7 +119,7 @@ public class TransportBulkActionIndicesThatCannotBeCreatedTests extends ESTestCa
         final ExecutorService direct = EsExecutors.newDirectExecutorService();
         when(threadPool.executor(anyString())).thenReturn(direct);
         TransportBulkAction action = new TransportBulkAction(threadPool, mock(TransportService.class), clusterService,
-                null, null, null, mock(ActionFilters.class), null, null) {
+                null, null, mock(ActionFilters.class), null, null) {
             @Override
             void executeBulk(Task task, BulkRequest bulkRequest, long startTimeNanos, ActionListener<BulkResponse> listener,
                     AtomicArray<BulkItemResponse> responses, Map<String, IndexNotFoundException> indicesThatCannotBeCreated) {

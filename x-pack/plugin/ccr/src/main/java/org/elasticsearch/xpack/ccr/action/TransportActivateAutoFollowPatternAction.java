@@ -19,6 +19,7 @@ import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xpack.core.ccr.AutoFollowMetadata;
@@ -54,11 +55,10 @@ public class TransportActivateAutoFollowPatternAction extends TransportMasterNod
     }
 
     @Override
-    protected void masterOperation(ActivateAutoFollowPatternAction.Request request,
-                                   ClusterState state,
-                                   ActionListener<AcknowledgedResponse> listener) throws Exception {
+    protected void masterOperation(final Task task, final Request request, final ClusterState state,
+                                   final ActionListener<AcknowledgedResponse> listener) throws Exception {
         clusterService.submitStateUpdateTask("activate-auto-follow-pattern-" + request.getName(),
-            new AckedClusterStateUpdateTask<AcknowledgedResponse>(request, listener) {
+            new AckedClusterStateUpdateTask<>(request, listener) {
 
                 @Override
                 protected AcknowledgedResponse newResponse(final boolean acknowledged) {

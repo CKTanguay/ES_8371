@@ -23,20 +23,9 @@ import org.elasticsearch.action.admin.indices.analyze.AnalyzeAction;
 import org.elasticsearch.common.xcontent.XContentParser;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 public class AnalyzeGlobalRequestTests extends AnalyzeRequestTests {
-
-    private static final Map<String, Object> charFilterConfig = new HashMap<>();
-    static {
-        charFilterConfig.put("type", "html_strip");
-    }
-
-    private static final Map<String, Object> tokenFilterConfig = new HashMap<>();
-    static {
-        tokenFilterConfig.put("type", "synonym");
-    }
 
     @Override
     protected AnalyzeRequest createClientTestInstance() {
@@ -47,16 +36,16 @@ public class AnalyzeGlobalRequestTests extends AnalyzeRequestTests {
             case 1:
                 return AnalyzeRequest.buildCustomAnalyzer("my_tokenizer")
                     .addCharFilter("my_char_filter")
-                    .addCharFilter(charFilterConfig)
+                    .addCharFilter(Map.of("type", "html_strip"))
                     .addTokenFilter("my_token_filter")
-                    .addTokenFilter(tokenFilterConfig)
+                    .addTokenFilter(Map.of("type", "synonym"))
                     .build("some text", "some more text");
             case 2:
                 return AnalyzeRequest.buildCustomNormalizer()
                     .addCharFilter("my_char_filter")
-                    .addCharFilter(charFilterConfig)
+                    .addCharFilter(Map.of("type", "html_strip"))
                     .addTokenFilter("my_token_filter")
-                    .addTokenFilter(tokenFilterConfig)
+                    .addTokenFilter(Map.of("type", "synonym"))
                     .build("some text", "some more text");
         }
         throw new IllegalStateException("nextInt(3) has returned a value greater than 2");

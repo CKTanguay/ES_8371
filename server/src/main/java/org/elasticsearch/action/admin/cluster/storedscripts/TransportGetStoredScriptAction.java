@@ -30,6 +30,7 @@ import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -60,7 +61,7 @@ public class TransportGetStoredScriptAction extends TransportMasterNodeReadActio
     }
 
     @Override
-    protected void masterOperation(GetStoredScriptRequest request, ClusterState state,
+    protected void masterOperation(Task task, GetStoredScriptRequest request, ClusterState state,
                                    ActionListener<GetStoredScriptResponse> listener) throws Exception {
         listener.onResponse(new GetStoredScriptResponse(request.id(), scriptService.getStoredScript(state, request)));
     }

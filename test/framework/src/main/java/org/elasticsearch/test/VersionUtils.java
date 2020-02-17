@@ -43,7 +43,7 @@ public class VersionUtils {
      * rules here match up with the rules in gradle then this should
      * produce sensible results.
      * @return a tuple containing versions with backwards compatibility
-     * guarantees in v1 and versions without the guarantees in v2
+     * guarantees in v1 and versions without the guranteees in v2
      */
     static Tuple<List<Version>, List<Version>> resolveReleasedVersions(Version current, Class<?> versionClass) {
         // group versions into major version
@@ -67,11 +67,7 @@ public class VersionUtils {
             // on a stable or release branch, ie N.x
             stableVersions = currentMajor;
             // remove the next maintenance bugfix
-            final Version prevMajorLastMinor = moveLastToUnreleased(previousMajor, unreleasedVersions);
-            if (prevMajorLastMinor.revision == 0 && previousMajor.isEmpty() == false) {
-                // The latest minor in the previous major is a ".0" release, so there must be an unreleased bugfix for the minor before that
-                moveLastToUnreleased(previousMajor, unreleasedVersions);
-            }
+            moveLastToUnreleased(previousMajor, unreleasedVersions);
         }
 
         // remove next minor
@@ -231,13 +227,6 @@ public class VersionUtils {
         }
     }
 
-    /** returns the first future incompatible version */
-    public static Version incompatibleFutureVersion(Version version) {
-        final Optional<Version> opt = ALL_VERSIONS.stream().filter(version::before).filter(v -> v.isCompatible(version) == false).findAny();
-        assert opt.isPresent() : "no future incompatible version for " + version;
-        return opt.get();
-    }
-
     /** returns the first future compatible version */
     public static Version compatibleFutureVersion(Version version) {
         final Optional<Version> opt = ALL_VERSIONS.stream().filter(version::before).filter(v -> v.isCompatible(version)).findAny();
@@ -258,5 +247,15 @@ public class VersionUtils {
      */
     public static Version randomIndexCompatibleVersion(Random random) {
         return randomVersionBetween(random, Version.CURRENT.minimumIndexCompatibilityVersion(), Version.CURRENT);
+    }
+
+    /**
+     * Returns a random version index compatible with the given version, but not the given version.
+     */
+    public static Version randomPreviousCompatibleVersion(Random random, Version version) {
+        // TODO: change this to minimumCompatibilityVersion(), but first need to remove released/unreleased
+        // versions so getPreviousVerison returns the *actual* previous version. Otherwise eg 8.0.0 returns say 7.0.2 for previous,
+        // but 7.2.0 for minimum compat
+        return randomVersionBetween(random, version.minimumIndexCompatibilityVersion(), getPreviousVersion(version));
     }
 }

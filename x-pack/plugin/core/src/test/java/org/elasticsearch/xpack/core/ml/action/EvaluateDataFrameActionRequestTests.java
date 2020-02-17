@@ -31,8 +31,8 @@ public class EvaluateDataFrameActionRequestTests extends AbstractSerializingTest
     @Override
     protected NamedWriteableRegistry getNamedWriteableRegistry() {
         List<NamedWriteableRegistry.Entry> namedWriteables = new ArrayList<>();
-        namedWriteables.addAll(new MlEvaluationNamedXContentProvider().getNamedWriteables());
-        namedWriteables.addAll(new SearchModule(Settings.EMPTY, false, Collections.emptyList()).getNamedWriteables());
+        namedWriteables.addAll(MlEvaluationNamedXContentProvider.getNamedWriteables());
+        namedWriteables.addAll(new SearchModule(Settings.EMPTY, Collections.emptyList()).getNamedWriteables());
         return new NamedWriteableRegistry(namedWriteables);
     }
 
@@ -40,19 +40,17 @@ public class EvaluateDataFrameActionRequestTests extends AbstractSerializingTest
     protected NamedXContentRegistry xContentRegistry() {
         List<NamedXContentRegistry.Entry> namedXContent = new ArrayList<>();
         namedXContent.addAll(new MlEvaluationNamedXContentProvider().getNamedXContentParsers());
-        namedXContent.addAll(new SearchModule(Settings.EMPTY, false, Collections.emptyList()).getNamedXContents());
+        namedXContent.addAll(new SearchModule(Settings.EMPTY, Collections.emptyList()).getNamedXContents());
         return new NamedXContentRegistry(namedXContent);
     }
 
     @Override
     protected Request createTestInstance() {
-        Request request = new Request();
         int indicesCount = randomIntBetween(1, 5);
         List<String> indices = new ArrayList<>(indicesCount);
         for (int i = 0; i < indicesCount; i++) {
             indices.add(randomAlphaOfLength(10));
         }
-        request.setIndices(indices);
         QueryProvider queryProvider = null;
         if (randomBoolean()) {
             try {
@@ -62,10 +60,11 @@ public class EvaluateDataFrameActionRequestTests extends AbstractSerializingTest
                 throw new UncheckedIOException(e);
             }
         }
-        request.setQueryProvider(queryProvider);
         Evaluation evaluation = randomBoolean() ? BinarySoftClassificationTests.createRandom() : RegressionTests.createRandom();
-        request.setEvaluation(evaluation);
-        return request;
+        return new Request()
+            .setIndices(indices)
+            .setQueryProvider(queryProvider)
+            .setEvaluation(evaluation);
     }
 
     @Override

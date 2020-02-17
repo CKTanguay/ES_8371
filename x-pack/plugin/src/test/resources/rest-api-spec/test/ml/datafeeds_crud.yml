@@ -86,7 +86,7 @@ setup:
 ---
 "Test put datafeed with security headers in the body":
   - do:
-      catch: /unknown field \[headers\], parser not found/
+      catch: /unknown field \[headers\]/
       ml.put_datafeed:
         datafeed_id: test-datafeed-1
         body:  >
@@ -160,7 +160,7 @@ setup:
 ---
 "Test put datafeed with invalid query":
   - do:
-      catch: /parsing_exception/
+      catch: /failed\sto\sparse\sfield\s\[query\]/
       ml.put_datafeed:
         datafeed_id: test-datafeed-1
         body:  >
@@ -207,9 +207,6 @@ setup:
 
 ---
 "Test update datafeed to point to different job":
-  - skip:
-      features: "warnings"
-
   - do:
       ml.put_datafeed:
         datafeed_id: test-datafeed-1
@@ -231,17 +228,13 @@ setup:
   - match: { job_id: "datafeeds-crud-1" }
 
   - do:
-      warnings:
-        - The ability to update a datafeed's job_id is deprecated.
+      catch: /Datafeed's job_id cannot be changed/
       ml.update_datafeed:
         datafeed_id: test-datafeed-1
         body:  >
           {
             "job_id": "datafeeds-crud-2"
           }
-  - match: { datafeed_id: "test-datafeed-1" }
-  - match: { job_id: "datafeeds-crud-2" }
-  - match: { indices: ["index-foo"] }
 
 ---
 "Test update datafeed with missing id":
@@ -266,7 +259,7 @@ setup:
           }
 
   - do:
-      catch: /resource_not_found_exception/
+      catch: /Datafeed's job_id cannot be changed/
       ml.update_datafeed:
         datafeed_id: test-datafeed-1
         body:  >
@@ -295,7 +288,7 @@ setup:
           }
 
   - do:
-      catch: /A datafeed \[test-datafeed-2\] already exists for job \[datafeeds-crud-2\]/
+      catch: /Datafeed's job_id cannot be changed/
       ml.update_datafeed:
         datafeed_id: test-datafeed-1
         body:  >

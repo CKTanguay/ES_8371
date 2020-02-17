@@ -69,7 +69,7 @@ class StoreTrustConfig extends TrustConfig {
         } catch (AccessDeniedException  e) {
             throw unreadableTrustConfigFile(e, TRUSTSTORE_FILE, storePath);
         } catch (AccessControlException e) {
-            throw blockedTrustConfigFile(e, environment, TRUSTSTORE_FILE, Collections.singletonList(storePath));
+            throw blockedTrustConfigFile(e, environment, TRUSTSTORE_FILE, List.of(storePath));
         } catch (Exception e) {
             throw new ElasticsearchException("failed to initialize SSL TrustManager", e);
         }

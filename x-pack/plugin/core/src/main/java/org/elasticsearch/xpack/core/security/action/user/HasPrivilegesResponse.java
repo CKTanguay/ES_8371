@@ -5,7 +5,6 @@
  */
 package org.elasticsearch.xpack.core.security.action.user;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -40,20 +39,10 @@ public class HasPrivilegesResponse extends ActionResponse implements ToXContentO
     public HasPrivilegesResponse(StreamInput in) throws IOException {
         super(in);
         completeMatch = in.readBoolean();
-        if (in.getVersion().onOrAfter(Version.V_6_6_0 )) {
-            cluster = in.readMap(StreamInput::readString, StreamInput::readBoolean);
-        } else {
-            cluster = Collections.emptyMap();
-        }
+        cluster = in.readMap(StreamInput::readString, StreamInput::readBoolean);
         index = readResourcePrivileges(in);
-        if (in.getVersion().onOrAfter(Version.V_6_4_0)) {
-            application = in.readMap(StreamInput::readString, HasPrivilegesResponse::readResourcePrivileges);
-        } else {
-            application = Collections.emptyMap();
-        }
-        if (in.getVersion().onOrAfter(Version.V_6_6_0)) {
-            username = in.readString();
-        }
+        application = in.readMap(StreamInput::readString, HasPrivilegesResponse::readResourcePrivileges);
+        username = in.readString();
     }
 
     public HasPrivilegesResponse(String username, boolean completeMatch, Map<String, Boolean> cluster, Collection<ResourcePrivileges> index,
@@ -133,16 +122,10 @@ public class HasPrivilegesResponse extends ActionResponse implements ToXContentO
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeBoolean(completeMatch);
-        if (out.getVersion().onOrAfter(Version.V_6_6_0)) {
-            out.writeMap(cluster, StreamOutput::writeString, StreamOutput::writeBoolean);
-        }
+        out.writeMap(cluster, StreamOutput::writeString, StreamOutput::writeBoolean);
         writeResourcePrivileges(out, index);
-        if (out.getVersion().onOrAfter(Version.V_6_4_0)) {
-            out.writeMap(application, StreamOutput::writeString, HasPrivilegesResponse::writeResourcePrivileges);
-        }
-        if (out.getVersion().onOrAfter(Version.V_6_6_0)) {
-            out.writeString(username);
-        }
+        out.writeMap(application, StreamOutput::writeString, HasPrivilegesResponse::writeResourcePrivileges);
+        out.writeString(username);
     }
 
     private static void writeResourcePrivileges(StreamOutput out, Set<ResourcePrivileges> privileges) throws IOException {

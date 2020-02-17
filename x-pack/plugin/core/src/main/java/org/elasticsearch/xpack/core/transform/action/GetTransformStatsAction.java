@@ -27,7 +27,6 @@ import org.elasticsearch.xpack.core.transform.transforms.TransformStats;
 import org.elasticsearch.xpack.core.transform.utils.ExceptionsHelper;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -86,7 +85,7 @@ public class GetTransformStatsAction extends ActionType<GetTransformStatsAction.
         }
 
         public void setExpandedIds(List<String> expandedIds) {
-            this.expandedIds = Collections.unmodifiableList(new ArrayList<>(expandedIds));
+            this.expandedIds = List.copyOf(expandedIds);
         }
 
         public final void setPageParams(PageParams pageParams) {

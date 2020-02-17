@@ -142,6 +142,10 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=model-plot-config]
 (boolean)
 include::{docdir}/ml/ml-shared.asciidoc[tag=model-plot-config-enabled]
 
+`model_plot_config`.`terms`:::
+experimental[] (string)
+include::{docdir}/ml/ml-shared.asciidoc[tag=model-plot-config-terms]
+
 `model_snapshot_retention_days`::
 (long)
 include::{docdir}/ml/ml-shared.asciidoc[tag=model-snapshot-retention-days]
@@ -155,6 +159,7 @@ NOTE: If the job is open when you make the update, you must stop the {dfeed},
 close the job, then reopen the job and restart the {dfeed} for the changes to take effect.
 
 --
+
 `results_retention_days`::
 (long)
 include::{docdir}/ml/ml-shared.asciidoc[tag=results-retention-days]
@@ -192,14 +197,13 @@ configuration information, including the updated property values. For example:
 {
   "job_id" : "low_request_rate",
   "job_type" : "anomaly_detector",
-  "job_version" : "7.5.1",
+  "job_version" : "8.0.0",
   "groups" : [
     "kibana_sample_data",
     "kibana_sample_web_logs"
   ],
   "description" : "An updated job",
-  "create_time" : 1578101716125,
-  "finished_time" : 1578101721816,
+  "create_time" : 1576623023709,
   "analysis_config" : {
     "bucket_span" : "1h",
     "summary_count_field_name" : "doc_count",

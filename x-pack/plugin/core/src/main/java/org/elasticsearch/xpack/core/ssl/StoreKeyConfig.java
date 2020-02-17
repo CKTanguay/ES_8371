@@ -98,7 +98,7 @@ class StoreKeyConfig extends KeyConfig {
         } catch (AccessDeniedException e) {
             throw missingTrustConfigFile(e, KEYSTORE_FILE, ksPath);
         } catch (AccessControlException e) {
-            throw blockedTrustConfigFile(e, environment, KEYSTORE_FILE, Collections.singletonList(ksPath));
+            throw blockedTrustConfigFile(e, environment, KEYSTORE_FILE, List.of(ksPath));
         } catch (IOException | GeneralSecurityException e) {
             throw new ElasticsearchException("failed to initialize SSL TrustManager", e);
         }

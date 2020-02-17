@@ -5,7 +5,6 @@
  */
 package org.elasticsearch.xpack.core.monitoring.action;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
@@ -15,8 +14,6 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.xpack.core.monitoring.MonitoredSystem;
-import org.elasticsearch.xpack.core.monitoring.exporter.MonitoringDoc;
-import org.elasticsearch.xpack.core.monitoring.exporter.MonitoringTemplateUtils;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -51,52 +48,27 @@ public class MonitoringBulkDoc implements Writeable {
 
     public MonitoringBulkDoc (StreamInput in) throws IOException {
         this.system = MonitoredSystem.fromSystem(in.readOptionalString());
-
-        if (in.getVersion().before(Version.V_6_0_0_rc1)) {
-            in.readOptionalString(); // Monitoring version, removed in 6.0 rc1
-            in.readOptionalString(); // Cluster UUID, removed in 6.0 rc1
-        }
-
         this.timestamp = in.readVLong();
-
-        if (in.getVersion().before(Version.V_6_0_0_rc1)) {
-            in.readOptionalWriteable(MonitoringDoc.Node::new);// Source node, removed in 6.0 rc1
-            MonitoringIndex.readFrom(in);// Monitoring index, removed in 6.0 rc1
-        }
 
         this.type = in.readOptionalString();
         this.id = in.readOptionalString();
         this.source = in.readBytesReference();
         this.xContentType = (source != BytesArray.EMPTY) ? in.readEnum(XContentType.class) : XContentType.JSON;
-
-        long interval = 0L;
-        if (in.getVersion().onOrAfter(Version.V_6_0_0_rc1)) {
-            interval = in.readVLong();
-        }
-        this.intervalMillis = interval;
+        this.intervalMillis = in.readVLong();
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeOptionalString(system.getSystem());
-        if (out.getVersion().before(Version.V_6_0_0_rc1)) {
-            out.writeOptionalString(MonitoringTemplateUtils.TEMPLATE_VERSION);
-            out.writeOptionalString(null);
-        }
         out.writeVLong(timestamp);
-        if (out.getVersion().before(Version.V_6_0_0_rc1)) {
-            out.writeOptionalWriteable(null);
-            MonitoringIndex.IGNORED_DATA.writeTo(out);
-        }
         out.writeOptionalString(type);
         out.writeOptionalString(id);
         out.writeBytesReference(source);
         if (source != BytesArray.EMPTY) {
             out.writeEnum(xContentType);
         }
-        if (out.getVersion().onOrAfter(Version.V_6_0_0_rc1)) {
-            out.writeVLong(intervalMillis);
-        }
+        out.writeVLong(intervalMillis);
+
     }
 
     public MonitoredSystem getSystem() {

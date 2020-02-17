@@ -33,6 +33,7 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -42,17 +43,20 @@ import java.nio.file.attribute.PosixFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipException;
 
+import static org.elasticsearch.packaging.util.FileExistenceMatchers.fileDoesNotExist;
+import static org.elasticsearch.packaging.util.FileExistenceMatchers.fileExists;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.core.IsNot.not;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThat;
 
 /**
  * Wrappers and convenience methods for common filesystem operations
@@ -150,7 +154,7 @@ public class FileUtils {
 
     public static String slurp(Path file) {
         try {
-            return String.join("\n", Files.readAllLines(file, StandardCharsets.UTF_8));
+            return String.join(System.lineSeparator(), Files.readAllLines(file, StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -264,9 +268,26 @@ public class FileUtils {
         }
     }
 
+    /**
+     * Gets numeric ownership attributes that are supported by Unix filesystems
+     * @return a Map of the uid/gid integer values
+     */
+    public static Map<String, Integer> getNumericUnixPathOwnership(Path path) {
+        Map<String, Integer> numericPathOwnership = new HashMap<>();
+
+        try {
+            numericPathOwnership.put("uid", (int) Files.getAttribute(path, "unix:uid", LinkOption.NOFOLLOW_LINKS));
+            numericPathOwnership.put("gid", (int) Files.getAttribute(path, "unix:gid", LinkOption.NOFOLLOW_LINKS));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return numericPathOwnership;
+    }
+
+
     // vagrant creates /tmp for us in windows so we use that to avoid long paths
     public static Path getTempDir() {
-        return Paths.get("/tmp");
+        return Paths.get("/tmp").toAbsolutePath();
     }
 
     public static Path getDefaultArchiveInstallPath() {
@@ -288,8 +309,8 @@ public class FileUtils {
         return distribution.path;
     }
 
-    public static void assertPathsExist(Path... paths) {
-        Arrays.stream(paths).forEach(path -> assertTrue(path + " should exist", Files.exists(path)));
+    public static void assertPathsExist(final Path... paths) {
+        Arrays.stream(paths).forEach(path -> assertThat(path, fileExists()));
     }
 
     public static Matcher<Path> fileWithGlobExist(String glob) throws IOException {
@@ -306,8 +327,8 @@ public class FileUtils {
         };
     }
 
-    public static void assertPathsDontExist(Path... paths) {
-        Arrays.stream(paths).forEach(path -> assertFalse(path + " should not exist", Files.exists(path)));
+    public static void assertPathsDoNotExist(final Path... paths) {
+        Arrays.stream(paths).forEach(path -> assertThat(path, fileDoesNotExist()));
     }
 
     public static void deleteIfExists(Path path) {
@@ -318,5 +339,16 @@ public class FileUtils {
                 throw new UncheckedIOException(e);
             }
         }
+    }
+
+    /**
+     * Return the given path a string suitable for using on the host system.
+     */
+    public static String escapePath(Path path) {
+        if (Platforms.WINDOWS) {
+            // replace single backslash with forward slash, to avoid unintended escapes in scripts
+            return path.toString().replace('\\', '/');
+        }
+        return path.toString();
     }
 }

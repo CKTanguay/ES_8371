@@ -9,7 +9,6 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.service.ClusterService;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.threadpool.TestThreadPool;
 import org.elasticsearch.threadpool.ThreadPool;
@@ -29,7 +28,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class TransportDeleteExpiredDataActionTests extends ESTestCase {
 
@@ -51,8 +49,6 @@ public class TransportDeleteExpiredDataActionTests extends ESTestCase {
         threadPool = new TestThreadPool("TransportDeleteExpiredDataActionTests thread pool");
         TransportService transportService = mock(TransportService.class);
         Client client = mock(Client.class);
-        when(client.settings()).thenReturn(Settings.EMPTY);
-        when(client.threadPool()).thenReturn(threadPool);
         ClusterService clusterService = mock(ClusterService.class);
         transportDeleteExpiredDataAction = new TransportDeleteExpiredDataAction(threadPool, ThreadPool.Names.SAME, transportService,
             new ActionFilters(Collections.emptySet()), client, clusterService, Clock.systemUTC());

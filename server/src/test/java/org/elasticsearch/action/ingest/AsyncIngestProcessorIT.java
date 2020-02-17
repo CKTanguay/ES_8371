@@ -43,8 +43,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.watcher.ResourceWatcherService;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
@@ -62,7 +61,7 @@ public class AsyncIngestProcessorIT extends ESSingleNodeTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> getPlugins() {
-        return Collections.singleton(TestPlugin.class);
+        return List.of(TestPlugin.class);
     }
 
     public void testAsyncProcessorImplementation() {
@@ -102,58 +101,58 @@ public class AsyncIngestProcessorIT extends ESSingleNodeTestCase {
                                                    NamedXContentRegistry xContentRegistry, Environment environment,
                                                    NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry) {
             this.threadPool = threadPool;
-            return Collections.emptyList();
+            return List.of();
         }
 
         @Override
         public Map<String, Processor.Factory> getProcessors(Processor.Parameters parameters) {
-            Map<String, Processor.Factory> processors = new HashMap<>();
-            processors.put("test-async", (factories, tag, config) -> {
-                return new AbstractProcessor(tag) {
+            return Map.of(
+                "test-async", (factories, tag, config) -> {
+                    return new AbstractProcessor(tag) {
 
-                    @Override
-                    public void execute(IngestDocument ingestDocument, BiConsumer<IngestDocument, Exception> handler) {
-                        threadPool.generic().execute(() -> {
-                            String id = (String) ingestDocument.getSourceAndMetadata().get("_id");
-                            if (usually()) {
-                                try {
-                                    Thread.sleep(10);
-                                } catch (InterruptedException e) {
-                                    // ignore
+                        @Override
+                        public void execute(IngestDocument ingestDocument, BiConsumer<IngestDocument, Exception> handler) {
+                            threadPool.generic().execute(() -> {
+                                String id = (String) ingestDocument.getSourceAndMetadata().get("_id");
+                                if (usually()) {
+                                    try {
+                                        Thread.sleep(10);
+                                    } catch (InterruptedException e) {
+                                        // ignore
+                                    }
                                 }
-                            }
-                            ingestDocument.setFieldValue("foo", "bar-" + id);
-                            handler.accept(ingestDocument, null);
-                        });
-                    }
+                                ingestDocument.setFieldValue("foo", "bar-" + id);
+                                handler.accept(ingestDocument, null);
+                            });
+                        }
 
-                    @Override
-                    public IngestDocument execute(IngestDocument ingestDocument) throws Exception {
-                        throw new UnsupportedOperationException();
-                    }
+                        @Override
+                        public IngestDocument execute(IngestDocument ingestDocument) throws Exception {
+                            throw new UnsupportedOperationException();
+                        }
 
-                    @Override
-                    public String getType() {
-                        return "test-async";
-                    }
-                };
-            });
-            processors.put("test", (processorFactories, tag, config) -> {
-                return new AbstractProcessor(tag) {
-                    @Override
-                    public IngestDocument execute(IngestDocument ingestDocument) throws Exception {
-                        String id = (String) ingestDocument.getSourceAndMetadata().get("_id");
-                        ingestDocument.setFieldValue("bar", "baz-" + id);
-                        return ingestDocument;
-                    }
+                        @Override
+                        public String getType() {
+                            return "test-async";
+                        }
+                    };
+                },
+                "test", (processorFactories, tag, config) -> {
+                    return new AbstractProcessor(tag) {
+                        @Override
+                        public IngestDocument execute(IngestDocument ingestDocument) throws Exception {
+                            String id = (String) ingestDocument.getSourceAndMetadata().get("_id");
+                            ingestDocument.setFieldValue("bar", "baz-" + id);
+                            return ingestDocument;
+                        }
 
-                    @Override
-                    public String getType() {
-                        return "test";
-                    }
-                };
-            });
-            return processors;
+                        @Override
+                        public String getType() {
+                            return "test";
+                        }
+                    };
+                }
+            );
         }
     }
 

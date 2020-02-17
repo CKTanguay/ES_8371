@@ -113,7 +113,7 @@ public class EnrichPolicyRunner implements Runnable {
         final String[] sourceIndices = policy.getIndices().toArray(new String[0]);
         logger.debug("Policy [{}]: Checking source indices [{}]", policyName, sourceIndices);
         GetIndexRequest getIndexRequest = new GetIndexRequest().indices(sourceIndices);
-        client.admin().indices().getIndex(getIndexRequest, new ActionListener<GetIndexResponse>() {
+        client.admin().indices().getIndex(getIndexRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetIndexResponse getIndexResponse) {
                 validateMappings(getIndexResponse);
@@ -128,9 +128,9 @@ public class EnrichPolicyRunner implements Runnable {
     }
 
     private Map<String, Object> getMappings(final GetIndexResponse getIndexResponse, final String sourceIndexName) {
-        ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappings = getIndexResponse.mappings();
-        ImmutableOpenMap<String, MappingMetaData> indexMapping = mappings.get(sourceIndexName);
-        if (indexMapping.keys().size() == 0) {
+        ImmutableOpenMap<String, MappingMetaData> mappings = getIndexResponse.mappings();
+        MappingMetaData indexMapping = mappings.get(sourceIndexName);
+        if (indexMapping == MappingMetaData.EMPTY_MAPPINGS) {
             throw new ElasticsearchException(
                 "Enrich policy execution for [{}] failed. No mapping available on source [{}] included in [{}]",
                 policyName,
@@ -138,9 +138,7 @@ public class EnrichPolicyRunner implements Runnable {
                 policy.getIndices()
             );
         }
-        assert indexMapping.keys().size() == 1 : "Expecting only one type per index";
-        MappingMetaData typeMapping = indexMapping.iterator().next().value;
-        return typeMapping.sourceAsMap();
+        return indexMapping.sourceAsMap();
     }
 
     private void validateMappings(final GetIndexResponse getIndexResponse) {
@@ -297,9 +295,9 @@ public class EnrichPolicyRunner implements Runnable {
             .put("index.warmer.enabled", false)
             .build();
         CreateIndexRequest createEnrichIndexRequest = new CreateIndexRequest(enrichIndexName, enrichIndexSettings);
-        createEnrichIndexRequest.mapping(MapperService.SINGLE_MAPPING_NAME, resolveEnrichMapping(policy));
+        createEnrichIndexRequest.mapping(resolveEnrichMapping(policy));
         logger.debug("Policy [{}]: Creating new enrich index [{}]", policyName, enrichIndexName);
-        client.admin().indices().create(createEnrichIndexRequest, new ActionListener<CreateIndexResponse>() {
+        client.admin().indices().create(createEnrichIndexRequest, new ActionListener<>() {
             @Override
             public void onResponse(CreateIndexResponse createIndexResponse) {
                 prepareReindexOperation(enrichIndexName);
@@ -315,7 +313,7 @@ public class EnrichPolicyRunner implements Runnable {
     private void prepareReindexOperation(final String destinationIndexName) {
         // Check to make sure that the enrich pipeline exists, and create it if it is missing.
         if (EnrichPolicyReindexPipeline.exists(clusterService.state()) == false) {
-            EnrichPolicyReindexPipeline.create(client, new ActionListener<AcknowledgedResponse>() {
+            EnrichPolicyReindexPipeline.create(client, new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                     transferDataToEnrichIndex(destinationIndexName);
@@ -349,7 +347,7 @@ public class EnrichPolicyRunner implements Runnable {
         reindexRequest.getDestination().source(new BytesArray(new byte[0]), XContentType.SMILE);
         reindexRequest.getDestination().routing("discard");
         reindexRequest.getDestination().setPipeline(EnrichPolicyReindexPipeline.pipelineName());
-        client.execute(ReindexAction.INSTANCE, reindexRequest, new ActionListener<BulkByScrollResponse>() {
+        client.execute(ReindexAction.INSTANCE, reindexRequest, new ActionListener<>() {
             @Override
             public void onResponse(BulkByScrollResponse bulkByScrollResponse) {
                 // Do we want to fail the request if there were failures during the reindex process?
@@ -383,24 +381,22 @@ public class EnrichPolicyRunner implements Runnable {
             attempt,
             maxForceMergeAttempts
         );
-        client.admin()
-            .indices()
-            .forceMerge(new ForceMergeRequest(destinationIndexName).maxNumSegments(1), new ActionListener<ForceMergeResponse>() {
-                @Override
-                public void onResponse(ForceMergeResponse forceMergeResponse) {
-                    refreshEnrichIndex(destinationIndexName, attempt);
-                }
+        client.admin().indices().forceMerge(new ForceMergeRequest(destinationIndexName).maxNumSegments(1), new ActionListener<>() {
+            @Override
+            public void onResponse(ForceMergeResponse forceMergeResponse) {
+                refreshEnrichIndex(destinationIndexName, attempt);
+            }
 
-                @Override
-                public void onFailure(Exception e) {
-                    listener.onFailure(e);
-                }
-            });
+            @Override
+            public void onFailure(Exception e) {
+                listener.onFailure(e);
+            }
+        });
     }
 
     private void refreshEnrichIndex(final String destinationIndexName, final int attempt) {
         logger.debug("Policy [{}]: Refreshing enrich index [{}]", policyName, destinationIndexName);
-        client.admin().indices().refresh(new RefreshRequest(destinationIndexName), new ActionListener<RefreshResponse>() {
+        client.admin().indices().refresh(new RefreshRequest(destinationIndexName), new ActionListener<>() {
             @Override
             public void onResponse(RefreshResponse refreshResponse) {
                 ensureSingleSegment(destinationIndexName, attempt);
@@ -414,7 +410,7 @@ public class EnrichPolicyRunner implements Runnable {
     }
 
     protected void ensureSingleSegment(final String destinationIndexName, final int attempt) {
-        client.admin().indices().segments(new IndicesSegmentsRequest(destinationIndexName), new ActionListener<IndicesSegmentResponse>() {
+        client.admin().indices().segments(new IndicesSegmentsRequest(destinationIndexName), new ActionListener<>() {
             @Override
             public void onResponse(IndicesSegmentResponse indicesSegmentResponse) {
                 IndexSegments indexSegments = indicesSegmentResponse.getIndices().get(destinationIndexName);
@@ -467,7 +463,7 @@ public class EnrichPolicyRunner implements Runnable {
         logger.debug("Policy [{}]: Setting new enrich index [{}] to be read only", policyName, destinationIndexName);
         UpdateSettingsRequest request = new UpdateSettingsRequest(destinationIndexName).setPreserveExisting(true)
             .settings(Settings.builder().put("index.auto_expand_replicas", "0-all").put("index.blocks.write", "true"));
-        client.admin().indices().updateSettings(request, new ActionListener<AcknowledgedResponse>() {
+        client.admin().indices().updateSettings(request, new ActionListener<>() {
             @Override
             public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                 waitForIndexGreen(destinationIndexName);
@@ -482,7 +478,7 @@ public class EnrichPolicyRunner implements Runnable {
 
     private void waitForIndexGreen(final String destinationIndexName) {
         ClusterHealthRequest request = new ClusterHealthRequest(destinationIndexName).waitForGreenStatus();
-        client.admin().cluster().health(request, new ActionListener<ClusterHealthResponse>() {
+        client.admin().cluster().health(request, new ActionListener<>() {
             @Override
             public void onResponse(ClusterHealthResponse clusterHealthResponse) {
                 updateEnrichPolicyAlias(destinationIndexName);
@@ -508,7 +504,7 @@ public class EnrichPolicyRunner implements Runnable {
             aliasToggleRequest.addAliasAction(IndicesAliasesRequest.AliasActions.remove().indices(indices).alias(enrichIndexBase));
         }
         aliasToggleRequest.addAliasAction(IndicesAliasesRequest.AliasActions.add().index(destinationIndexName).alias(enrichIndexBase));
-        client.admin().indices().aliases(aliasToggleRequest, new ActionListener<AcknowledgedResponse>() {
+        client.admin().indices().aliases(aliasToggleRequest, new ActionListener<>() {
             @Override
             public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                 logger.info("Policy [{}]: Policy execution complete", policyName);

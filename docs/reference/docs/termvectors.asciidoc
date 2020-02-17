@@ -248,7 +248,6 @@ Response:
 {
     "_id": "1",
     "_index": "twitter",
-    "_type": "_doc",
     "_version": 1,
     "found": true,
     "took": 6,
@@ -380,7 +379,6 @@ Response:
 --------------------------------------------------
 {
   "_index": "twitter",
-  "_type": "_doc",
   "_version": 0,
   "found": true,
   "took": 6,
@@ -449,7 +447,6 @@ Response:
 --------------------------------------------------
 {
    "_index": "imdb",
-   "_type": "_doc",
    "_version": 0,
    "found": true,
    "term_vectors": {

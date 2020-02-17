@@ -40,6 +40,7 @@ import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.threadpool.ThreadPool.Names;
 import org.elasticsearch.transport.TransportService;
@@ -71,7 +72,7 @@ public class TransportClearVotingConfigExclusionsAction
     }
 
     @Override
-    protected void masterOperation(ClearVotingConfigExclusionsRequest request, ClusterState initialState,
+    protected void masterOperation(Task task, ClearVotingConfigExclusionsRequest request, ClusterState initialState,
                                    ActionListener<ClearVotingConfigExclusionsResponse> listener) throws Exception {
 
         final long startTimeMillis = threadPool.relativeTimeInMillis();

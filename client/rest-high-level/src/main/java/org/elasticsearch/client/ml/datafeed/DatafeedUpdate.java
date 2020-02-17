@@ -18,7 +18,6 @@
  */
 package org.elasticsearch.client.ml.datafeed;
 
-import org.elasticsearch.client.ml.job.config.Job;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -57,7 +56,6 @@ public class DatafeedUpdate implements ToXContentObject {
     static {
         PARSER.declareString(ConstructingObjectParser.constructorArg(), DatafeedConfig.ID);
 
-        PARSER.declareString(Builder::setJobId, Job.ID);
         PARSER.declareStringArray(Builder::setIndices, DatafeedConfig.INDEXES);
         PARSER.declareStringArray(Builder::setIndices, DatafeedConfig.INDICES);
         PARSER.declareString((builder, val) -> builder.setQueryDelay(
@@ -89,7 +87,6 @@ public class DatafeedUpdate implements ToXContentObject {
     }
 
     private final String id;
-    private final String jobId;
     private final TimeValue queryDelay;
     private final TimeValue frequency;
     private final List<String> indices;
@@ -101,12 +98,11 @@ public class DatafeedUpdate implements ToXContentObject {
     private final DelayedDataCheckConfig delayedDataCheckConfig;
     private final Integer maxEmptySearches;
 
-    private DatafeedUpdate(String id, String jobId, TimeValue queryDelay, TimeValue frequency, List<String> indices, BytesReference query,
+    private DatafeedUpdate(String id, TimeValue queryDelay, TimeValue frequency, List<String> indices, BytesReference query,
                            BytesReference aggregations, List<SearchSourceBuilder.ScriptField> scriptFields, Integer scrollSize,
                            ChunkingConfig chunkingConfig, DelayedDataCheckConfig delayedDataCheckConfig,
                            Integer maxEmptySearches) {
         this.id = id;
-        this.jobId = jobId;
         this.queryDelay = queryDelay;
         this.frequency = frequency;
         this.indices = indices;
@@ -130,7 +126,6 @@ public class DatafeedUpdate implements ToXContentObject {
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
         builder.field(DatafeedConfig.ID.getPreferredName(), id);
-        addOptionalField(builder, Job.ID, jobId);
         if (queryDelay != null) {
             builder.field(DatafeedConfig.QUERY_DELAY.getPreferredName(), queryDelay.getStringRep());
         }
@@ -165,10 +160,6 @@ public class DatafeedUpdate implements ToXContentObject {
         if (value != null) {
             builder.field(field.getPreferredName(), value);
         }
-    }
-
-    public String getJobId() {
-        return jobId;
     }
 
     public TimeValue getQueryDelay() {
@@ -237,7 +228,6 @@ public class DatafeedUpdate implements ToXContentObject {
         DatafeedUpdate that = (DatafeedUpdate) other;
 
         return Objects.equals(this.id, that.id)
-            && Objects.equals(this.jobId, that.jobId)
             && Objects.equals(this.frequency, that.frequency)
             && Objects.equals(this.queryDelay, that.queryDelay)
             && Objects.equals(this.indices, that.indices)
@@ -257,7 +247,7 @@ public class DatafeedUpdate implements ToXContentObject {
      */
     @Override
     public int hashCode() {
-        return Objects.hash(id, jobId, frequency, queryDelay, indices, asMap(query), scrollSize, asMap(aggregations), scriptFields,
+        return Objects.hash(id, frequency, queryDelay, indices, asMap(query), scrollSize, asMap(aggregations), scriptFields,
             chunkingConfig, delayedDataCheckConfig, maxEmptySearches);
     }
 
@@ -268,7 +258,6 @@ public class DatafeedUpdate implements ToXContentObject {
     public static class Builder {
 
         private String id;
-        private String jobId;
         private TimeValue queryDelay;
         private TimeValue frequency;
         private List<String> indices;
@@ -286,7 +275,6 @@ public class DatafeedUpdate implements ToXContentObject {
 
         public Builder(DatafeedUpdate config) {
             this.id = config.id;
-            this.jobId = config.jobId;
             this.queryDelay = config.queryDelay;
             this.frequency = config.frequency;
             this.indices = config.indices;
@@ -297,12 +285,6 @@ public class DatafeedUpdate implements ToXContentObject {
             this.chunkingConfig = config.chunkingConfig;
             this.delayedDataCheckConfig = config.delayedDataCheckConfig;
             this.maxEmptySearches = config.maxEmptySearches;
-        }
-
-        @Deprecated
-        public Builder setJobId(String jobId) {
-            this.jobId = jobId;
-            return this;
         }
 
         public Builder setIndices(List<String> indices) {
@@ -382,7 +364,7 @@ public class DatafeedUpdate implements ToXContentObject {
         }
 
         public DatafeedUpdate build() {
-            return new DatafeedUpdate(id, jobId, queryDelay, frequency, indices, query, aggregations, scriptFields, scrollSize,
+            return new DatafeedUpdate(id, queryDelay, frequency, indices, query, aggregations, scriptFields, scrollSize,
                 chunkingConfig, delayedDataCheckConfig, maxEmptySearches);
         }
 

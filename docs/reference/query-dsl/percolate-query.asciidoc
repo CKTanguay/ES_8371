@@ -95,7 +95,6 @@ The above request will yield the following response:
     "hits": [
       { <1>
         "_index": "my-index",
-        "_type": "_doc",
         "_id": "1",
         "_score": 0.26152915,
         "_source": {
@@ -244,7 +243,6 @@ GET /my-index/_search
     "hits": [
       {
         "_index": "my-index",
-        "_type": "_doc",
         "_id": "1",
         "_score": 0.7093853,
         "_source": {
@@ -295,7 +293,6 @@ Index response:
 --------------------------------------------------
 {
   "_index": "my-index",
-  "_type": "_doc",
   "_id": "2",
   "_version": 1,
   "_shards": {
@@ -420,7 +417,6 @@ This will yield the following response.
     "hits": [
       {
         "_index": "my-index",
-        "_type": "_doc",
         "_id": "3",
         "_score": 0.26152915,
         "_source": {
@@ -441,7 +437,6 @@ This will yield the following response.
       },
       {
         "_index": "my-index",
-        "_type": "_doc",
         "_id": "4",
         "_score": 0.26152915,
         "_source": {
@@ -527,7 +522,6 @@ The slightly different response:
     "hits": [
       {
         "_index": "my-index",
-        "_type": "_doc",
         "_id": "1",
         "_score": 0.7093853,
         "_source": {
@@ -625,7 +619,6 @@ The above search request returns a response similar to this:
     "hits": [
       {
         "_index": "my-index",
-        "_type": "_doc",
         "_id": "1",
         "_score": 0.26152915,
         "_source": {
@@ -693,3 +686,8 @@ being percolated, as opposed to a single index as we do in examples. There are a
 allows for fields to be stored in a denser, more efficient way.
 - Percolate queries do not scale in the same way as other queries, so percolation performance may benefit from using
 a different index configuration, like the number of primary shards.
+
+=== Notes
+==== Allow expensive queries
+Percolate queries will not be executed if <<query-dsl-allow-expensive-queries, `search.allow_expensive_queries`>>
+is set to false.

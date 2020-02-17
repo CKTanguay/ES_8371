@@ -33,8 +33,8 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.Matchers.containsString;
@@ -55,7 +55,7 @@ public class TransportPutRoleActionTests extends ESTestCase {
 
     @Override
     protected NamedXContentRegistry xContentRegistry() {
-        return new NamedXContentRegistry(Arrays.asList(
+        return new NamedXContentRegistry(List.of(
             new NamedXContentRegistry.Entry(QueryBuilder.class, new ParseField(MatchAllQueryBuilder.NAME),
                 (p, c) -> MatchAllQueryBuilder.fromXContent(p)),
             new NamedXContentRegistry.Entry(QueryBuilder.class, new ParseField(HasChildQueryBuilder.NAME),

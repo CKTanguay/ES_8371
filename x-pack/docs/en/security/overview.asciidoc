@@ -72,4 +72,4 @@ attempts, user access denied, node connection denied, and more. By analyzing
 access patterns and failed attempts to access your cluster, you can gain
 insights into attempted attacks and data breaches. Keeping an auditable log of
 the activity in your cluster can also help diagnose operational issues. For more
-information, see <<auditing>>.
+information, see <<enable-audit-logging>>.

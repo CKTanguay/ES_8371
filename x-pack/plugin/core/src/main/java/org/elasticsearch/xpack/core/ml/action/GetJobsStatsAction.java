@@ -6,7 +6,6 @@
 package org.elasticsearch.xpack.core.ml.action;
 
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionType;
 import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.ActionRequestValidationException;
@@ -82,9 +81,7 @@ public class GetJobsStatsAction extends ActionType<GetJobsStatsAction.Response> 
             super(in);
             jobId = in.readString();
             expandedJobsIds = in.readStringList();
-            if (in.getVersion().onOrAfter(Version.V_6_1_0)) {
-                allowNoJobs = in.readBoolean();
-            }
+            allowNoJobs = in.readBoolean();
         }
 
         @Override
@@ -92,9 +89,7 @@ public class GetJobsStatsAction extends ActionType<GetJobsStatsAction.Response> 
             super.writeTo(out);
             out.writeString(jobId);
             out.writeStringCollection(expandedJobsIds);
-            if (out.getVersion().onOrAfter(Version.V_6_1_0)) {
-                out.writeBoolean(allowNoJobs);
-            }
+            out.writeBoolean(allowNoJobs);
         }
 
         public List<String> getExpandedJobsIds() { return expandedJobsIds; }
@@ -189,11 +184,7 @@ public class GetJobsStatsAction extends ActionType<GetJobsStatsAction.Response> 
                 node = in.readOptionalWriteable(DiscoveryNode::new);
                 assignmentExplanation = in.readOptionalString();
                 openTime = in.readOptionalTimeValue();
-                if (in.getVersion().onOrAfter(Version.V_6_4_0)) {
-                    forecastStats = in.readOptionalWriteable(ForecastStats::new);
-                } else {
-                    forecastStats = null;
-                }
+                forecastStats = in.readOptionalWriteable(ForecastStats::new);
                 if (in.getVersion().onOrAfter(V_7_3_0)) {
                     timingStats = in.readOptionalWriteable(TimingStats::new);
                 } else {
@@ -296,9 +287,7 @@ public class GetJobsStatsAction extends ActionType<GetJobsStatsAction.Response> 
                 out.writeOptionalWriteable(node);
                 out.writeOptionalString(assignmentExplanation);
                 out.writeOptionalTimeValue(openTime);
-                if (out.getVersion().onOrAfter(Version.V_6_4_0)) {
-                    out.writeOptionalWriteable(forecastStats);
-                }
+                out.writeOptionalWriteable(forecastStats);
                 if (out.getVersion().onOrAfter(V_7_3_0)) {
                     out.writeOptionalWriteable(timingStats);
                 }

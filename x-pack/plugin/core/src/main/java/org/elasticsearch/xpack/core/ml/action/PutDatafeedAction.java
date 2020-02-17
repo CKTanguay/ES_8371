@@ -5,7 +5,6 @@
  */
 package org.elasticsearch.xpack.core.ml.action;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.ActionType;
@@ -105,10 +104,6 @@ public class PutDatafeedAction extends ActionType<PutDatafeedAction.Response> {
 
         public Response(StreamInput in) throws IOException {
             super(in);
-            if (in.getVersion().before(Version.V_6_3_0)) {
-                //the acknowledged flag was removed
-                in.readBoolean();
-            }
             datafeed = new DatafeedConfig(in);
         }
 
@@ -118,10 +113,6 @@ public class PutDatafeedAction extends ActionType<PutDatafeedAction.Response> {
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
-            if (out.getVersion().before(Version.V_6_3_0)) {
-                //the acknowledged flag is no longer supported
-                out.writeBoolean(true);
-            }
             datafeed.writeTo(out);
         }
 

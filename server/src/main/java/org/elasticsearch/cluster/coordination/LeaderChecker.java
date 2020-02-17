@@ -22,7 +22,6 @@ package org.elasticsearch.cluster.coordination;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
-import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
@@ -33,7 +32,6 @@ import org.elasticsearch.common.lease.Releasable;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.discovery.zen.MasterFaultDetection;
 import org.elasticsearch.threadpool.ThreadPool.Names;
 import org.elasticsearch.transport.ConnectTransportException;
 import org.elasticsearch.transport.NodeDisconnectedException;
@@ -81,8 +79,6 @@ public class LeaderChecker {
     public static final Setting<Integer> LEADER_CHECK_RETRY_COUNT_SETTING =
         Setting.intSetting("cluster.fault_detection.leader_check.retry_count", 3, 1, Setting.Property.NodeScope);
 
-    private final Settings settings;
-
     private final TimeValue leaderCheckInterval;
     private final TimeValue leaderCheckTimeout;
     private final int leaderCheckRetryCount;
@@ -94,7 +90,6 @@ public class LeaderChecker {
     private volatile DiscoveryNodes discoveryNodes;
 
     LeaderChecker(final Settings settings, final TransportService transportService, final Consumer<Exception> onLeaderFailure) {
-        this.settings = settings;
         leaderCheckInterval = LEADER_CHECK_INTERVAL_SETTING.get(settings);
         leaderCheckTimeout = LEADER_CHECK_TIMEOUT_SETTING.get(settings);
         leaderCheckRetryCount = LEADER_CHECK_RETRY_COUNT_SETTING.get(settings);
@@ -105,16 +100,6 @@ public class LeaderChecker {
             (request, channel, task) -> {
                 handleLeaderCheck(request);
                 channel.sendResponse(Empty.INSTANCE);
-            });
-
-        transportService.registerRequestHandler(MasterFaultDetection.MASTER_PING_ACTION_NAME,
-            Names.SAME, false, false, MasterFaultDetection.MasterPingRequest::new, (request, channel, task) -> {
-                try {
-                    handleLeaderCheck(new LeaderCheckRequest(request.sourceNode));
-                } catch (CoordinationStateRejectedException e) {
-                    throw new MasterFaultDetection.ThisIsNotTheMasterYouAreLookingForException(e.getMessage());
-                }
-                channel.sendResponse(new MasterFaultDetection.MasterPingResponseResponse());
             });
 
         transportService.addConnectionListener(new TransportConnectionListener() {
@@ -219,21 +204,7 @@ public class LeaderChecker {
 
             logger.trace("checking {} with [{}] = {}", leader, LEADER_CHECK_TIMEOUT_SETTING.getKey(), leaderCheckTimeout);
 
-            final String actionName;
-            final TransportRequest transportRequest;
-            if (Coordinator.isZen1Node(leader)) {
-                actionName = MasterFaultDetection.MASTER_PING_ACTION_NAME;
-                transportRequest = new MasterFaultDetection.MasterPingRequest(
-                    transportService.getLocalNode(), leader, ClusterName.CLUSTER_NAME_SETTING.get(settings));
-            } else {
-                actionName = LEADER_CHECK_ACTION_NAME;
-                transportRequest = new LeaderCheckRequest(transportService.getLocalNode());
-            }
-            // TODO lag detection:
-            // In the PoC, the leader sent its current version to the follower in the response to a LeaderCheck, so the follower
-            // could detect if it was lagging. We'd prefer this to be implemented on the leader, so the response is just
-            // TransportResponse.Empty here.
-            transportService.sendRequest(leader, actionName, transportRequest,
+            transportService.sendRequest(leader, LEADER_CHECK_ACTION_NAME, new LeaderCheckRequest(transportService.getLocalNode()),
                 TransportRequestOptions.builder().withTimeout(leaderCheckTimeout).withType(Type.PING).build(),
 
                 new TransportResponseHandler<TransportResponse.Empty>() {

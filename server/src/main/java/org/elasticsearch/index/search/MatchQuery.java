@@ -29,14 +29,11 @@ import org.apache.lucene.analysis.tokenattributes.PositionLengthAttribute;
 import org.apache.lucene.analysis.tokenattributes.TermToBytesRefAttribute;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queries.ExtendedCommonTermsQuery;
 import org.apache.lucene.search.BooleanClause;
-import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.FuzzyQuery;
 import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.spans.SpanMultiTermQueryWrapper;
 import org.apache.lucene.search.spans.SpanNearQuery;
 import org.apache.lucene.search.spans.SpanOrQuery;
@@ -172,8 +169,6 @@ public class MatchQuery {
 
     protected ZeroTermsQuery zeroTermsQuery = DEFAULT_ZERO_TERMS_QUERY;
 
-    protected Float commonTermsCutoff = null;
-
     protected boolean autoGenerateSynonymsPhraseQuery = true;
 
     public MatchQuery(QueryShardContext context) {
@@ -193,14 +188,6 @@ public class MatchQuery {
 
     public void setOccur(BooleanClause.Occur occur) {
         this.occur = occur;
-    }
-
-    /**
-     * @deprecated See {@link MatchQueryBuilder#setCommonTermsCutoff(Float)} for more details
-     */
-    @Deprecated
-    public void setCommonTermsCutoff(Float cutoff) {
-        this.commonTermsCutoff = cutoff;
     }
 
     public void setEnablePositionIncrements(boolean enablePositionIncrements) {
@@ -285,11 +272,7 @@ public class MatchQuery {
         final Query query;
         switch (type) {
             case BOOLEAN:
-                if (commonTermsCutoff == null) {
-                    query = builder.createBooleanQuery(fieldName, value.toString(), occur);
-                } else {
-                    query = createCommonTermsQuery(builder, fieldName, value.toString(), occur, occur, commonTermsCutoff);
-                }
+                query = builder.createBooleanQuery(fieldName, value.toString(), occur);
                 break;
 
             case BOOLEAN_PREFIX:
@@ -309,30 +292,6 @@ public class MatchQuery {
         }
 
         return query == null ? zeroTermsQuery() : query;
-    }
-
-    private Query createCommonTermsQuery(MatchQueryBuilder builder, String field, String queryText,
-                                         Occur highFreqOccur, Occur lowFreqOccur, float maxTermFrequency) {
-        Query booleanQuery = builder.createBooleanQuery(field, queryText, lowFreqOccur);
-        if (booleanQuery != null && booleanQuery instanceof BooleanQuery) {
-            BooleanQuery bq = (BooleanQuery) booleanQuery;
-            return boolToExtendedCommonTermsQuery(bq, highFreqOccur, lowFreqOccur, maxTermFrequency);
-        }
-        return booleanQuery;
-    }
-
-    private Query boolToExtendedCommonTermsQuery(BooleanQuery bq,
-                                                 Occur highFreqOccur,
-                                                 Occur lowFreqOccur,
-                                                 float maxTermFrequency) {
-        ExtendedCommonTermsQuery query = new ExtendedCommonTermsQuery(highFreqOccur, lowFreqOccur, maxTermFrequency);
-        for (BooleanClause clause : bq.clauses()) {
-            if ((clause.getQuery() instanceof TermQuery) == false) {
-                return bq;
-            }
-            query.add(((TermQuery) clause.getQuery()).getTerm());
-        }
-        return query;
     }
 
     protected Analyzer getAnalyzer(MappedFieldType fieldType, boolean quoted) {
@@ -566,7 +525,8 @@ public class MatchQuery {
             Supplier<Query> querySupplier;
             if (fuzziness != null) {
                 querySupplier = () -> {
-                    Query query = fieldType.fuzzyQuery(term.text(), fuzziness, fuzzyPrefixLength, maxExpansions, transpositions);
+                    Query query = fieldType.fuzzyQuery(term.text(), fuzziness, fuzzyPrefixLength, maxExpansions,
+                            transpositions, context);
                     if (query instanceof FuzzyQuery) {
                         QueryParsers.setRewriteMethod((FuzzyQuery) query, fuzzyRewriteMethod);
                     }

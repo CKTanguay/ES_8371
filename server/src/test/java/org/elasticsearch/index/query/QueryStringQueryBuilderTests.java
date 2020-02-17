@@ -50,8 +50,6 @@ import org.apache.lucene.util.automaton.Automata;
 import org.apache.lucene.util.automaton.Automaton;
 import org.apache.lucene.util.automaton.Operations;
 import org.apache.lucene.util.automaton.TooComplexToDeterminizeException;
-import org.elasticsearch.Version;
-import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.compress.CompressedXContent;
@@ -59,7 +57,6 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
-import org.elasticsearch.index.mapper.FieldNamesFieldMapper;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.search.QueryStringQueryParser;
 import org.elasticsearch.test.AbstractQueryTestCase;
@@ -801,7 +798,7 @@ public class QueryStringQueryBuilderTests extends AbstractQueryTestCase<QueryStr
         }
     }
     public void testFuzzyNumeric() throws Exception {
-        QueryStringQueryBuilder query = queryStringQuery("12~0.2").defaultField(INT_FIELD_NAME);
+        QueryStringQueryBuilder query = queryStringQuery("12~1.0").defaultField(INT_FIELD_NAME);
         QueryShardContext context = createShardContext();
         IllegalArgumentException e = expectThrows(IllegalArgumentException.class,
                 () -> query.toQuery(context));
@@ -1022,8 +1019,7 @@ public class QueryStringQueryBuilderTests extends AbstractQueryTestCase<QueryStr
         QueryShardContext context = createShardContext();
         QueryStringQueryBuilder queryBuilder = new QueryStringQueryBuilder(STRING_FIELD_NAME + ":*");
         Query query = queryBuilder.toQuery(context);
-        if (context.getIndexSettings().getIndexVersionCreated().onOrAfter(Version.V_6_1_0)
-                && (context.fieldMapper(STRING_FIELD_NAME).omitNorms() == false)) {
+        if (context.fieldMapper(STRING_FIELD_NAME).omitNorms() == false) {
             assertThat(query, equalTo(new ConstantScoreQuery(new NormsFieldExistsQuery(STRING_FIELD_NAME))));
         } else {
             assertThat(query, equalTo(new ConstantScoreQuery(new TermQuery(new Term("_field_names", STRING_FIELD_NAME)))));
@@ -1033,8 +1029,7 @@ public class QueryStringQueryBuilderTests extends AbstractQueryTestCase<QueryStr
             String value = (quoted ? "\"" : "") + STRING_FIELD_NAME + (quoted ? "\"" : "");
             queryBuilder = new QueryStringQueryBuilder("_exists_:" + value);
             query = queryBuilder.toQuery(context);
-            if (context.getIndexSettings().getIndexVersionCreated().onOrAfter(Version.V_6_1_0)
-                && (context.fieldMapper(STRING_FIELD_NAME).omitNorms() == false)) {
+            if (context.fieldMapper(STRING_FIELD_NAME).omitNorms() == false) {
                 assertThat(query, equalTo(new ConstantScoreQuery(new NormsFieldExistsQuery(STRING_FIELD_NAME))));
             } else {
                 assertThat(query, equalTo(new ConstantScoreQuery(new TermQuery(new Term("_field_names", STRING_FIELD_NAME)))));
@@ -1053,36 +1048,6 @@ public class QueryStringQueryBuilderTests extends AbstractQueryTestCase<QueryStr
         query = queryBuilder.toQuery(context);
         expected = new MatchAllDocsQuery();
         assertThat(query, equalTo(expected));
-    }
-
-    public void testDisabledFieldNamesField() throws Exception {
-        QueryShardContext context = createShardContext();
-        context.getMapperService().merge("_doc",
-                new CompressedXContent(Strings
-                        .toString(PutMappingRequest.buildFromSimplifiedDef("_doc",
-                                "foo",
-                                "type=text",
-                                "_field_names",
-                                "enabled=false"))),
-                MapperService.MergeReason.MAPPING_UPDATE);
-
-        try {
-            QueryStringQueryBuilder queryBuilder = new QueryStringQueryBuilder("foo:*");
-            Query query = queryBuilder.toQuery(context);
-            Query expected = new WildcardQuery(new Term("foo", "*"));
-            assertThat(query, equalTo(expected));
-        } finally {
-            // restore mappings as they were before
-            context.getMapperService().merge("_doc",
-                    new CompressedXContent(Strings.toString(
-                            PutMappingRequest.buildFromSimplifiedDef("_doc",
-                                    "foo",
-                                    "type=text",
-                                    "_field_names",
-                                    "enabled=true"))),
-                    MapperService.MergeReason.MAPPING_UPDATE);
-        }
-        assertWarnings(FieldNamesFieldMapper.TypeParser.ENABLED_DEPRECATION_MESSAGE.replace("{}",  context.index().getName()));
     }
 
     public void testFromJson() throws IOException {

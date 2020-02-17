@@ -211,7 +211,7 @@ public class CuckooFilter implements Writeable {
      * Expert-level API
      */
     Iterator<long[]> getBuckets() {
-        return new Iterator<long[]>() {
+        return new Iterator<>() {
             int current = 0;
 
             @Override

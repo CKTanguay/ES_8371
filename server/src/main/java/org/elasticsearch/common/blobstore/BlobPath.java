@@ -80,7 +80,7 @@ public class BlobPath implements Iterable<String> {
         if (paths.isEmpty()) {
             return null;
         } else {
-            return new BlobPath(new ArrayList<>(paths.subList(0, paths.size() - 1)));
+            return new BlobPath(List.copyOf(paths.subList(0, paths.size() - 1)));
         }
     }
 

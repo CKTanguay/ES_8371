@@ -54,7 +54,6 @@ import java.util.Map;
 import java.util.function.Function;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-import static org.elasticsearch.index.mapper.CompletionFieldMapper.COMPLETION_CONTEXTS_LIMIT;
 import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.containsString;
@@ -167,7 +166,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
             .parse("type1", new CompressedXContent(mapping));
         Mapper fieldMapper = defaultMapper.mappers().getMapper("completion");
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                         .startObject()
                         .field("completion", "suggestion")
@@ -188,7 +187,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
             .parse("type1", new CompressedXContent(mapping));
 
         MapperParsingException e = expectThrows(MapperParsingException.class, () ->
-            defaultMapper.parse(new SourceToParse("test", "type1", "1",
+            defaultMapper.parse(new SourceToParse("test", "1",
                 BytesReference.bytes(XContentFactory.jsonBuilder()
                             .startObject()
                             .field("completion", 1.0)
@@ -221,7 +220,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         DocumentMapper defaultMapper = createIndex("test").mapperService().documentMapperParser()
             .parse("type1", new CompressedXContent(mapping));
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                     .startObject()
                     .array("keywordfield", "key1", "key2", "key3")
@@ -276,7 +275,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         DocumentMapper defaultMapper = createIndex("test").mapperService().documentMapperParser()
             .parse("type1", new CompressedXContent(mapping));
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                     .startObject()
                         .startObject("suggest")
@@ -332,7 +331,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         DocumentMapper defaultMapper = createIndex("test").mapperService().documentMapperParser()
             .parse("type1", new CompressedXContent(mapping));
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                     .startObject()
                     .array("suggest", "timmy","starbucks")
@@ -369,7 +368,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         DocumentMapper defaultMapper = createIndex("test").mapperService().documentMapperParser()
             .parse("type1", new CompressedXContent(mapping));
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                     .startObject()
                     .field("geofield", "drm3btev3e86")//"41.12,-71.34"
@@ -400,7 +399,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         DocumentMapper defaultMapper = createIndex("test").mapperService().documentMapperParser()
             .parse("type1", new CompressedXContent(mapping));
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                     .startObject()
                     .field("suggest", "suggestion")
@@ -432,7 +431,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         DocumentMapper defaultMapper = createIndex("test").mapperService().documentMapperParser()
             .parse("type1", new CompressedXContent(mapping));
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                     .startObject()
                     .startObject("completion")
@@ -470,7 +469,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         DocumentMapper defaultMapper = createIndex("test").mapperService().documentMapperParser()
             .parse("type1", new CompressedXContent(mapping));
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                     .startObject()
                     .startObject("completion")
@@ -510,7 +509,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         DocumentMapper defaultMapper = createIndex("test").mapperService().documentMapperParser()
             .parse("type1", new CompressedXContent(mapping));
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                     .startObject()
                     .field("completion", "suggestion")
@@ -538,7 +537,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
             .parse("type1", new CompressedXContent(mapping));
         Mapper fieldMapper = defaultMapper.mappers().getMapper("completion");
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                         .startObject()
                         .array("completion", "suggestion1", "suggestion2")
@@ -562,7 +561,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
             .parse("type1", new CompressedXContent(mapping));
         Mapper fieldMapper = defaultMapper.mappers().getMapper("completion");
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                         .startObject()
                         .startObject("completion")
@@ -588,7 +587,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
             .parse("type1", new CompressedXContent(mapping));
         Mapper fieldMapper = defaultMapper.mappers().getMapper("completion");
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                         .startObject()
                         .startObject("completion")
@@ -607,7 +606,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
 
     public void testParsingWithGeoFieldAlias() throws Exception {
         XContentBuilder mapping = XContentFactory.jsonBuilder().startObject()
-            .startObject("type1")
+            .startObject("_doc")
                 .startObject("properties")
                     .startObject("completion")
                         .field("type", "completion")
@@ -628,10 +627,10 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
             .endObject()
         .endObject();
 
-        MapperService mapperService = createIndex("test", Settings.EMPTY, "type1", mapping).mapperService();
+        MapperService mapperService = createIndex("test", Settings.EMPTY, mapping).mapperService();
         Mapper fieldMapper = mapperService.documentMapper().mappers().getMapper("completion");
 
-        ParsedDocument parsedDocument = mapperService.documentMapper().parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = mapperService.documentMapper().parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                 .startObject()
                     .startObject("completion")
@@ -656,7 +655,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
             .parse("type1", new CompressedXContent(mapping));
         Mapper fieldMapper = defaultMapper.mappers().getMapper("completion");
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                         .startObject()
                         .startArray("completion")
@@ -694,7 +693,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
             .parse("type1", new CompressedXContent(mapping));
         Mapper fieldMapper = defaultMapper.mappers().getMapper("completion");
 
-        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument parsedDocument = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                         .startObject()
                         .startArray("completion")
@@ -734,7 +733,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         DocumentMapper defaultMapper = createIndex("test").mapperService().documentMapperParser()
             .parse("type1", new CompressedXContent(mapping));
         try {
-            defaultMapper.parse(new SourceToParse("test", "type1", "1",
+            defaultMapper.parse(new SourceToParse("test", "1",
                 BytesReference.bytes(XContentFactory.jsonBuilder()
                             .startObject()
                             .startObject("field1")
@@ -765,7 +764,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         charsRefBuilder.append("sugg");
         charsRefBuilder.setCharAt(2, '\u001F');
         try {
-            defaultMapper.parse(new SourceToParse("test", "type1", "1",
+            defaultMapper.parse(new SourceToParse("test", "1",
                 BytesReference.bytes(XContentFactory.jsonBuilder()
                             .startObject()
                             .field("completion", charsRefBuilder.get().toString())
@@ -780,7 +779,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
 
         charsRefBuilder.setCharAt(2, '\u0000');
         try {
-            defaultMapper.parse(new SourceToParse("test", "type1", "1",
+            defaultMapper.parse(new SourceToParse("test", "1",
                 BytesReference.bytes(XContentFactory.jsonBuilder()
                             .startObject()
                             .field("completion", charsRefBuilder.get().toString())
@@ -795,7 +794,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
 
         charsRefBuilder.setCharAt(2, '\u001E');
         try {
-            defaultMapper.parse(new SourceToParse("test", "type1", "1",
+            defaultMapper.parse(new SourceToParse("test", "1",
                 BytesReference.bytes(XContentFactory.jsonBuilder()
                             .startObject()
                             .field("completion", charsRefBuilder.get().toString())
@@ -809,7 +808,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         }
 
         // empty inputs are ignored
-        ParsedDocument doc = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument doc = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                     .startObject()
                     .array("completion", "   ", "")
@@ -822,7 +821,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         assertThat(ignoredFields.stringValue(), equalTo("completion"));
 
         // null inputs are ignored
-        ParsedDocument nullDoc = defaultMapper.parse(new SourceToParse("test", "type1", "1",
+        ParsedDocument nullDoc = defaultMapper.parse(new SourceToParse("test", "1",
             BytesReference.bytes(XContentFactory.jsonBuilder()
                     .startObject()
                     .nullField("completion")
@@ -913,7 +912,7 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         final String index = "test";
         XContentBuilder mappingBuilder = XContentFactory.jsonBuilder().startObject().startObject("properties")
             .startObject("suggest").field("type", "completion").startArray("contexts");
-        for (int i = 0; i < COMPLETION_CONTEXTS_LIMIT + 1; i++) {
+        for (int i = 0; i < CompletionFieldMapper.COMPLETION_CONTEXTS_LIMIT + 1; i++) {
             mappingBuilder.startObject();
             mappingBuilder.field("name", Integer.toString(i));
             mappingBuilder.field("type", "category");
@@ -923,11 +922,12 @@ public class CompletionFieldMapperTests extends ESSingleNodeTestCase {
         mappingBuilder.endArray().endObject().endObject().endObject();
         String mappings = Strings.toString(mappingBuilder);
 
-        DocumentMapper mapper = createIndex(index).mapperService().documentMapperParser()
-            .parse("type1", new CompressedXContent(mappings));
-        assertWarnings("You have defined more than [" + COMPLETION_CONTEXTS_LIMIT + "] completion contexts" +
-            " in the mapping for index [test]. The maximum allowed number of completion contexts in a mapping will be limited to " +
-                "[" + COMPLETION_CONTEXTS_LIMIT + "] starting in version [8.0].");
+        IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> {
+            createIndex(index).mapperService().documentMapperParser().parse("type1", new CompressedXContent(mappings));
+        });
+        assertTrue(e.getMessage(),
+            e.getMessage().contains("Limit of completion field contexts [" +
+                CompletionFieldMapper.COMPLETION_CONTEXTS_LIMIT + "] has been exceeded"));
     }
 
     private Matcher<IndexableField> suggestField(String value) {

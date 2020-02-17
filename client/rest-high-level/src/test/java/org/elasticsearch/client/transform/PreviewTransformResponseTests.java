@@ -24,7 +24,6 @@ import org.elasticsearch.test.ESTestCase;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +56,7 @@ public class PreviewTransformResponseTests extends ESTestCase {
         int numMappingEntries = randomIntBetween(5, 10);
         Map<String, Object> mappings = new HashMap<>(numMappingEntries);
         for (int i = 0; i < numMappingEntries; i++) {
-            mappings.put(randomAlphaOfLength(10), Collections.singletonMap("type", randomAlphaOfLength(10)));
+            mappings.put(randomAlphaOfLength(10), Map.of("type", randomAlphaOfLength(10)));
         }
 
         return new PreviewTransformResponse(docs, mappings);

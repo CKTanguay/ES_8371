@@ -7,13 +7,15 @@ package org.elasticsearch.cluster.coordination;
 
 import org.apache.lucene.util.SetOnce;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.ActionRequest;
+import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.coordination.CoordinationMetaData.VotingConfiguration;
 import org.elasticsearch.cluster.coordination.CoordinationState.VoteCollection;
+import org.elasticsearch.cluster.coordination.VotingOnlyNodeFeatureSet.UsageTransportAction;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodeRole;
 import org.elasticsearch.cluster.service.ClusterService;
-import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.settings.Setting;
@@ -38,9 +40,11 @@ import org.elasticsearch.transport.TransportRequestOptions;
 import org.elasticsearch.transport.TransportResponse;
 import org.elasticsearch.transport.TransportResponseHandler;
 import org.elasticsearch.watcher.ResourceWatcherService;
-import org.elasticsearch.xpack.core.XPackPlugin;
+import org.elasticsearch.xpack.core.action.XPackInfoFeatureAction;
+import org.elasticsearch.xpack.core.action.XPackUsageFeatureAction;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -68,13 +72,10 @@ public class VotingOnlyNodePlugin extends Plugin implements DiscoveryPlugin, Net
 
     private final boolean isVotingOnlyNode;
 
-    private final boolean transportClientMode;
-
     public VotingOnlyNodePlugin(Settings settings) {
         this.settings = settings;
         threadPool = new SetOnce<>();
         isVotingOnlyNode = VOTING_ONLY_NODE_SETTING.get(settings);
-        this.transportClientMode = XPackPlugin.transportClientMode(settings);
     }
 
     public static boolean isVotingOnlyNode(DiscoveryNode discoveryNode) {
@@ -108,12 +109,9 @@ public class VotingOnlyNodePlugin extends Plugin implements DiscoveryPlugin, Net
     }
 
     @Override
-    public Collection<Module> createGuiceModules() {
-        if (transportClientMode) {
-            return Collections.emptyList();
-        }
-
-        return Collections.singleton(b -> XPackPlugin.bindFeatureSet(b, VotingOnlyNodeFeatureSet.class));
+    public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
+        return Arrays.asList(new ActionHandler<>(XPackUsageFeatureAction.VOTING_ONLY, UsageTransportAction.class),
+            new ActionHandler<>(XPackInfoFeatureAction.VOTING_ONLY, VotingOnlyNodeFeatureSet.UsageInfoAction.class));
     }
 
     @Override
@@ -198,7 +196,7 @@ public class VotingOnlyNodePlugin extends Plugin implements DiscoveryPlugin, Net
             if (action.equals(PublicationTransportHandler.PUBLISH_STATE_ACTION_NAME)) {
                 final DiscoveryNode destinationNode = connection.getNode();
                 if (isFullMasterNode(destinationNode)) {
-                    sender.sendRequest(connection, action, request, options, new TransportResponseHandler<T>() {
+                    sender.sendRequest(connection, action, request, options, new TransportResponseHandler<>() {
                         @Override
                         public void handleResponse(TransportResponse response) {
                             handler.handleException(new TransportException(new ElasticsearchException(
@@ -216,7 +214,7 @@ public class VotingOnlyNodePlugin extends Plugin implements DiscoveryPlugin, Net
                         }
 
                         @Override
-                        public T read(StreamInput in) throws IOException {
+                        public TransportResponse read(StreamInput in) throws IOException {
                             return handler.read(in);
                         }
                     });

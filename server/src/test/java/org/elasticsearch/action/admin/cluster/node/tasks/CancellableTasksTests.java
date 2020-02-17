@@ -182,11 +182,6 @@ public class CancellableTasksTests extends TaskManagerTestCase {
 
             return new NodeResponse(clusterService.localNode());
         }
-
-        @Override
-        protected NodeResponse nodeOperation(CancellableNodeRequest request) {
-            throw new UnsupportedOperationException("the task parameter is required");
-        }
     }
 
     private Task startCancellableTestNodesAction(boolean waitForActionToStart, int blockedNodesCount, ActionListener<NodesResponse>
@@ -205,7 +200,8 @@ public class CancellableTasksTests extends TaskManagerTestCase {
             actions[i] = new CancellableTestNodesAction("internal:testAction", threadPool, testNodes[i]
                 .clusterService, testNodes[i].transportService, shouldBlock, actionLatch);
         }
-        Task task = actions[0].execute(request, listener);
+        Task task = testNodes[0].transportService.getTaskManager().registerAndExecute("transport", actions[0], request,
+            (t, r) -> listener.onResponse(r), (t, e) -> listener.onFailure(e));
         if (waitForActionToStart) {
             logger.info("Awaiting for all actions to start");
             actionLatch.await();

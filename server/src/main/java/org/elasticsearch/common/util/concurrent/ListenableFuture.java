@@ -103,7 +103,7 @@ public final class ListenableFuture<V> extends BaseFuture<V> implements ActionLi
 
     private void notifyListener(ActionListener<V> listener, ExecutorService executorService) {
         try {
-            executorService.execute(new ActionRunnable<V>(listener) {
+            executorService.execute(new ActionRunnable<>(listener) {
                 @Override
                 protected void doRun() {
                     // call get in a non-blocking fashion as we could be on a network thread

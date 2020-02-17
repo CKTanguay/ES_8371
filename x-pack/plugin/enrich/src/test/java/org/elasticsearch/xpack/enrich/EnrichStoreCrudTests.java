@@ -11,7 +11,7 @@ import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.xpack.core.enrich.EnrichPolicy;
 
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -20,7 +20,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 
 public class EnrichStoreCrudTests extends AbstractEnrichTestCase {
-
     public void testCrud() throws Exception {
         EnrichPolicy policy = randomEnrichPolicy(XContentType.JSON);
         ClusterService clusterService = getInstanceFromNode(ClusterService.class);
@@ -102,13 +101,7 @@ public class EnrichStoreCrudTests extends AbstractEnrichTestCase {
             assertThat(error.getMessage(), equalTo("Invalid policy name [myPolicy], must be lowercase"));
         }
         {
-            EnrichPolicy invalidPolicy = new EnrichPolicy(
-                "unsupported_type",
-                null,
-                Collections.singletonList("index"),
-                "field",
-                Collections.singletonList("field")
-            );
+            EnrichPolicy invalidPolicy = new EnrichPolicy("unsupported_type", null, List.of("index"), "field", List.of("field"));
             IllegalArgumentException error = expectThrows(
                 IllegalArgumentException.class,
                 () -> saveEnrichPolicy("name", invalidPolicy, clusterService)
@@ -160,4 +153,5 @@ public class EnrichStoreCrudTests extends AbstractEnrichTestCase {
         Map<String, EnrichPolicy> policies = EnrichStore.getPolicies(clusterService.state());
         assertTrue(policies.isEmpty());
     }
+
 }

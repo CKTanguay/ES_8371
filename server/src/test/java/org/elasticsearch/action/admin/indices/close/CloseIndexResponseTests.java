@@ -35,7 +35,6 @@ import org.elasticsearch.index.Index;
 import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.test.AbstractWireSerializingTestCase;
-import org.elasticsearch.test.VersionUtils;
 import org.elasticsearch.transport.ActionNotFoundTransportException;
 
 import java.io.IOException;
@@ -43,7 +42,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import static org.elasticsearch.test.VersionUtils.getPreviousVersion;
 import static org.elasticsearch.test.VersionUtils.randomVersionBetween;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
@@ -113,7 +114,17 @@ public class CloseIndexResponseTests extends AbstractWireSerializingTestCase<Clo
                             assertThat(actualFailure.getNodeId(), equalTo(expectedFailure.getNodeId()));
                             assertThat(actualFailure.index(), equalTo(expectedFailure.index()));
                             assertThat(actualFailure.shardId(), equalTo(expectedFailure.shardId()));
-                            assertThat(actualFailure.reason(), equalTo(expectedFailure.reason()));
+
+                            // Serialising and deserialising an exception seems to remove the "java.base/" part from the stack trace
+                            // in the `reason` property, so we don't compare it directly. Instead, check that the first lines match,
+                            // and that the stack trace has the same number of lines.
+                            List<String> expectedReasonLines = expectedFailure.reason().lines().collect(Collectors.toList());
+                            List<String> actualReasonLines = actualFailure.reason().lines().collect(Collectors.toList());
+                            assertThat(actualReasonLines.get(0), equalTo(expectedReasonLines.get(0)));
+                            assertThat("Exceptions have a different number of lines",
+                                actualReasonLines,
+                                hasSize(expectedReasonLines.size()));
+
                             assertThat(actualFailure.getCause().getMessage(), equalTo(expectedFailure.getCause().getMessage()));
                             assertThat(actualFailure.getCause().getClass(), equalTo(expectedFailure.getCause().getClass()));
                             assertArrayEquals(actualFailure.getCause().getStackTrace(), expectedFailure.getCause().getStackTrace());
@@ -164,7 +175,7 @@ public class CloseIndexResponseTests extends AbstractWireSerializingTestCase<Clo
         {
             final CloseIndexResponse response = randomResponse();
             try (BytesStreamOutput out = new BytesStreamOutput()) {
-                out.setVersion(randomVersionBetween(random(), Version.V_6_0_0, VersionUtils.getPreviousVersion(Version.V_7_2_0)));
+                out.setVersion(randomVersionBetween(random(), Version.V_7_0_0, getPreviousVersion(Version.V_7_2_0)));
                 response.writeTo(out);
 
                 try (StreamInput in = out.bytes().streamInput()) {
@@ -180,7 +191,7 @@ public class CloseIndexResponseTests extends AbstractWireSerializingTestCase<Clo
                 response.writeTo(out);
 
                 try (StreamInput in = out.bytes().streamInput()) {
-                    in.setVersion(randomVersionBetween(random(), Version.V_6_0_0, VersionUtils.getPreviousVersion(Version.V_7_2_0)));
+                    in.setVersion(randomVersionBetween(random(), Version.V_7_0_0, getPreviousVersion(Version.V_7_2_0)));
                     final CloseIndexResponse deserializedResponse = new CloseIndexResponse(in);
                     assertThat(deserializedResponse.isAcknowledged(), equalTo(response.isAcknowledged()));
                 }

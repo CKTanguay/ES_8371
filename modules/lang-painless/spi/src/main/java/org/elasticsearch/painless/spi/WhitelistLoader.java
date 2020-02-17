@@ -460,11 +460,11 @@ public final class WhitelistLoader {
 
         List<Object> annotations;
 
-        line = line.trim();
-
-        if (line.isEmpty()) {
+        if (line.isBlank()) {
             annotations = Collections.emptyList();
         } else {
+            line = line.trim();
+
             if (line.charAt(0) != '@') {
                 throw new IllegalArgumentException("invalid annotation: expected at symbol [" + line + "]");
             }

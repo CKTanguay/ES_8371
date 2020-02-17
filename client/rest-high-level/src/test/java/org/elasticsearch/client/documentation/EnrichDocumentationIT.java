@@ -38,13 +38,10 @@ import org.elasticsearch.client.enrich.StatsResponse.ExecutingPolicy;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.junit.After;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import static java.util.Collections.singletonMap;
 
 public class EnrichDocumentationIT extends ESRestHighLevelClientTestCase {
 
@@ -62,13 +59,13 @@ public class EnrichDocumentationIT extends ESRestHighLevelClientTestCase {
     public void testPutPolicy() throws Exception {
         RestHighLevelClient client = highLevelClient();
         CreateIndexRequest createIndexRequest = new CreateIndexRequest("users")
-            .mapping(singletonMap("properties", singletonMap("email", singletonMap("type", "keyword"))));
+            .mapping(Map.of("properties", Map.of("email", Map.of("type", "keyword"))));
         client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
 
         // tag::enrich-put-policy-request
         PutPolicyRequest putPolicyRequest = new PutPolicyRequest(
-            "users-policy", "match", Arrays.asList("users"),
-            "email", Arrays.asList("address", "zip", "city", "state"));
+            "users-policy", "match", List.of("users"),
+            "email", List.of("address", "zip", "city", "state"));
         // end::enrich-put-policy-request
 
         // tag::enrich-put-policy-execute
@@ -82,8 +79,7 @@ public class EnrichDocumentationIT extends ESRestHighLevelClientTestCase {
         // end::enrich-put-policy-response
 
         // tag::enrich-put-policy-execute-listener
-        ActionListener<AcknowledgedResponse> listener =
-            new ActionListener<AcknowledgedResponse>() {
+        ActionListener<AcknowledgedResponse> listener = new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse response) { // <1>
                     boolean isAcknowledged = response.isAcknowledged();
@@ -113,13 +109,13 @@ public class EnrichDocumentationIT extends ESRestHighLevelClientTestCase {
 
         {
             CreateIndexRequest createIndexRequest = new CreateIndexRequest("users")
-                .mapping(singletonMap("properties", singletonMap("email", singletonMap("type", "keyword"))));
+                .mapping(Map.of("properties", Map.of("email", Map.of("type", "keyword"))));
             client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
 
             // Add a policy, so that it can be deleted:
             PutPolicyRequest putPolicyRequest = new PutPolicyRequest(
-                "users-policy", "match", Arrays.asList("users"),
-                "email", Arrays.asList("address", "zip", "city", "state"));
+                "users-policy", "match", List.of("users"),
+                "email", List.of("address", "zip", "city", "state"));
             client.enrich().putPolicy(putPolicyRequest, RequestOptions.DEFAULT);
         }
 
@@ -139,8 +135,7 @@ public class EnrichDocumentationIT extends ESRestHighLevelClientTestCase {
         // end::enrich-delete-policy-response
 
         // tag::enrich-delete-policy-execute-listener
-        ActionListener<AcknowledgedResponse> listener =
-            new ActionListener<AcknowledgedResponse>() {
+        ActionListener<AcknowledgedResponse> listener = new ActionListener<>() {
             @Override
             public void onResponse(AcknowledgedResponse response) { // <1>
                 boolean isAcknowledged = response.isAcknowledged();
@@ -169,12 +164,12 @@ public class EnrichDocumentationIT extends ESRestHighLevelClientTestCase {
         RestHighLevelClient client = highLevelClient();
 
         CreateIndexRequest createIndexRequest = new CreateIndexRequest("users")
-            .mapping(singletonMap("properties", singletonMap("email", singletonMap("type", "keyword"))));
+            .mapping(Map.of("properties", Map.of("email", Map.of("type", "keyword"))));
         client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
 
         PutPolicyRequest putPolicyRequest = new PutPolicyRequest(
-            "users-policy", "match", Collections.singletonList("users"),
-            "email", Arrays.asList("address", "zip", "city", "state"));
+            "users-policy", "match", List.of("users"),
+            "email", List.of("address", "zip", "city", "state"));
         client.enrich().putPolicy(putPolicyRequest, RequestOptions.DEFAULT);
 
         // tag::enrich-get-policy-request
@@ -192,8 +187,7 @@ public class EnrichDocumentationIT extends ESRestHighLevelClientTestCase {
         // end::enrich-get-policy-response
 
         // tag::enrich-get-policy-execute-listener
-        ActionListener<GetPolicyResponse> listener =
-            new ActionListener<GetPolicyResponse>() {
+        ActionListener<GetPolicyResponse> listener = new ActionListener<>() {
             @Override
             public void onResponse(GetPolicyResponse response) { // <1>
                 List<NamedPolicy> policies = response.getPolicies();
@@ -239,8 +233,7 @@ public class EnrichDocumentationIT extends ESRestHighLevelClientTestCase {
         // end::enrich-stats-response
 
         // tag::enrich-stats-execute-listener
-        ActionListener<StatsResponse> listener =
-            new ActionListener<StatsResponse>() {
+        ActionListener<StatsResponse> listener = new ActionListener<>() {
             @Override
             public void onResponse(StatsResponse response) { // <1>
                 List<ExecutingPolicy> executingPolicies =
@@ -273,12 +266,11 @@ public class EnrichDocumentationIT extends ESRestHighLevelClientTestCase {
 
         {
             CreateIndexRequest createIndexRequest = new CreateIndexRequest("users")
-                .mapping(singletonMap("properties", singletonMap("email",
-                    singletonMap("type", "keyword"))));
+                .mapping(Map.of("properties", Map.of("email", Map.of("type", "keyword"))));
             client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
             PutPolicyRequest putPolicyRequest = new PutPolicyRequest(
-                "users-policy", "match", Collections.singletonList("users"),
-                "email", Arrays.asList("address", "zip", "city", "state"));
+                "users-policy", "match", List.of("users"),
+                "email", List.of("address", "zip", "city", "state"));
             client.enrich().putPolicy(putPolicyRequest, RequestOptions.DEFAULT);
         }
 
@@ -298,8 +290,7 @@ public class EnrichDocumentationIT extends ESRestHighLevelClientTestCase {
         // end::enrich-execute-policy-response
 
         // tag::enrich-execute-policy-execute-listener
-        ActionListener<ExecutePolicyResponse> listener =
-            new ActionListener<ExecutePolicyResponse>() {
+        ActionListener<ExecutePolicyResponse> listener = new ActionListener<>() {
             @Override
             public void onResponse(ExecutePolicyResponse response) { // <1>
                 ExecutePolicyResponse.ExecutionStatus status =

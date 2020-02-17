@@ -19,7 +19,6 @@
 
 package org.elasticsearch.cluster.action.index;
 
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.action.support.master.MasterNodeRequest;
@@ -31,11 +30,9 @@ import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.util.concurrent.UncategorizedExecutionException;
 import org.elasticsearch.common.util.concurrent.RunOnce;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.Index;
-import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.mapper.Mapping;
 
 import java.util.concurrent.Semaphore;
@@ -84,11 +81,7 @@ public class MappingUpdatedAction {
      * {@code timeout} is the master node timeout ({@link MasterNodeRequest#masterNodeTimeout()}),
      * potentially waiting for a master node to be available.
      */
-    public void updateMappingOnMaster(Index index, String type, Mapping mappingUpdate, ActionListener<Void> listener) {
-        if (type.equals(MapperService.DEFAULT_MAPPING)) {
-            throw new IllegalArgumentException("_default_ mapping should not be updated");
-        }
-
+    public void updateMappingOnMaster(Index index, Mapping mappingUpdate, ActionListener<Void> listener) {
         final RunOnce release = new RunOnce(() -> semaphore.release());
         try {
             semaphore.acquire();
@@ -99,7 +92,7 @@ public class MappingUpdatedAction {
         }
         boolean successFullySent = false;
         try {
-            sendUpdateMapping(index, type, mappingUpdate, ActionListener.runBefore(listener, release::run));
+            sendUpdateMapping(index, mappingUpdate, ActionListener.runBefore(listener, release::run));
             successFullySent = true;
         } finally {
             if (successFullySent == false) {
@@ -114,10 +107,10 @@ public class MappingUpdatedAction {
     }
 
     // can be overridden by tests
-    protected void sendUpdateMapping(Index index, String type, Mapping mappingUpdate, ActionListener<Void> listener) {
-            client.preparePutMapping().setConcreteIndex(index).setType(type).setSource(mappingUpdate.toString(), XContentType.JSON)
+    protected void sendUpdateMapping(Index index, Mapping mappingUpdate, ActionListener<Void> listener) {
+        client.preparePutMapping().setConcreteIndex(index).setSource(mappingUpdate.toString(), XContentType.JSON)
             .setMasterNodeTimeout(dynamicMappingUpdateTimeout).setTimeout(TimeValue.ZERO)
-            .execute(new ActionListener<AcknowledgedResponse>() {
+            .execute(new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                     listener.onResponse(null);
@@ -125,22 +118,9 @@ public class MappingUpdatedAction {
 
                 @Override
                 public void onFailure(Exception e) {
-                    listener.onFailure(unwrapException(e));
+                    listener.onFailure(e);
                 }
             });
-    }
-
-    // todo: this explicit unwrap should not be necessary, but is until guessRootCause is fixed to allow wrapped non-es exception.
-    private static Exception unwrapException(Exception cause) {
-        return cause instanceof ElasticsearchException ? unwrapEsException((ElasticsearchException) cause) : cause;
-    }
-
-    private static RuntimeException unwrapEsException(ElasticsearchException esEx) {
-        Throwable root = esEx.unwrapCause();
-        if (root instanceof RuntimeException) {
-            return (RuntimeException) root;
-        }
-        return new UncategorizedExecutionException("Failed execution", root);
     }
 
     static class AdjustableSemaphore extends Semaphore {

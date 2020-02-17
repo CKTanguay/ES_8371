@@ -816,7 +816,7 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
                 new Script(ScriptType.INLINE, MockScriptEngine.NAME, "1", Collections.emptyMap()));
         RandomScoreFunctionBuilder randomScoreFunctionBuilder = new RandomScoreFunctionBuilderWithFixedSeed();
 
-        for (ScoreFunctionBuilder<?> scoreFunction : Arrays.asList(scriptScoreFunction, randomScoreFunctionBuilder)) {
+        for (ScoreFunctionBuilder<?> scoreFunction : List.of(scriptScoreFunction, randomScoreFunctionBuilder)) {
             FilterFunctionBuilder[] functions = new FilterFunctionBuilder[] {
                     new FilterFunctionBuilder(RandomQueryBuilder.createQuery(random()), scoreFunction) };
             queryBuilder = new FunctionScoreQueryBuilder(functions);

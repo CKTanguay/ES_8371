@@ -53,8 +53,7 @@ import org.junit.After;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
@@ -66,7 +65,7 @@ public class FinalPipelineIT extends ESIntegTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        return Collections.singletonList(TestPlugin.class);
+        return List.of(TestPlugin.class);
     }
 
     @After
@@ -87,7 +86,7 @@ public class FinalPipelineIT extends ESIntegTestCase {
         // this asserts that the final_pipeline was used, without us having to actually create the pipeline etc.
         final IllegalArgumentException e = expectThrows(
             IllegalArgumentException.class,
-            () -> client().prepareIndex("index", "_doc", "1").setSource(Collections.singletonMap("field", "value")).get());
+            () -> client().prepareIndex("index").setId("1").setSource(Map.of("field", "value")).get());
         assertThat(e, hasToString(containsString("pipeline with id [final_pipeline] does not exist")));
     }
 
@@ -104,13 +103,13 @@ public class FinalPipelineIT extends ESIntegTestCase {
             .actionGet();
         final Settings settings = Settings.builder().put(IndexSettings.FINAL_PIPELINE.getKey(), "final_pipeline").build();
         createIndex("index", settings);
-        final IndexRequestBuilder index = client().prepareIndex("index", "_doc", "1");
-        index.setSource(Collections.singletonMap("field", "value"));
+        final IndexRequestBuilder index = client().prepareIndex("index").setId("1");
+        index.setSource(Map.of("field", "value"));
         index.setPipeline("request_pipeline");
         index.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
         final IndexResponse response = index.get();
         assertThat(response.status(), equalTo(RestStatus.CREATED));
-        final GetRequestBuilder get = client().prepareGet("index", "_doc", "1");
+        final GetRequestBuilder get = client().prepareGet("index", "1");
         final GetResponse getResponse = get.get();
         assertTrue(getResponse.isExists());
         final Map<String, Object> source = getResponse.getSourceAsMap();
@@ -136,12 +135,12 @@ public class FinalPipelineIT extends ESIntegTestCase {
             .put(IndexSettings.FINAL_PIPELINE.getKey(), "final_pipeline")
             .build();
         createIndex("index", settings);
-        final IndexRequestBuilder index = client().prepareIndex("index", "_doc", "1");
-        index.setSource(Collections.singletonMap("field", "value"));
+        final IndexRequestBuilder index = client().prepareIndex("index").setId("1");
+        index.setSource(Map.of("field", "value"));
         index.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
         final IndexResponse response = index.get();
         assertThat(response.status(), equalTo(RestStatus.CREATED));
-        final GetRequestBuilder get = client().prepareGet("index", "_doc", "1");
+        final GetRequestBuilder get = client().prepareGet("index", "1");
         final GetResponse getResponse = get.get();
         assertTrue(getResponse.isExists());
         final Map<String, Object> source = getResponse.getSourceAsMap();
@@ -177,7 +176,7 @@ public class FinalPipelineIT extends ESIntegTestCase {
             Settings.builder().put(IndexSettings.DEFAULT_PIPELINE.getKey(), "default_pipeline").build();
         admin().indices()
             .preparePutTemplate("default")
-            .setPatterns(Collections.singletonList("index*"))
+            .setPatterns(List.of("index*"))
             .setOrder(defaultPipelineOrder)
             .setSettings(defaultPipelineSettings)
             .get();
@@ -185,16 +184,16 @@ public class FinalPipelineIT extends ESIntegTestCase {
             Settings.builder().put(IndexSettings.FINAL_PIPELINE.getKey(), "final_pipeline").build();
         admin().indices()
             .preparePutTemplate("final")
-            .setPatterns(Collections.singletonList("index*"))
+            .setPatterns(List.of("index*"))
             .setOrder(finalPipelineOrder)
             .setSettings(finalPipelineSettings)
             .get();
-        final IndexRequestBuilder index = client().prepareIndex("index", "_doc", "1");
-        index.setSource(Collections.singletonMap("field", "value"));
+        final IndexRequestBuilder index = client().prepareIndex("index").setId("1");
+        index.setSource(Map.of("field", "value"));
         index.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
         final IndexResponse response = index.get();
         assertThat(response.status(), equalTo(RestStatus.CREATED));
-        final GetRequestBuilder get = client().prepareGet("index", "_doc", "1");
+        final GetRequestBuilder get = client().prepareGet("index", "1");
         final GetResponse getResponse = get.get();
         assertTrue(getResponse.isExists());
         final Map<String, Object> source = getResponse.getSourceAsMap();
@@ -211,7 +210,7 @@ public class FinalPipelineIT extends ESIntegTestCase {
             Settings.builder().put(IndexSettings.FINAL_PIPELINE.getKey(), "low_order_final_pipeline").build();
         admin().indices()
             .preparePutTemplate("low_order")
-            .setPatterns(Collections.singletonList("index*"))
+            .setPatterns(List.of("index*"))
             .setOrder(lowOrder)
             .setSettings(lowOrderFinalPipelineSettings)
             .get();
@@ -219,7 +218,7 @@ public class FinalPipelineIT extends ESIntegTestCase {
             Settings.builder().put(IndexSettings.FINAL_PIPELINE.getKey(), "high_order_final_pipeline").build();
         admin().indices()
             .preparePutTemplate("high_order")
-            .setPatterns(Collections.singletonList("index*"))
+            .setPatterns(List.of("index*"))
             .setOrder(highOrder)
             .setSettings(highOrderFinalPipelineSettings)
             .get();
@@ -227,7 +226,7 @@ public class FinalPipelineIT extends ESIntegTestCase {
         // this asserts that the high_order_final_pipeline was selected, without us having to actually create the pipeline etc.
         final IllegalArgumentException e = expectThrows(
             IllegalArgumentException.class,
-            () -> client().prepareIndex("index", "_doc", "1").setSource(Collections.singletonMap("field", "value")).get());
+            () -> client().prepareIndex("index").setId("1").setSource(Map.of("field", "value")).get());
         assertThat(e, hasToString(containsString("pipeline with id [high_order_final_pipeline] does not exist")));
     }
 
@@ -244,13 +243,12 @@ public class FinalPipelineIT extends ESIntegTestCase {
             final Environment environment,
             final NodeEnvironment nodeEnvironment,
             final NamedWriteableRegistry namedWriteableRegistry) {
-            return Collections.emptyList();
+            return List.of();
         }
 
         @Override
         public Map<String, Processor.Factory> getProcessors(Processor.Parameters parameters) {
-            final HashMap<String, Processor.Factory> map = new HashMap<>(3);
-            map.put(
+            return Map.of(
                 "default",
                 (factories, tag, config) ->
                     new AbstractProcessor(tag) {
@@ -265,8 +263,7 @@ public class FinalPipelineIT extends ESIntegTestCase {
                         public String getType() {
                             return "default";
                         }
-                    });
-            map.put(
+                    },
                 "final",
                 (processorFactories, tag, config) -> {
                     final String exists = (String) config.remove("exists");
@@ -289,8 +286,7 @@ public class FinalPipelineIT extends ESIntegTestCase {
                             return "final";
                         }
                     };
-                });
-            map.put(
+                },
                 "request",
                 (processorFactories, tag, config) ->
                     new AbstractProcessor(tag) {
@@ -306,7 +302,6 @@ public class FinalPipelineIT extends ESIntegTestCase {
                         }
                     }
             );
-            return map;
         }
     }
 

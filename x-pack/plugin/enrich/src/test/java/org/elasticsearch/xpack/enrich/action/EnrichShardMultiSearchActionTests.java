@@ -21,7 +21,7 @@ import org.elasticsearch.xpack.core.enrich.EnrichPolicy;
 import org.elasticsearch.xpack.enrich.LocalStateEnrich;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -30,7 +30,7 @@ public class EnrichShardMultiSearchActionTests extends ESSingleNodeTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> getPlugins() {
-        return Collections.singletonList(LocalStateEnrich.class);
+        return List.of(LocalStateEnrich.class);
     }
 
     public void testExecute() throws Exception {

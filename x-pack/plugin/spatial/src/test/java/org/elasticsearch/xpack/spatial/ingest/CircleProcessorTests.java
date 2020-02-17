@@ -41,9 +41,9 @@ import org.elasticsearch.xpack.spatial.index.mapper.ShapeIndexer;
 import org.elasticsearch.xpack.spatial.index.query.ShapeQueryProcessor;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.elasticsearch.ingest.IngestDocumentMatcher.assertIngestDocument;
@@ -112,7 +112,7 @@ public class CircleProcessorTests extends ESTestCase {
         HashMap<String, Object> map = new HashMap<>();
         HashMap<String, Object> circleMap = new HashMap<>();
         circleMap.put("type", "Circle");
-        circleMap.put("coordinates", Arrays.asList(circle.getLon(), circle.getLat()));
+        circleMap.put("coordinates", List.of(circle.getLon(), circle.getLat()));
         circleMap.put("radius", circle.getRadiusMeters() + "m");
         map.put("field", circleMap);
         Geometry expectedPoly = SpatialUtils.createRegularGeoShapePolygon(circle, 4);
@@ -161,7 +161,7 @@ public class CircleProcessorTests extends ESTestCase {
 
     public void testInvalidType() {
         Map<String, Object> field = new HashMap<>();
-        field.put("coordinates", Arrays.asList(100, 100));
+        field.put("coordinates", List.of(100, 100));
         field.put("radius", "10m");
         Map<String, Object> map = new HashMap<>();
         map.put("field", field);
@@ -194,7 +194,7 @@ public class CircleProcessorTests extends ESTestCase {
     public void testInvalidRadius() {
         Map<String, Object> field = new HashMap<>();
         field.put("type", "circle");
-        field.put("coordinates", Arrays.asList(100.0, 1.0));
+        field.put("coordinates", List.of(100.0, 1.0));
         Map<String, Object> map = new HashMap<>();
         map.put("field", field);
         IngestDocument ingestDocument = new IngestDocument(map, Collections.emptyMap());

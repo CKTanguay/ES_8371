@@ -158,7 +158,7 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
         "index.number_of_routing_shards",
         INDEX_NUMBER_OF_SHARDS_SETTING,
         1,
-        new Setting.Validator<Integer>() {
+        new Setting.Validator<>() {
 
             @Override
             public void validate(final Integer value) {
@@ -177,7 +177,7 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
 
             @Override
             public Iterator<Setting<?>> settings() {
-                final List<Setting<?>> settings = Collections.singletonList(INDEX_NUMBER_OF_SHARDS_SETTING);
+                final List<Setting<?>> settings = List.of(INDEX_NUMBER_OF_SHARDS_SETTING);
                 return settings.iterator();
             }
 
@@ -255,6 +255,13 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
                       ActiveShardCount::parseString,
                       Setting.Property.Dynamic,
                       Setting.Property.IndexScope);
+
+    /**
+     * Whether the index is considered hidden or not. A hidden index will not be resolved in
+     * normal wildcard searches unless explicitly allowed
+     */
+    public static final Setting<Boolean> INDEX_HIDDEN_SETTING =
+        Setting.boolSetting("index.hidden", false, Property.IndexScope, Property.Final);
 
     /**
      * an internal index format description, allowing us to find out if this index is upgraded or needs upgrading
@@ -487,36 +494,14 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
     }
 
     /**
-     * Return an object that maps each type to the associated mappings.
-     * The return value is never {@code null} but may be empty if the index
-     * has no mappings.
-     * @deprecated Use {@link #mapping()} instead now that indices have a single type
-     */
-    @Deprecated
-    public ImmutableOpenMap<String, MappingMetaData> getMappings() {
-        return mappings;
-    }
-
-    /**
      * Return the concrete mapping for this index or {@code null} if this index has no mappings at all.
      */
     @Nullable
     public MappingMetaData mapping() {
         for (ObjectObjectCursor<String, MappingMetaData> cursor : mappings) {
-            if (cursor.key.equals(MapperService.DEFAULT_MAPPING) == false) {
-                return cursor.value;
-            }
+            return cursor.value;
         }
         return null;
-    }
-
-    /**
-     * Get the default mapping.
-     * NOTE: this is always {@code null} for 7.x indices which are disallowed to have a default mapping.
-     */
-    @Nullable
-    public MappingMetaData defaultMapping() {
-        return mappings.get(MapperService.DEFAULT_MAPPING);
     }
 
     public static final String INDEX_RESIZE_SOURCE_UUID_KEY = "index.resize.source.uuid";
@@ -527,25 +512,6 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
     public Index getResizeSourceIndex() {
         return INDEX_RESIZE_SOURCE_UUID.exists(settings) ? new Index(INDEX_RESIZE_SOURCE_NAME.get(settings),
             INDEX_RESIZE_SOURCE_UUID.get(settings)) : null;
-    }
-
-    /**
-     * Sometimes, the default mapping exists and an actual mapping is not created yet (introduced),
-     * in this case, we want to return the default mapping in case it has some default mapping definitions.
-     * <p>
-     * Note, once the mapping type is introduced, the default mapping is applied on the actual typed MappingMetaData,
-     * setting its routing, timestamp, and so on if needed.
-     */
-    @Nullable
-    public MappingMetaData mappingOrDefault() {
-        MappingMetaData mapping = null;
-        for (ObjectCursor<MappingMetaData> m : mappings.values()) {
-            if (mapping == null || mapping.type().equals(MapperService.DEFAULT_MAPPING)) {
-                mapping = m.value;
-            }
-        }
-
-        return mapping;
     }
 
     ImmutableOpenMap<String, DiffableStringMap> getCustomData() {
@@ -716,16 +682,8 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
             index = in.readString();
             routingNumShards = in.readInt();
             version = in.readLong();
-            if (in.getVersion().onOrAfter(Version.V_6_5_0)) {
-                mappingVersion = in.readVLong();
-            } else {
-                mappingVersion = 1;
-            }
-            if (in.getVersion().onOrAfter(Version.V_6_5_0)) {
-                settingsVersion = in.readVLong();
-            } else {
-                settingsVersion = 1;
-            }
+            mappingVersion = in.readVLong();
+            settingsVersion = in.readVLong();
             if (in.getVersion().onOrAfter(Version.V_7_2_0)) {
                 aliasesVersion = in.readVLong();
             } else {
@@ -742,13 +700,8 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
                 DiffableStringMap::readDiffFrom);
             inSyncAllocationIds = DiffableUtils.readImmutableOpenIntMapDiff(in, DiffableUtils.getVIntKeySerializer(),
                 DiffableUtils.StringSetValueSerializer.getInstance());
-            if (in.getVersion().onOrAfter(Version.V_6_4_0)) {
-                rolloverInfos = DiffableUtils.readImmutableOpenMapDiff(in, DiffableUtils.getStringKeySerializer(), RolloverInfo::new,
-                    RolloverInfo::readDiffFrom);
-            } else {
-                ImmutableOpenMap<String, RolloverInfo> emptyMap = ImmutableOpenMap.of();
-                rolloverInfos = DiffableUtils.diff(emptyMap, emptyMap, DiffableUtils.getStringKeySerializer());
-            }
+            rolloverInfos = DiffableUtils.readImmutableOpenMapDiff(in, DiffableUtils.getStringKeySerializer(), RolloverInfo::new,
+                RolloverInfo::readDiffFrom);
         }
 
         @Override
@@ -756,12 +709,8 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
             out.writeString(index);
             out.writeInt(routingNumShards);
             out.writeLong(version);
-            if (out.getVersion().onOrAfter(Version.V_6_5_0)) {
-                out.writeVLong(mappingVersion);
-            }
-            if (out.getVersion().onOrAfter(Version.V_6_5_0)) {
-                out.writeVLong(settingsVersion);
-            }
+            out.writeVLong(mappingVersion);
+            out.writeVLong(settingsVersion);
             if (out.getVersion().onOrAfter(Version.V_7_2_0)) {
                 out.writeVLong(aliasesVersion);
             }
@@ -772,9 +721,7 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
             aliases.writeTo(out);
             customData.writeTo(out);
             inSyncAllocationIds.writeTo(out);
-            if (out.getVersion().onOrAfter(Version.V_6_4_0)) {
-                rolloverInfos.writeTo(out);
-            }
+            rolloverInfos.writeTo(out);
         }
 
         @Override
@@ -800,20 +747,10 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
     public static IndexMetaData readFrom(StreamInput in) throws IOException {
         Builder builder = new Builder(in.readString());
         builder.version(in.readLong());
-        if (in.getVersion().onOrAfter(Version.V_6_5_0)) {
-            builder.mappingVersion(in.readVLong());
-        } else {
-            builder.mappingVersion(1);
-        }
-        if (in.getVersion().onOrAfter(Version.V_6_5_0)) {
-            builder.settingsVersion(in.readVLong());
-        } else {
-            builder.settingsVersion(1);
-        }
+        builder.mappingVersion(in.readVLong());
+        builder.settingsVersion(in.readVLong());
         if (in.getVersion().onOrAfter(Version.V_7_2_0)) {
             builder.aliasesVersion(in.readVLong());
-        } else {
-            builder.aliasesVersion(1);
         }
         builder.setRoutingNumShards(in.readInt());
         builder.state(State.fromId(in.readByte()));
@@ -830,17 +767,10 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
             builder.putAlias(aliasMd);
         }
         int customSize = in.readVInt();
-        if (in.getVersion().onOrAfter(Version.V_6_5_0)) {
-            for (int i = 0; i < customSize; i++) {
-                String key = in.readString();
-                DiffableStringMap custom = new DiffableStringMap(in);
-                builder.putCustom(key, custom);
-            }
-        } else {
-            assert customSize == 0 : "expected no custom index metadata";
-            if (customSize > 0) {
-                throw new IllegalStateException("unexpected custom metadata when none is supported");
-            }
+        for (int i = 0; i < customSize; i++) {
+            String key = in.readString();
+            DiffableStringMap custom = new DiffableStringMap(in);
+            builder.putCustom(key, custom);
         }
         int inSyncAllocationIdsSize = in.readVInt();
         for (int i = 0; i < inSyncAllocationIdsSize; i++) {
@@ -848,11 +778,9 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
             Set<String> allocationIds = DiffableUtils.StringSetValueSerializer.getInstance().read(in, key);
             builder.putInSyncAllocationIds(key, allocationIds);
         }
-        if (in.getVersion().onOrAfter(Version.V_6_4_0)) {
-            int rolloverAliasesSize = in.readVInt();
-            for (int i = 0; i < rolloverAliasesSize; i++) {
-                builder.putRolloverInfo(new RolloverInfo(in));
-            }
+        int rolloverAliasesSize = in.readVInt();
+        for (int i = 0; i < rolloverAliasesSize; i++) {
+            builder.putRolloverInfo(new RolloverInfo(in));
         }
         return builder.build();
     }
@@ -861,12 +789,8 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(index.getName()); // uuid will come as part of settings
         out.writeLong(version);
-        if (out.getVersion().onOrAfter(Version.V_6_5_0)) {
-            out.writeVLong(mappingVersion);
-        }
-        if (out.getVersion().onOrAfter(Version.V_6_5_0)) {
-            out.writeVLong(settingsVersion);
-        }
+        out.writeVLong(mappingVersion);
+        out.writeVLong(settingsVersion);
         if (out.getVersion().onOrAfter(Version.V_7_2_0)) {
             out.writeVLong(aliasesVersion);
         }
@@ -882,25 +806,19 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
         for (ObjectCursor<AliasMetaData> cursor : aliases.values()) {
             cursor.value.writeTo(out);
         }
-        if (out.getVersion().onOrAfter(Version.V_6_5_0)) {
-            out.writeVInt(customData.size());
-            for (final ObjectObjectCursor<String, DiffableStringMap> cursor : customData) {
-                out.writeString(cursor.key);
-                cursor.value.writeTo(out);
-            }
-        } else {
-            out.writeVInt(0);
+        out.writeVInt(customData.size());
+        for (final ObjectObjectCursor<String, DiffableStringMap> cursor : customData) {
+            out.writeString(cursor.key);
+            cursor.value.writeTo(out);
         }
         out.writeVInt(inSyncAllocationIds.size());
         for (IntObjectCursor<Set<String>> cursor : inSyncAllocationIds) {
             out.writeVInt(cursor.key);
             DiffableUtils.StringSetValueSerializer.getInstance().write(cursor.value, out);
         }
-        if (out.getVersion().onOrAfter(Version.V_6_4_0)) {
-            out.writeVInt(rolloverInfos.size());
-            for (ObjectCursor<RolloverInfo> cursor : rolloverInfos.values()) {
-                cursor.value.writeTo(out);
-            }
+        out.writeVInt(rolloverInfos.size());
+        for (ObjectCursor<RolloverInfo> cursor : rolloverInfos.values()) {
+            cursor.value.writeTo(out);
         }
     }
 
@@ -1018,17 +936,21 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
             return this;
         }
 
-        public MappingMetaData mapping(String type) {
-            return mappings.get(type);
+        public MappingMetaData mapping() {
+            return mappings.get(MapperService.SINGLE_MAPPING_NAME);
         }
 
-        public Builder putMapping(String type, String source) throws IOException {
-            putMapping(new MappingMetaData(type, XContentHelper.convertToMap(XContentFactory.xContent(source), source, true)));
+        public Builder putMapping(String source) {
+            putMapping(new MappingMetaData(MapperService.SINGLE_MAPPING_NAME,
+                XContentHelper.convertToMap(XContentFactory.xContent(source), source, true)));
             return this;
         }
 
         public Builder putMapping(MappingMetaData mappingMd) {
-            mappings.put(mappingMd.type(), mappingMd);
+            mappings.clear();
+            if (mappingMd != null) {
+                mappings.put(MapperService.SINGLE_MAPPING_NAME, mappingMd);
+            }
             return this;
         }
 
@@ -1157,14 +1079,6 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
             ImmutableOpenMap.Builder<String, AliasMetaData> tmpAliases = aliases;
             Settings tmpSettings = settings;
 
-            // update default mapping on the MappingMetaData
-            if (mappings.containsKey(MapperService.DEFAULT_MAPPING)) {
-                MappingMetaData defaultMapping = mappings.get(MapperService.DEFAULT_MAPPING);
-                for (ObjectCursor<MappingMetaData> cursor : mappings.values()) {
-                    cursor.value.updateDefaultMapping(defaultMapping);
-                }
-            }
-
             Integer maybeNumberOfShards = settings.getAsInt(SETTING_NUMBER_OF_SHARDS, null);
             if (maybeNumberOfShards == null) {
                 throw new IllegalArgumentException("must specify numberOfShards for index [" + index + "]");
@@ -1192,7 +1106,7 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
             ImmutableOpenIntMap.Builder<Set<String>> filledInSyncAllocationIds = ImmutableOpenIntMap.builder();
             for (int i = 0; i < numberOfShards; i++) {
                 if (inSyncAllocationIds.containsKey(i)) {
-                    filledInSyncAllocationIds.put(i, Collections.unmodifiableSet(new HashSet<>(inSyncAllocationIds.get(i))));
+                    filledInSyncAllocationIds.put(i, Set.copyOf(inSyncAllocationIds.get(i)));
                 } else {
                     filledInSyncAllocationIds.put(i, Collections.emptySet());
                 }
@@ -1288,11 +1202,12 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
             builder.endObject();
 
             builder.startArray(KEY_MAPPINGS);
-            for (ObjectObjectCursor<String, MappingMetaData> cursor : indexMetaData.getMappings()) {
+            MappingMetaData mmd = indexMetaData.mapping();
+            if (mmd != null) {
                 if (binary) {
-                    builder.value(cursor.value.source().compressed());
+                    builder.value(mmd.source().compressed());
                 } else {
-                    builder.map(XContentHelper.convertToMap(new BytesArray(cursor.value.source().uncompressed()), true).v2());
+                    builder.map(XContentHelper.convertToMap(new BytesArray(mmd.source().uncompressed()), true).v2());
                 }
             }
             builder.endArray();
@@ -1463,10 +1378,10 @@ public class IndexMetaData implements Diffable<IndexMetaData>, ToXContentFragmen
                     throw new IllegalArgumentException("Unexpected token " + token);
                 }
             }
-            if (Assertions.ENABLED && Version.indexCreated(builder.settings).onOrAfter(Version.V_6_5_0)) {
+            if (Assertions.ENABLED) {
                 assert mappingVersion : "mapping version should be present for indices created on or after 6.5.0";
             }
-            if (Assertions.ENABLED && Version.indexCreated(builder.settings).onOrAfter(Version.V_6_5_0)) {
+            if (Assertions.ENABLED) {
                 assert settingsVersion : "settings version should be present for indices created on or after 6.5.0";
             }
             if (Assertions.ENABLED && Version.indexCreated(builder.settings).onOrAfter(Version.V_7_2_0)) {

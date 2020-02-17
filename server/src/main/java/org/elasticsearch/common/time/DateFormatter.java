@@ -31,7 +31,6 @@ import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.stream.Collectors;
 
 public interface DateFormatter {
 
@@ -138,26 +137,18 @@ public interface DateFormatter {
             input = input.substring(1);
         }
 
-        List<String> patterns = splitCombinedPatterns(input);
-        List<DateFormatter> formatters = patterns.stream()
-                                                 .map(DateFormatters::forPattern)
-                                                 .collect(Collectors.toList());
+        List<DateFormatter> formatters = new ArrayList<>();
+        for (String pattern : Strings.delimitedListToStringArray(input, "||")) {
+            if (Strings.hasLength(pattern) == false) {
+                throw new IllegalArgumentException("Cannot have empty element in multi date format pattern: " + input);
+            }
+            formatters.add(DateFormatters.forPattern(pattern));
+        }
 
         if (formatters.size() == 1) {
             return formatters.get(0);
         }
 
         return JavaDateFormatter.combined(input, formatters);
-    }
-
-    static List<String> splitCombinedPatterns(String input) {
-        List<String> patterns = new ArrayList<>();
-        for (String pattern : Strings.delimitedListToStringArray(input, "||")) {
-            if (Strings.hasLength(pattern) == false) {
-                throw new IllegalArgumentException("Cannot have empty element in multi date format pattern: " + input);
-            }
-            patterns.add(pattern);
-        }
-        return patterns;
     }
 }

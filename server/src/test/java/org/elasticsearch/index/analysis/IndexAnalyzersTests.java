@@ -107,8 +107,7 @@ public class IndexAnalyzersTests extends ESTestCase {
             }
         };
 
-        IndexAnalyzers ia = new IndexAnalyzers(Collections.singletonMap("default", a),
-            Collections.singletonMap("n", n), Collections.singletonMap("w", w));
+        IndexAnalyzers ia = new IndexAnalyzers(Map.of("default", a), Map.of("n", n), Map.of("w", w));
         ia.close();
         assertEquals(3, closes.get());
 

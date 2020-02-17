@@ -23,15 +23,8 @@ public class TransformStringsTests extends ESTestCase {
     }
 
     public void testKasValidLengthForId_givenTooLong() {
-        StringBuilder sb = new StringBuilder();
-        for (int i=0; i<TransformStrings.ID_LENGTH_LIMIT; i++) {
-            sb.append('#');
-        }
-
-        assertTrue(TransformStrings.hasValidLengthForId(sb.toString()));
-
-        sb.append('#');
-        assertFalse(TransformStrings.hasValidLengthForId(sb.toString()));
+        assertTrue(TransformStrings.hasValidLengthForId("#".repeat(TransformStrings.ID_LENGTH_LIMIT )));
+        assertFalse(TransformStrings.hasValidLengthForId("#".repeat(TransformStrings.ID_LENGTH_LIMIT + 1)));
     }
 }
 

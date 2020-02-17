@@ -40,7 +40,6 @@ import org.elasticsearch.index.query.RandomQueryBuilder;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.indices.InvalidAliasNameException;
 import org.elasticsearch.search.AbstractSearchTestCase;
-import org.elasticsearch.test.VersionUtils;
 
 import java.io.IOException;
 
@@ -62,7 +61,6 @@ public class ShardSearchRequestTests extends AbstractSearchTestCase {
         assertEquals(deserializedRequest.scroll(), shardSearchTransportRequest.scroll());
         assertEquals(deserializedRequest.getAliasFilter(), shardSearchTransportRequest.getAliasFilter());
         assertArrayEquals(deserializedRequest.indices(), shardSearchTransportRequest.indices());
-        assertArrayEquals(deserializedRequest.types(), shardSearchTransportRequest.types());
         assertEquals(deserializedRequest.indicesOptions(), shardSearchTransportRequest.indicesOptions());
         assertEquals(deserializedRequest.nowInMillis(), shardSearchTransportRequest.nowInMillis());
         assertEquals(deserializedRequest.source(), shardSearchTransportRequest.source());
@@ -77,18 +75,8 @@ public class ShardSearchRequestTests extends AbstractSearchTestCase {
         assertEquals(deserializedRequest.indexBoost(), shardSearchTransportRequest.indexBoost(), 0.0f);
         assertEquals(deserializedRequest.getClusterAlias(), shardSearchTransportRequest.getClusterAlias());
         assertEquals(shardSearchTransportRequest.allowPartialSearchResults(), deserializedRequest.allowPartialSearchResults());
-    }
-
-    public void testAllowPartialResultsSerializationPre7_0_0() throws IOException {
-        Version version = VersionUtils.randomVersionBetween(random(), Version.V_6_0_0, VersionUtils.getPreviousVersion(Version.V_7_0_0));
-        ShardSearchRequest shardSearchTransportRequest = createShardSearchRequest();
-        ShardSearchRequest deserializedRequest =
-            copyWriteable(shardSearchTransportRequest, namedWriteableRegistry, ShardSearchRequest::new, version);
-        if (version.before(Version.V_6_3_0)) {
-            assertFalse(deserializedRequest.allowPartialSearchResults());
-        } else {
-            assertEquals(shardSearchTransportRequest.allowPartialSearchResults(), deserializedRequest.allowPartialSearchResults());
-        }
+        assertEquals(deserializedRequest.canReturnNullResponseIfMatchNoDocs(),
+            shardSearchTransportRequest.canReturnNullResponseIfMatchNoDocs());
     }
 
     private ShardSearchRequest createShardSearchRequest() throws IOException {
@@ -102,9 +90,11 @@ public class ShardSearchRequestTests extends AbstractSearchTestCase {
             filteringAliases = new AliasFilter(null, Strings.EMPTY_ARRAY);
         }
         final String[] routings = generateRandomStringArray(5, 10, false, true);
-        return new ShardSearchRequest(new OriginalIndices(searchRequest), searchRequest, shardId,
+        ShardSearchRequest req = new ShardSearchRequest(new OriginalIndices(searchRequest), searchRequest, shardId,
             randomIntBetween(1, 100), filteringAliases, randomBoolean() ? 1.0f : randomFloat(),
             Math.abs(randomLong()), randomAlphaOfLengthBetween(3, 10), routings);
+        req.canReturnNullResponseIfMatchNoDocs(randomBoolean());
+        return req;
     }
 
     public void testFilteringAliases() throws Exception {

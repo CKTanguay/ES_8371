@@ -51,8 +51,7 @@ specify this parameter, the API returns information about all buckets.
 this value.
 
 `desc`::
-(Optional, boolean)
-include::{docdir}/ml/ml-shared.asciidoc[tag=desc-results]
+(Optional, boolean) If true, the buckets are sorted in descending order.
 
 `end`::
 (Optional, string) Returns buckets with timestamps earlier than this time.
@@ -66,7 +65,6 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=exclude-interim-results]
 
 `page`.`from`::
 (Optional, integer) Skips the specified number of buckets.
-
 `page`.`size`::
 (Optional, integer) Specifies the maximum number of buckets to obtain.
 
@@ -84,7 +82,7 @@ The API returns an array of bucket objects, which have the following properties:
 
 `anomaly_score`::
 (number) The maximum anomaly score, between 0-100, for any of the bucket
-influencers. This is an overall, rate-limited score for the job. All the anomaly
+influencers. This is an overall, rate-limited score for the job. All the anomaly 
 records in the bucket contribute to this score. This value might be updated as
 new data is analyzed.
 
@@ -97,8 +95,8 @@ properties:
 influencer. This score might be updated as newer data is analyzed.
 
 `bucket_influencers`.`bucket_span`:::
-(number)
-include::{docdir}/ml/ml-shared.asciidoc[tag=bucket-span-results]
+(number) The length of the bucket in seconds. This value matches the `bucket_span`
+that is specified in the job.
 
 `bucket_influencers`.`initial_anomaly_score`:::
 (number) The score between 0-100 for each bucket influencer. This score is the
@@ -108,7 +106,7 @@ initial value that was calculated at the time the bucket was processed.
 (string) The field name of the influencer.
 
 `bucket_influencers`.`influencer_field_value`:::
-(string) The field value of the influencer.
+(string) The field value of the influencer. 
 
 `bucket_influencers`.`is_interim`:::
 (boolean)
@@ -119,10 +117,10 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=is-interim]
 include::{docdir}/ml/ml-shared.asciidoc[tag=job-id-anomaly-detection]
 
 `bucket_influencers`.`probability`:::
-(number) The probability that the bucket has this behavior, in the range `0` to
-`1`. This value can be held to a high precision of over 300 decimal places, so
-the `anomaly_score` is provided as a human-readable and friendly interpretation
-of this.
+(number) The probability that the bucket has this behavior, in the range 0 to 1.
+This value can be held to a high precision of over 300 decimal places, so the
+`anomaly_score` is provided as a human-readable and friendly interpretation of
+this.
 
 `bucket_influencers`.`raw_anomaly_score`:::
 (number) Internal.
@@ -141,9 +139,8 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=bucket-span-results]
 (number) The number of input data records processed in this bucket.
 
 `initial_anomaly_score`::
-(number) The maximum `anomaly_score` for any of the bucket influencers.
-This is the initial value that was calculated at the time the bucket was
-processed.
+(number) The maximum `anomaly_score` for any of the bucket influencers. This is
+the initial value that was calculated at the time the bucket was processed.
 
 `is_interim`::
 (boolean)
@@ -154,15 +151,15 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=is-interim]
 include::{docdir}/ml/ml-shared.asciidoc[tag=job-id-anomaly-detection]
 
 `processing_time_ms`::
-(number) The amount of time, in milliseconds, that it took to analyze the bucket
-contents and calculate results.
+(number) The amount of time, in milliseconds, that it took to analyze the
+bucket contents and calculate results.
 
 `result_type`::
 (string) Internal. This value is always set to `bucket`.
 
 `timestamp`::
 (date) The start time of the bucket. This timestamp uniquely identifies the
-bucket.
+bucket. 
 +
 --
 NOTE: Events that occur exactly at the timestamp of the bucket are included in
@@ -182,7 +179,6 @@ GET _ml/anomaly_detectors/low_request_rate/results/buckets
 }
 --------------------------------------------------
 // TEST[skip:Kibana sample data]
-
 
 In this example, the API returns a single result that matches the specified
 score and time constraints:

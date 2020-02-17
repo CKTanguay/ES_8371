@@ -188,7 +188,7 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
             return success;
         };
         assert predicate.test(attributes) : attributes;
-        this.roles = Collections.unmodifiableSet(new HashSet<>(roles));
+        this.roles = Set.copyOf(roles);
     }
 
     /** Creates a DiscoveryNode representing the local node. */
@@ -200,8 +200,7 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
 
     /** extract node roles from the given settings */
     public static Set<DiscoveryNodeRole> getRolesFromSettings(final Settings settings) {
-        return Collections.unmodifiableSet(
-                roleNameToPossibleRoles.values().stream().filter(s -> s.roleSetting().get(settings)).collect(Collectors.toSet()));
+        return roleNameToPossibleRoles.values().stream().filter(s -> s.roleSetting().get(settings)).collect(Collectors.toUnmodifiableSet());
     }
 
     /**
@@ -256,7 +255,7 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
                 }
             }
         }
-        this.roles = Collections.unmodifiableSet(new HashSet<>(roles));
+        this.roles = Set.copyOf(roles);
         this.version = Version.readVersion(in);
     }
 
@@ -282,7 +281,7 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
         } else {
             // an old node will only understand legacy roles since pluggable roles is a new concept
             final List<DiscoveryNodeRole> rolesToWrite =
-                    roles.stream().filter(DiscoveryNodeRole.BUILT_IN_ROLES::contains).collect(Collectors.toList());
+                    roles.stream().filter(DiscoveryNodeRole.BUILT_IN_ROLES::contains).collect(Collectors.toUnmodifiableList());
             out.writeVInt(rolesToWrite.size());
             for (final DiscoveryNodeRole role : rolesToWrite) {
                 if (role == DiscoveryNodeRole.MASTER_ROLE) {
@@ -440,13 +439,12 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
     private static Map<String, DiscoveryNodeRole> roleNameToPossibleRoles;
 
     public static void setPossibleRoles(final Set<DiscoveryNodeRole> possibleRoles) {
-        final Map<String, DiscoveryNodeRole> roleNameToPossibleRoles = Collections.unmodifiableMap(
-                possibleRoles.stream().collect(Collectors.toMap(DiscoveryNodeRole::roleName, Function.identity())));
+        final Map<String, DiscoveryNodeRole> roleNameToPossibleRoles =
+                possibleRoles.stream().collect(Collectors.toUnmodifiableMap(DiscoveryNodeRole::roleName, Function.identity()));
         // collect the abbreviation names into a map to ensure that there are not any duplicate abbreviations
-        final Map<String, DiscoveryNodeRole> roleNameAbbreviationToPossibleRoles = Collections.unmodifiableMap(
-                roleNameToPossibleRoles.values()
-                        .stream()
-                        .collect(Collectors.toMap(DiscoveryNodeRole::roleNameAbbreviation, Function.identity())));
+        final Map<String, DiscoveryNodeRole> roleNameAbbreviationToPossibleRoles = roleNameToPossibleRoles.values()
+                .stream()
+                .collect(Collectors.toUnmodifiableMap(DiscoveryNodeRole::roleNameAbbreviation, Function.identity()));
         assert roleNameToPossibleRoles.size() == roleNameAbbreviationToPossibleRoles.size() :
                 "roles by name [" + roleNameToPossibleRoles + "], roles by name abbreviation [" + roleNameAbbreviationToPossibleRoles + "]";
         DiscoveryNode.roleNameToPossibleRoles = roleNameToPossibleRoles;

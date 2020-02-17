@@ -66,4 +66,5 @@ See
 [[active-directory-ssl]]
 ==== Setting up SSL between Elasticsearch and Active Directory
 
-See <<tls-active-directory>>.
+See 
+<<tls-active-directory>>.

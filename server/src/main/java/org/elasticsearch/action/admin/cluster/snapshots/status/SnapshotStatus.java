@@ -81,9 +81,7 @@ public class SnapshotStatus implements ToXContentObject, Writeable {
             builder.add(new SnapshotIndexShardStatus(in));
         }
         shards = Collections.unmodifiableList(builder);
-        if (in.getVersion().onOrAfter(Version.V_6_2_0)) {
-            includeGlobalState = in.readOptionalBoolean();
-        }
+        includeGlobalState = in.readOptionalBoolean();
         final long startTime;
         final long time;
         if (in.getVersion().onOrAfter(Version.V_7_4_0)) {
@@ -189,9 +187,7 @@ public class SnapshotStatus implements ToXContentObject, Writeable {
         for (SnapshotIndexShardStatus shard : shards) {
             shard.writeTo(out);
         }
-        if (out.getVersion().onOrAfter(Version.V_6_2_0)) {
-            out.writeOptionalBoolean(includeGlobalState);
-        }
+        out.writeOptionalBoolean(includeGlobalState);
         if (out.getVersion().onOrAfter(Version.V_7_4_0)) {
             out.writeLong(stats.getStartTime());
             out.writeLong(stats.getTime());

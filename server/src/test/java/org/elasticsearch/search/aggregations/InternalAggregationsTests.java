@@ -45,7 +45,7 @@ import java.util.List;
 public class InternalAggregationsTests extends ESTestCase {
 
     private final NamedWriteableRegistry registry = new NamedWriteableRegistry(
-        new SearchModule(Settings.EMPTY, false, Collections.emptyList()).getNamedWriteables());
+        new SearchModule(Settings.EMPTY, Collections.emptyList()).getNamedWriteables());
 
     public void testReduceEmptyAggs() {
         List<InternalAggregations> aggs = Collections.emptyList();
@@ -62,7 +62,7 @@ public class InternalAggregationsTests extends ESTestCase {
         List<InternalAggregations> aggs = Collections.singletonList(new InternalAggregations(Collections.singletonList(terms),
             topLevelPipelineAggs));
         InternalAggregation.ReduceContext reduceContext = new InternalAggregation.ReduceContext(null, null, false);
-        InternalAggregations reducedAggs = InternalAggregations.reduce(aggs, reduceContext);
+        InternalAggregations reducedAggs = InternalAggregations.topLevelReduce(aggs, reduceContext);
         assertEquals(1, reducedAggs.getTopLevelPipelineAggregators().size());
         assertEquals(1, reducedAggs.aggregations.size());
     }
@@ -78,11 +78,11 @@ public class InternalAggregationsTests extends ESTestCase {
         if (randomBoolean()) {
             InternalAggregations aggs = new InternalAggregations(Collections.singletonList(terms),
                 Collections.singletonList(siblingPipelineAggregator));
-            reducedAggs = InternalAggregations.reduce(Collections.singletonList(aggs), reduceContext);
+            reducedAggs = InternalAggregations.topLevelReduce(Collections.singletonList(aggs), reduceContext);
         } else {
             InternalAggregations aggs = new InternalAggregations(Collections.singletonList(terms),
                 Collections.singletonList(siblingPipelineAggregator));
-            reducedAggs = InternalAggregations.reduce(Collections.singletonList(aggs), reduceContext);
+            reducedAggs = InternalAggregations.topLevelReduce(Collections.singletonList(aggs), reduceContext);
         }
         assertEquals(0, reducedAggs.getTopLevelPipelineAggregators().size());
         assertEquals(2, reducedAggs.aggregations.size());
@@ -137,17 +137,13 @@ public class InternalAggregationsTests extends ESTestCase {
                 if (aggregations.getTopLevelPipelineAggregators() == null) {
                     assertEquals(0, deserialized.getTopLevelPipelineAggregators().size());
                 } else {
-                    if (version.before(Version.V_6_7_0)) {
-                        assertEquals(0, deserialized.getTopLevelPipelineAggregators().size());
-                    } else {
-                        assertEquals(aggregations.getTopLevelPipelineAggregators().size(),
-                            deserialized.getTopLevelPipelineAggregators().size());
-                        for (int i = 0; i < aggregations.getTopLevelPipelineAggregators().size(); i++) {
-                            SiblingPipelineAggregator siblingPipelineAggregator1 = aggregations.getTopLevelPipelineAggregators().get(i);
-                            SiblingPipelineAggregator siblingPipelineAggregator2 = deserialized.getTopLevelPipelineAggregators().get(i);
-                            assertArrayEquals(siblingPipelineAggregator1.bucketsPaths(), siblingPipelineAggregator2.bucketsPaths());
-                            assertEquals(siblingPipelineAggregator1.name(), siblingPipelineAggregator2.name());
-                        }
+                    assertEquals(aggregations.getTopLevelPipelineAggregators().size(),
+                        deserialized.getTopLevelPipelineAggregators().size());
+                    for (int i = 0; i < aggregations.getTopLevelPipelineAggregators().size(); i++) {
+                        SiblingPipelineAggregator siblingPipelineAggregator1 = aggregations.getTopLevelPipelineAggregators().get(i);
+                        SiblingPipelineAggregator siblingPipelineAggregator2 = deserialized.getTopLevelPipelineAggregators().get(i);
+                        assertArrayEquals(siblingPipelineAggregator1.bucketsPaths(), siblingPipelineAggregator2.bucketsPaths());
+                        assertEquals(siblingPipelineAggregator1.name(), siblingPipelineAggregator2.name());
                     }
                 }
                 if (iteration < 2) {

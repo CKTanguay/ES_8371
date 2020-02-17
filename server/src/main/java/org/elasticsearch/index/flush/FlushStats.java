@@ -19,7 +19,6 @@
 
 package org.elasticsearch.index.flush;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
@@ -42,9 +41,7 @@ public class FlushStats implements Writeable, ToXContentFragment {
     public FlushStats(StreamInput in) throws IOException {
         total = in.readVLong();
         totalTimeInMillis = in.readVLong();
-        if (in.getVersion().onOrAfter(Version.V_6_3_0)) {
-            periodic = in.readVLong();
-        }
+        periodic = in.readVLong();
     }
 
     public FlushStats(long total, long periodic, long totalTimeInMillis) {
@@ -122,8 +119,6 @@ public class FlushStats implements Writeable, ToXContentFragment {
     public void writeTo(StreamOutput out) throws IOException {
         out.writeVLong(total);
         out.writeVLong(totalTimeInMillis);
-        if (out.getVersion().onOrAfter(Version.V_6_3_0)) {
-            out.writeVLong(periodic);
-        }
+        out.writeVLong(periodic);
     }
 }

@@ -19,6 +19,7 @@
 package org.elasticsearch.index.analysis;
 
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.KeywordTokenizer;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.elasticsearch.ElasticsearchException;
@@ -186,13 +187,7 @@ public final class AnalysisRegistry implements Closeable {
                             throw new ElasticsearchException("failed to load analyzer for name " + key, ex);
                         }}
             );
-        } else if ("standard_html_strip".equals(analyzer)) {
-            if (Version.CURRENT.onOrAfter(Version.V_7_0_0)) {
-                throw new IllegalArgumentException("[standard_html_strip] analyzer is not supported for new indices, " +
-                    "use a custom analyzer using [standard] tokenizer and [html_strip] char_filter, plus [lowercase] filter");
-            }
         }
-
         return analyzerProvider.get(environment, analyzer).get();
     }
 
@@ -255,7 +250,7 @@ public final class AnalysisRegistry implements Closeable {
         Analyzer analyzer = new CustomAnalyzer(tokenizerFactory,
             charFilterFactories.toArray(new CharFilterFactory[]{}),
             tokenFilterFactories.toArray(new TokenFilterFactory[]{}));
-        return produceAnalyzer("__custom__", new AnalyzerProvider<Analyzer>() {
+        return produceAnalyzer("__custom__", new AnalyzerProvider<>() {
             @Override
             public String name() {
                 return "__custom__";
@@ -542,6 +537,10 @@ public final class AnalysisRegistry implements Closeable {
                 tokenFilterFactoryFactories, charFilterFactoryFactories);
         }
 
+        for (Analyzer analyzer : normalizers.values()) {
+            analyzer.normalize("", ""); // check for deprecations
+        }
+
         if (!analyzers.containsKey(DEFAULT_ANALYZER_NAME)) {
             analyzers.put(DEFAULT_ANALYZER_NAME,
                     produceAnalyzer(DEFAULT_ANALYZER_NAME,
@@ -605,6 +604,7 @@ public final class AnalysisRegistry implements Closeable {
         } else {
             analyzer = new NamedAnalyzer(name, analyzerFactory.scope(), analyzerF, overridePositionIncrementGap);
         }
+        checkVersions(analyzer);
         return analyzer;
     }
 
@@ -631,5 +631,21 @@ public final class AnalysisRegistry implements Closeable {
         }
         NamedAnalyzer normalizer = new NamedAnalyzer(name, normalizerFactory.scope(), normalizerF);
         normalizers.put(name, normalizer);
+    }
+
+    // Some analysis components emit deprecation warnings or throw exceptions when used
+    // with the wrong version of elasticsearch.  These exceptions and warnings are
+    // normally thrown when tokenstreams are constructed, which unless we build a
+    // tokenstream up-front does not happen until a document is indexed.  In order to
+    // surface these warnings or exceptions as early as possible, we build an empty
+    // tokenstream and pull it through an Analyzer at construction time.
+    private static void checkVersions(Analyzer analyzer) {
+        try (TokenStream ts = analyzer.tokenStream("", "")) {
+            ts.reset();
+            while (ts.incrementToken()) {}
+            ts.end();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 }

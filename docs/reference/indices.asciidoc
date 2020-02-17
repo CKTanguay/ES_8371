@@ -29,7 +29,6 @@ index settings, aliases, mappings, and index templates.
 * <<indices-put-mapping>>
 * <<indices-get-mapping>>
 * <<indices-get-field-mapping>>
-* <<indices-types-exists>>
 
 [float]
 [[alias-management]]
@@ -69,7 +68,6 @@ index settings, aliases, mappings, and index templates.
 * <<indices-clearcache>>
 * <<indices-refresh>>
 * <<indices-flush>>
-* <<indices-synced-flush-api>>
 * <<indices-forcemerge>>
 
 
@@ -136,10 +134,6 @@ include::indices/rollover-index.asciidoc[]
 include::indices/shrink-index.asciidoc[]
 
 include::indices/split-index.asciidoc[]
-
-include::indices/synced-flush.asciidoc[]
-
-include::indices/types-exists.asciidoc[]
 
 include::indices/apis/unfreeze.asciidoc[]
 

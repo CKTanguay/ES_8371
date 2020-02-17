@@ -22,7 +22,6 @@ package org.elasticsearch.index.reindex;
 import org.elasticsearch.action.ActionType;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
@@ -52,7 +51,7 @@ public abstract class AbstractBulkByQueryRestHandler<
         SearchRequest searchRequest = internal.getSearchRequest();
 
         try (XContentParser parser = extractRequestSpecificFields(restRequest, bodyConsumers)) {
-            RestSearchAction.parseSearchRequest(searchRequest, restRequest, parser, size -> setMaxDocsFromSearchSize(internal, size));
+            RestSearchAction.parseSearchRequest(searchRequest, restRequest, parser, size -> failOnSizeSpecified());
         }
 
         searchRequest.source().size(restRequest.paramAsInt("scroll_size", searchRequest.source().size()));
@@ -95,8 +94,7 @@ public abstract class AbstractBulkByQueryRestHandler<
         }
     }
 
-    private void setMaxDocsFromSearchSize(Request request, int size) {
-        LoggingDeprecationHandler.INSTANCE.usedDeprecatedName("size", "max_docs");
-        setMaxDocsValidateIdentical(request, size);
+    private static void failOnSizeSpecified() {
+        throw new IllegalArgumentException("invalid parameter [size], use [max_docs] instead");
     }
 }

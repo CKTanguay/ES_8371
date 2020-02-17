@@ -19,14 +19,12 @@
 
 package org.elasticsearch.tools.launchers;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 final class SystemJvmOptions {
 
     static List<String> systemJvmOptions() {
-        return Collections.unmodifiableList(Arrays.asList(
+        return List.of(
             /*
              * Cache ttl in seconds for positive DNS lookups noting that this overrides the JDK security property networkaddress.cache.ttl;
              * can be set to -1 to cache forever.
@@ -64,7 +62,8 @@ final class SystemJvmOptions {
              * Due to internationalization enhancements in JDK 9 Elasticsearch need to set the provider to COMPAT otherwise time/date
              * parsing will break in an incompatible way for some date patterns and locales.
              */
-            "-Djava.locale.providers=COMPAT"));
+            "-Djava.locale.providers=SPI,COMPAT"
+        );
     }
 
 }

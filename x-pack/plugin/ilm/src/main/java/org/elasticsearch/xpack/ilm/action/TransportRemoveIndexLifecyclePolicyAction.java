@@ -18,12 +18,13 @@ import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.index.Index;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xpack.core.ilm.action.RemoveIndexLifecyclePolicyAction;
 import org.elasticsearch.xpack.core.ilm.action.RemoveIndexLifecyclePolicyAction.Request;
 import org.elasticsearch.xpack.core.ilm.action.RemoveIndexLifecyclePolicyAction.Response;
-import org.elasticsearch.xpack.ilm.IndexLifecycleRunner;
+import org.elasticsearch.xpack.ilm.IndexLifecycleTransition;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,7 +56,7 @@ public class TransportRemoveIndexLifecyclePolicyAction extends TransportMasterNo
     }
 
     @Override
-    protected void masterOperation(Request request, ClusterState state, ActionListener<Response> listener) throws Exception {
+    protected void masterOperation(Task task, Request request, ClusterState state, ActionListener<Response> listener) throws Exception {
         final Index[] indices = indexNameExpressionResolver.concreteIndices(state, request.indicesOptions(), request.indices());
         clusterService.submitStateUpdateTask("remove-lifecycle-for-index",
                 new AckedClusterStateUpdateTask<Response>(request, listener) {
@@ -64,7 +65,7 @@ public class TransportRemoveIndexLifecyclePolicyAction extends TransportMasterNo
 
                     @Override
                     public ClusterState execute(ClusterState currentState) throws Exception {
-                        return IndexLifecycleRunner.removePolicyForIndexes(indices, currentState, failedIndexes);
+                        return IndexLifecycleTransition.removePolicyForIndexes(indices, currentState, failedIndexes);
                     }
 
                     @Override

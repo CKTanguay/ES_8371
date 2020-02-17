@@ -20,6 +20,7 @@ import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.license.XPackLicenseState;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xpack.core.XPackSettings;
@@ -83,6 +84,7 @@ public class TransportPutEnrichPolicyAction extends TransportMasterNodeAction<Pu
 
     @Override
     protected void masterOperation(
+        Task task,
         PutEnrichPolicyAction.Request request,
         ClusterState state,
         ActionListener<AcknowledgedResponse> listener

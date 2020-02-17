@@ -5,7 +5,6 @@
  */
 package org.elasticsearch.xpack.core.security.action.user;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -39,9 +38,7 @@ public class HasPrivilegesRequest extends ActionRequest implements UserRequest {
         for (int i = 0; i < indexSize; i++) {
             indexPrivileges[i] = new RoleDescriptor.IndicesPrivileges(in);
         }
-        if (in.getVersion().onOrAfter(Version.V_6_4_0)) {
-            applicationPrivileges = in.readArray(ApplicationResourcePrivileges::new, ApplicationResourcePrivileges[]::new);
-        }
+        applicationPrivileges = in.readArray(ApplicationResourcePrivileges::new, ApplicationResourcePrivileges[]::new);
     }
 
     @Override
@@ -124,9 +121,7 @@ public class HasPrivilegesRequest extends ActionRequest implements UserRequest {
         for (RoleDescriptor.IndicesPrivileges priv : indexPrivileges) {
             priv.writeTo(out);
         }
-        if (out.getVersion().onOrAfter(Version.V_6_4_0)) {
-            out.writeArray(ApplicationResourcePrivileges::write, applicationPrivileges);
-        }
+        out.writeArray(ApplicationResourcePrivileges::write, applicationPrivileges);
     }
 
 }

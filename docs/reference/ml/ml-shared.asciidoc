@@ -1,4 +1,3 @@
-
 tag::aggregations[]
 If set, the {dfeed} performs aggregation searches. Support for aggregations is
 limited and should be used only with low cardinality data. For more information,
@@ -60,7 +59,7 @@ when there are no matches or only partial matches.
 end::allow-no-jobs[]
 
 tag::allow-no-match[]
-Specifies what to do when the request:
+ Specifies what to do when the request:
 +
 --
 * Contains wildcard expressions and there are no {dfanalytics-jobs} that match.
@@ -107,12 +106,12 @@ don't support missing values therefore fields that have data types other than
 numeric or boolean are ignored. Documents where included fields contain missing 
 values, null values, or an array are also ignored. Therefore the `dest` index 
 may contain documents that don't have an {olscore}.
-* {regression-cap} supports fields that are numeric, `boolean`, `text`, 
-`keyword`, and `ip`. It is also tolerant of missing values. Fields that are 
-supported are included in the analysis, other fields are ignored. Documents 
-where included fields contain  an array with two or more values are also 
-ignored. Documents in the `dest` index  that don’t contain a results field are 
-not included in the {reganalysis}.
+* {regression-cap} supports fields that are numeric, `boolean`, `text`, `keyword`, 
+and `ip`. It is also tolerant of missing values. Fields that are supported are 
+included in the analysis, other fields are ignored. Documents where included
+fields contain  an array with two or more values are also ignored. Documents in
+the `dest` index  that don’t contain a results field are not included in the
+ {reganalysis}.
 * {classification-cap} supports fields that are numeric, `boolean`, `text`,
 `keyword`, and `ip`. It is also tolerant of missing values. Fields that are 
 supported are included in the analysis, other fields are ignored. Documents
@@ -121,8 +120,10 @@ Documents in the `dest` index that don’t contain a results field are not
 included in the {classanalysis}. {classanalysis-cap} can be improved by mapping
 ordinal variable values to a  single number. For example, in case of age ranges,
 you can model the values as "0-14" = 0, "15-24" = 1, "25-34" = 2, and so on.
+
 If `analyzed_fields` is not set, only the relevant fields will be included. For
-example, all the numeric fields for {oldetection}.
+example, all the numeric fields for {oldetection}. For more information about
+field selection, see <<explain-dfanalytics>>.
 --
 end::analyzed-fields[]
 
@@ -176,7 +177,7 @@ tag::categorization-analyzer[]
 If `categorization_field_name` is specified, you can also define the analyzer
 that is used to interpret the categorization field. This property cannot be used
 at the same time as `categorization_filters`. The categorization analyzer
-specifies how the categorization field is interpreted by the categorization
+specifies how the `categorization_field` is interpreted by the categorization
 process. The syntax is very similar to that used to define the `analyzer` in the
 <<indices-analyze,Analyze endpoint>>. For more information, see
 {ml-docs}/ml-configuring-categories.html[Categorizing log messages].
@@ -203,7 +204,7 @@ end::categorization-analyzer[]
 
 tag::categorization-examples-limit[]
 The maximum number of examples stored per category in memory and in the results
-data store. The default value is `4`.  If you increase this value, more examples
+data store. The default value is 4.  If you increase this value, more examples
 are available, however it requires that you have more storage available. If you
 set this value to `0`, no examples are stored.
 +
@@ -249,6 +250,7 @@ analyzer and you need to achieve the equivalent of `categorization_filters`
 add them here as
 <<analysis-pattern-replace-charfilter,pattern replace character filters>>.
 end::char-filter[]
+
 
 tag::compute-feature-influence[]
 If `true`, the feature influence calculation is enabled. Defaults to `true`.
@@ -539,10 +541,10 @@ the detectors in the `analysis_config`, starting at zero.
 end::detector-index[]
 
 tag::eta[]
-Advanced configuration option. The shrinkage applied to the weights. Smaller 
-values result in larger forests which have better generalization error. However, 
-the smaller the value the longer the training will take. For more information, 
-about shrinkage, see  
+Advanced configuration option. The shrinkage applied to the weights. Smaller
+values result in larger forests which have better generalization error. However,
+the smaller the value the longer the training will take. For more information
+about shrinkage, see
 https://en.wikipedia.org/wiki/Gradient_boosting#Shrinkage[this wiki article].
 end::eta[]
 
@@ -560,7 +562,7 @@ included.
 end::exclude-interim-results[]
 
 tag::feature-bag-fraction[]
-Advanced configuration option. Defines the fraction of features that will be 
+Advanced configuration option. Defines the fraction of features that will be
 used when selecting a random bag for each candidate split. 
 end::feature-bag-fraction[]
 
@@ -568,6 +570,30 @@ tag::feature-influence-threshold[]
 The minimum {olscore} that a document needs to have in order to calculate its 
 {fiscore}. Value range: 0-1 (`0.1` by default).
 end::feature-influence-threshold[]
+
+tag::field-selection[]
+An array of objects that explain selection for each field, sorted by 
+the field names. Each object in the array has the following properties:
+
+`name`:::
+(string) The field name.
+
+`mapping_types`:::
+(string) The mapping types of the field.
+
+`is_included`:::
+(boolean) Whether the field is selected to be included in the analysis.
+
+`is_required`:::
+(boolean) Whether the field is required.
+
+`feature_type`:::
+(string) The feature type of this field for the analysis. May be `categorical` 
+or `numerical`.
+
+`reason`:::
+(string) The reason a field is not selected to be included in the analysis.
+end::field-selection[]
 
 tag::filter[]
 One or more <<analysis-tokenfilters,token filters>>. In addition to the built-in 
@@ -601,10 +627,10 @@ The analysis function that is used. For example, `count`, `rare`, `mean`, `min`,
 end::function[]
 
 tag::gamma[]
-Advanced configuration option. Regularization parameter to prevent overfitting 
+Advanced configuration option. Regularization parameter to prevent overfitting
 on the training dataset. Multiplies a linear penalty associated with the size of 
 individual trees in the forest. The higher the value the more training will 
-prefer smaller trees. The smaller this parameter the larger individual trees 
+prefer smaller trees. The smaller this parameter the larger individual trees
 will be and the longer train will take.
 end::gamma[]
 
@@ -661,12 +687,6 @@ Identifier for the {dfanalytics-job}. If you do not specify this option, the API
 returns information for the first hundred {dfanalytics-jobs}.
 end::job-id-data-frame-analytics-default[]
 
-tag::job-id-anomaly-detection-define[]
-Identifier for the {anomaly-job}. This identifier can contain lowercase 
-alphanumeric characters (a-z and 0-9), hyphens, and underscores. It must start 
-and end with alphanumeric characters.
-end::job-id-anomaly-detection-define[]
-
 tag::job-id-anomaly-detection-list[]
 An identifier for the {anomaly-jobs}. It can be a job
 identifier, a group name, or a comma-separated list of jobs or groups.
@@ -682,6 +702,12 @@ Identifier for the {anomaly-job}. It can be a job identifier, a group name, a
 comma-separated list of jobs or groups, or a wildcard expression.
 end::job-id-anomaly-detection-wildcard-list[]
 
+tag::job-id-anomaly-detection-define[]
+Identifier for the {anomaly-job}. This identifier can contain lowercase 
+alphanumeric characters (a-z and 0-9), hyphens, and underscores. It must start 
+and end with alphanumeric characters.
+end::job-id-anomaly-detection-define[]
+
 tag::job-id-data-frame-analytics-define[]
 Identifier for the {dfanalytics-job}. This identifier can contain lowercase 
 alphanumeric characters (a-z and 0-9), hyphens, and underscores. It must start
@@ -693,9 +719,9 @@ The unique identifier for the job to which the {dfeed} sends data.
 end::job-id-datafeed[]
 
 tag::lambda[]
-Advanced configuration option. Regularization parameter to prevent overfitting 
-on the training dataset. Multiplies an L2 regularisation term which applies to 
-leaf weights of the individual trees in the forest. The higher the value the 
+Advanced configuration option. Regularization parameter to prevent overfitting
+on the training dataset. Multiplies an L2 regularisation term which applies to
+leaf weights of the individual trees in the forest. The higher the value the
 more training will attempt to keep leaf weights small. This makes the prediction  
 function smoother at the expense of potentially not being able to capture 
 relevant relationships between the features and the {depvar}. The smaller this 
@@ -725,9 +751,24 @@ until it is explicitly stopped. By default this setting is not set.
 end::max-empty-searches[]
 
 tag::maximum-number-trees[]
-Advanced configuration option. Defines the maximum number of trees the forest is 
+Advanced configuration option. Defines the maximum number of trees the forest is
 allowed to contain. The maximum value is 2000.
 end::maximum-number-trees[]
+
+tag::memory-estimation[]
+An object containing the memory estimates. The object has the 
+following properties:
+
+`expected_memory_without_disk`:::
+(string) Estimated memory usage under the assumption that the whole 
+{dfanalytics} should happen in memory (i.e. without overflowing to disk).
+
+`expected_memory_with_disk`:::
+(string) Estimated memory usage under the assumption that overflowing to disk is 
+allowed during {dfanalytics}. `expected_memory_with_disk` is usually smaller 
+than `expected_memory_without_disk` as using disk allows to limit the main 
+memory needed to perform {dfanalytics}.
+end::memory-estimation[]
 
 tag::method[]
 Sets the method that {oldetection} uses. If the method is not set {oldetection} 
@@ -816,10 +857,16 @@ applied. For example, "CPU,NetworkIn,DiskWrites". Wildcards are not supported.
 Only the specified `terms` can be viewed when using the Single Metric Viewer.
 end::model-plot-config-terms[]
 
+tag::model-snapshot-id[]
+A numerical character string that uniquely identifies the model snapshot. For 
+example, `1575402236000 `.
+end::model-snapshot-id[]
+
 tag::model-snapshot-retention-days[]
-The time in days that model snapshots are retained for the job. Older snapshots
-are deleted. The default value is `1`, which means snapshots are retained for
-one day (twenty-four hours).
+Advanced configuration option. The period of time (in days) that model snapshots are retained.
+Age is calculated relative to the timestamp of the newest model snapshot.
+The default value is `1`, which means snapshots that are one day (twenty-four hours)
+older than the newest snapshot are deleted.
 end::model-snapshot-retention-days[]
 
 tag::multivariate-by-fields[]
@@ -859,12 +906,25 @@ total number of categories (in the {version} version of the {stack}, it's two)
 to predict then we will report all category probabilities. Defaults to 2.
 end::num-top-classes[]
 
+tag::num-top-feature-importance-values[]
+Advanced configuration option. If set, feature importance for the top
+most important features will be computed. Importance is calculated
+using the SHAP (SHapley Additive exPlanations) method as described in
+https://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions.pdf[Lundberg, S. M., & Lee, S.-I. A Unified Approach to Interpreting Model Predictions. In NeurIPS 2017.].
+end::num-top-feature-importance-values[]
+
 tag::over-field-name[]
 The field used to split the data. In particular, this property is used for 
 analyzing the splits with respect to the history of all splits. It is used for 
 finding unusual values in the population of all splits. For more information,
 see {ml-docs}/ml-configuring-pop.html[Performing population analysis].
 end::over-field-name[]
+
+tag::outlier-fraction[]
+Sets the proportion of the data set that is assumed to be outlying prior to 
+{oldetection}. For example, 0.05 means it is assumed that 5% of values are real 
+outliers and 95% are inliers.
+end::outlier-fraction[]
 
 tag::partition-field-name[]
 The field used to segment the analysis. When you use this property, you have 
@@ -876,11 +936,13 @@ Defines the name of the prediction field in the results.
 Defaults to `<dependent_variable>_prediction`.
 end::prediction-field-name[]
 
-tag::outlier-fraction[]
-Sets the proportion of the data set that is assumed to be outlying prior to 
-{oldetection}. For example, 0.05 means it is assumed that 5% of values are real 
-outliers and 95% are inliers.
-end::outlier-fraction[]
+tag::randomize-seed[]
+Defines the seed to the random generator that is used to pick which documents 
+will be used for training. By default it is randomly generated. Set it to a 
+specific value to ensure the same documents are used for training assuming other 
+related parameters (for example, `source`, `analyzed_fields`, etc.) are the 
+same.
+end::randomize-seed[]
 
 tag::query[]
 The {es} query domain-specific language (DSL). This value corresponds to the
@@ -910,10 +972,12 @@ is `shared`, which generates an index named `.ml-anomalies-shared`.
 end::results-index-name[]
 
 tag::results-retention-days[]
-Advanced configuration option. The number of days for which job results are 
-retained. Once per day at 00:30 (server time), results older than this period
-are deleted from {es}. The default value is null, which means results are
-retained.
+Advanced configuration option. The period of time (in days) that results are retained.
+Age is calculated relative to the timestamp of the latest bucket result.
+If this property has a non-null value, once per day at 00:30 (server time),
+results that are the specified number of days older than the latest
+bucket result are deleted from {es}. The default value is null, which means all
+results are retained.
 end::results-retention-days[]
 
 tag::retain[]
@@ -940,7 +1004,7 @@ is `100`.
 end::size[]
 
 tag::snapshot-id[]
-A numerical character string that uniquely identifies the model snapshot.
+Identifier for the model snapshot.
 end::snapshot-id[]
 
 tag::source-put-dfa[]
@@ -992,6 +1056,12 @@ function.
 
 --
 end::summary-count-field-name[]
+
+tag::tags[]
+A comma delimited string of tags. A {infer} model can have many tags, or none.
+When supplied, only {infer} models that contain all the supplied tags are
+returned.
+end::tags[]
 
 tag::timeout-start[]
 Controls the amount of time to wait until the {dfanalytics-job} starts. Defaults 

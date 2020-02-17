@@ -122,7 +122,7 @@ with a backslash `\`, for example:
 
 The following example shows a search request that searches the Logstash indices for the past
 three days, assuming the indices use the default Logstash index name format,
-`logstash-yyyy.MM.dd`.
+`logstash-YYYY.MM.dd`.
 
 [source,console]
 ----------------------------------------------------------------------
@@ -335,11 +335,11 @@ parameter like this:
 
 [source,console]
 --------------------------------------------------
-POST /library/book?refresh
+POST /library/_doc?refresh
 {"title": "Book #1", "rating": 200.1}
-POST /library/book?refresh
+POST /library/_doc?refresh
 {"title": "Book #2", "rating": 1.7}
-POST /library/book?refresh
+POST /library/_doc?refresh
 {"title": "Book #3", "rating": 0.1}
 GET /_search?filter_path=hits.hits._source&_source=title&sort=rating:desc
 --------------------------------------------------

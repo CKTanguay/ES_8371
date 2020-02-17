@@ -24,8 +24,6 @@ import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.codecs.CodecUtil;
-import org.apache.lucene.codecs.DocValuesFormat;
-import org.apache.lucene.codecs.PostingsFormat;
 import org.apache.lucene.document.LatLonDocValuesField;
 import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.index.BinaryDocValues;
@@ -105,16 +103,7 @@ import java.util.List;
 import java.util.Map;
 
 public class Lucene {
-    public static final String LATEST_DOC_VALUES_FORMAT = "Lucene70";
-    public static final String LATEST_POSTINGS_FORMAT = "Lucene50";
-    public static final String LATEST_CODEC = "Lucene80";
-
-    static {
-        Deprecated annotation = PostingsFormat.forName(LATEST_POSTINGS_FORMAT).getClass().getAnnotation(Deprecated.class);
-        assert annotation == null : "PostingsFromat " + LATEST_POSTINGS_FORMAT + " is deprecated" ;
-        annotation = DocValuesFormat.forName(LATEST_DOC_VALUES_FORMAT).getClass().getAnnotation(Deprecated.class);
-        assert annotation == null : "DocValuesFormat " + LATEST_DOC_VALUES_FORMAT + " is deprecated" ;
-    }
+    public static final String LATEST_CODEC = "Lucene84";
 
     public static final String SOFT_DELETES_FIELD = "__soft_deletes";
 
@@ -256,14 +245,15 @@ public class Lucene {
                 .setSoftDeletesField(Lucene.SOFT_DELETES_FIELD)
                 .setMergePolicy(NoMergePolicy.INSTANCE) // no merges
                 .setCommitOnClose(false) // no commits
-                .setOpenMode(IndexWriterConfig.OpenMode.CREATE))) // force creation - don't append...
+                .setOpenMode(IndexWriterConfig.OpenMode.CREATE) // force creation - don't append...
+        ))
         {
             // do nothing and close this will kick of IndexFileDeleter which will remove all pending files
         }
     }
 
     public static void checkSegmentInfoIntegrity(final Directory directory) throws IOException {
-        new SegmentInfos.FindSegmentsFile(directory) {
+        new SegmentInfos.FindSegmentsFile<>(directory) {
 
             @Override
             protected Object doBody(String segmentFileName) throws IOException {
@@ -300,10 +290,7 @@ public class Lucene {
 
     public static TotalHits readTotalHits(StreamInput in) throws IOException {
         long totalHits = in.readVLong();
-        TotalHits.Relation totalHitsRelation = TotalHits.Relation.EQUAL_TO;
-        if (in.getVersion().onOrAfter(org.elasticsearch.Version.V_7_0_0)) {
-            totalHitsRelation = in.readEnum(TotalHits.Relation.class);
-        }
+        TotalHits.Relation totalHitsRelation = in.readEnum(TotalHits.Relation.class);
         return new TotalHits(totalHits, totalHitsRelation);
     }
 
@@ -347,7 +334,7 @@ public class Lucene {
     }
 
     public static FieldDoc readFieldDoc(StreamInput in) throws IOException {
-        Comparable[] cFields = new Comparable[in.readVInt()];
+        Comparable<?>[] cFields = new Comparable<?>[in.readVInt()];
         for (int j = 0; j < cFields.length; j++) {
             byte type = in.readByte();
             if (type == 0) {
@@ -377,7 +364,7 @@ public class Lucene {
         return new FieldDoc(in.readVInt(), in.readFloat(), cFields);
     }
 
-    public static Comparable readSortValue(StreamInput in) throws IOException {
+    public static Comparable<?> readSortValue(StreamInput in) throws IOException {
         byte type = in.readByte();
         if (type == 0) {
             return null;
@@ -412,11 +399,7 @@ public class Lucene {
 
     public static void writeTotalHits(StreamOutput out, TotalHits totalHits) throws IOException {
         out.writeVLong(totalHits.value);
-        if (out.getVersion().onOrAfter(org.elasticsearch.Version.V_7_0_0)) {
-            out.writeEnum(totalHits.relation);
-        } else if (totalHits.value > 0 && totalHits.relation != TotalHits.Relation.EQUAL_TO) {
-            throw new IllegalArgumentException("Cannot serialize approximate total hit counts to nodes that are on a version < 7.0.0");
-        }
+        out.writeEnum(totalHits.relation);
     }
 
     public static void writeTopDocs(StreamOutput out, TopDocsAndMaxScore topDocs) throws IOException {
@@ -490,7 +473,7 @@ public class Lucene {
         if (field == null) {
             out.writeByte((byte) 0);
         } else {
-            Class type = field.getClass();
+            Class<?> type = field.getClass();
             if (type == String.class) {
                 out.writeByte((byte) 1);
                 out.writeString((String) field);
@@ -610,9 +593,8 @@ public class Lucene {
     }
 
     private static Number readExplanationValue(StreamInput in) throws IOException {
-        if (in.getVersion().onOrAfter(org.elasticsearch.Version.V_7_0_0)) {
-            final int numberType = in.readByte();
-            switch (numberType) {
+        final int numberType = in.readByte();
+        switch (numberType) {
             case 0:
                 return in.readFloat();
             case 1:
@@ -621,9 +603,6 @@ public class Lucene {
                 return in.readZLong();
             default:
                 throw new IOException("Unexpected number type: " + numberType);
-            }
-        } else {
-            return in.readFloat();
         }
     }
 
@@ -642,19 +621,15 @@ public class Lucene {
     }
 
     private static void writeExplanationValue(StreamOutput out, Number value) throws IOException {
-        if (out.getVersion().onOrAfter(org.elasticsearch.Version.V_7_0_0)) {
-            if (value instanceof Float) {
-                out.writeByte((byte) 0);
-                out.writeFloat(value.floatValue());
-            } else if (value instanceof Double) {
-                out.writeByte((byte) 1);
-                out.writeDouble(value.doubleValue());
-            } else {
-                out.writeByte((byte) 2);
-                out.writeZLong(value.longValue());
-            }
-        } else {
+        if (value instanceof Float) {
+            out.writeByte((byte) 0);
             out.writeFloat(value.floatValue());
+        } else if (value instanceof Double) {
+            out.writeByte((byte) 1);
+            out.writeDouble(value.doubleValue());
+        } else {
+            out.writeByte((byte) 2);
+            out.writeZLong(value.longValue());
         }
     }
 

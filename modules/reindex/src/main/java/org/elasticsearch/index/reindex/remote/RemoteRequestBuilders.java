@@ -21,14 +21,12 @@ package org.elasticsearch.index.reindex.remote;
 
 import org.apache.http.entity.ContentType;
 import org.apache.http.nio.entity.NStringEntity;
-import org.apache.logging.log4j.LogManager;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
@@ -55,20 +53,12 @@ import static org.elasticsearch.common.unit.TimeValue.timeValueMillis;
  * because the version constants have been removed.
  */
 final class RemoteRequestBuilders {
-    private static final DeprecationLogger DEPRECATION_LOGGER
-        = new DeprecationLogger(LogManager.getLogger(RemoteRequestBuilders.class));
-
-    static final String DEPRECATED_URL_ENCODED_INDEX_WARNING =
-        "Specifying index name using URL escaped index names for reindex from remote is deprecated. " +
-        "Instead specify index name without URL escaping.";
-
     private RemoteRequestBuilders() {}
 
     static Request initialSearch(SearchRequest searchRequest, BytesReference query, Version remoteVersion) {
         // It is nasty to build paths with StringBuilder but we'll be careful....
         StringBuilder path = new StringBuilder("/");
         addIndices(path, searchRequest.indices());
-        addTypes(path, searchRequest.types());
         path.append("_search");
         Request request = new Request("POST", path.toString());
 
@@ -135,6 +125,11 @@ final class RemoteRequestBuilders {
             request.addParameter(storedFieldsParamName, fields.toString());
         }
 
+        if (remoteVersion.onOrAfter(Version.fromId(6030099))) {
+            // allow_partial_results introduced in 6.3, running remote reindex against earlier versions still silently discards RED shards.
+            request.addParameter("allow_partial_search_results", "false");
+        }
+
         // EMPTY is safe here because we're not calling namedObject
         try (XContentBuilder entity = JsonXContent.contentBuilder();
                 XContentParser queryParser = XContentHelper
@@ -179,34 +174,10 @@ final class RemoteRequestBuilders {
     }
 
     private static String encodeIndex(String s) {
-        if (s.contains("%")) { // already encoded, pass-through to allow this in mixed version clusters
-            checkIndexOrType("Index", s);
-            DEPRECATION_LOGGER.deprecated(DEPRECATED_URL_ENCODED_INDEX_WARNING);
-            return s;
-        }
         try {
             return URLEncoder.encode(s, "utf-8");
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    private static void addTypes(StringBuilder path, String[] types) {
-        if (types == null || types.length == 0) {
-            return;
-        }
-        for (String indexOrType : types) {
-            checkIndexOrType("Type", indexOrType);
-        }
-        path.append(Strings.arrayToCommaDelimitedString(types)).append('/');
-    }
-
-    private static void checkIndexOrType(String name, String indexOrType) {
-        if (indexOrType.indexOf(',') >= 0) {
-            throw new IllegalArgumentException(name + " containing [,] not supported but got [" + indexOrType + "]");
-        }
-        if (indexOrType.indexOf('/') >= 0) {
-            throw new IllegalArgumentException(name + " containing [/] not supported but got [" + indexOrType + "]");
         }
     }
 

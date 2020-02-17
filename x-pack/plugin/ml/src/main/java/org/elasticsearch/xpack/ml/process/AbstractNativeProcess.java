@@ -42,6 +42,7 @@ public abstract class AbstractNativeProcess implements NativeProcess {
     private static final Duration WAIT_FOR_KILL_TIMEOUT = Duration.ofMillis(1000);
 
     private final String jobId;
+    private final NativeController nativeController;
     private final CppLogMessageHandler cppLogHandler;
     private final OutputStream processInStream;
     private final InputStream processOutStream;
@@ -51,25 +52,28 @@ public abstract class AbstractNativeProcess implements NativeProcess {
     private final int numberOfFields;
     private final List<Path> filesToDelete;
     private final Consumer<String> onProcessCrash;
+    private final Duration processConnectTimeout;
     private volatile Future<?> logTailFuture;
     private volatile Future<?> stateProcessorFuture;
     private volatile boolean processCloseInitiated;
     private volatile boolean processKilled;
     private volatile boolean isReady;
 
-    protected AbstractNativeProcess(String jobId, InputStream logStream, OutputStream processInStream, InputStream processOutStream,
-                                    OutputStream processRestoreStream, int numberOfFields, List<Path> filesToDelete,
-                                    Consumer<String> onProcessCrash) {
+    protected AbstractNativeProcess(String jobId, NativeController nativeController, InputStream logStream, OutputStream processInStream,
+                                    InputStream processOutStream, OutputStream processRestoreStream, int numberOfFields,
+                                    List<Path> filesToDelete, Consumer<String> onProcessCrash, Duration processConnectTimeout) {
         this.jobId = jobId;
-        cppLogHandler = new CppLogMessageHandler(jobId, logStream);
+        this.nativeController = nativeController;
+        this.cppLogHandler = new CppLogMessageHandler(jobId, logStream);
         this.processInStream = processInStream != null ? new BufferedOutputStream(processInStream) : null;
         this.processOutStream = processOutStream;
         this.processRestoreStream = processRestoreStream;
         this.recordWriter = new LengthEncodedWriter(this.processInStream);
-        startTime = ZonedDateTime.now();
+        this.startTime = ZonedDateTime.now();
         this.numberOfFields = numberOfFields;
         this.filesToDelete = filesToDelete;
         this.onProcessCrash = Objects.requireNonNull(onProcessCrash);
+        this.processConnectTimeout = Objects.requireNonNull(processConnectTimeout);
     }
 
     public abstract String getName();
@@ -195,10 +199,9 @@ public abstract class AbstractNativeProcess implements NativeProcess {
         LOGGER.debug("[{}] Killing {} process", jobId, getName());
         processKilled = true;
         try {
-            // The PID comes via the processes log stream.  We don't wait for it to arrive here,
-            // but if the wait times out it implies the process has only just started, in which
-            // case it should die very quickly when we close its input stream.
-            NativeControllerHolder.getNativeController().killProcess(cppLogHandler.getPid(Duration.ZERO));
+            // The PID comes via the processes log stream. We do wait here to give the process the time to start up and report its PID.
+            // Without the PID we cannot kill the process.
+            nativeController.killProcess(cppLogHandler.getPid(processConnectTimeout));
 
             // Wait for the process to die before closing processInStream as if the process
             // is still alive when processInStream is closed it may start persisting state

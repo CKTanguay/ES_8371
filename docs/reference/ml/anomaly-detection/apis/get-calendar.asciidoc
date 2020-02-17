@@ -42,10 +42,10 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=calendar-id]
 ==== {api-request-body-title}
 
 `page`.`from`::
-(Optional, integer) Skips the specified number of calendars.
+    (Optional, integer) Skips the specified number of calendars.
 
 `page`.`size`::
-(Optional, integer) Specifies the maximum number of calendars to obtain.
+    (Optional, integer) Specifies the maximum number of calendars to obtain.
 
 [[ml-get-calendar-results]]
 ==== {api-response-body-title}
@@ -58,7 +58,8 @@ properties:
 include::{docdir}/ml/ml-shared.asciidoc[tag=calendar-id]
 
 `job_ids`::
-(array) An array of {anomaly-job} identifiers. For example: `["total-requests"]`.
+(array) An array of {anomaly-job} identifiers. For example:
+`["total-requests"]`.
 
 [[ml-get-calendar-example]]
 ==== {api-examples-title}

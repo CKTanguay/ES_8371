@@ -25,25 +25,17 @@ public class VerificationFailure {
 
     private Exception cause;
 
-    VerificationFailure() {
-
-    }
-
-    public VerificationFailure(String nodeId, Exception cause) {
+    VerificationFailure(String nodeId, Exception cause) {
         this.nodeId = nodeId;
         this.cause = cause;
-    }
-
-    public String nodeId() {
-        return nodeId;
-    }
-
-    public Throwable cause() {
-        return cause;
     }
 
     @Override
     public String toString() {
         return "[" + nodeId + ", '" + cause + "']";
+    }
+
+    public Exception getCause() {
+        return cause;
     }
 }

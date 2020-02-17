@@ -34,7 +34,7 @@ public abstract class CappedScoreWeight extends Weight {
     @Override
     public boolean isCacheable(LeafReaderContext ctx) {
         return innerWeight.isCacheable(ctx);
-    }    
+    }
 
     @Override
     public Scorer scorer(LeafReaderContext context) throws IOException {

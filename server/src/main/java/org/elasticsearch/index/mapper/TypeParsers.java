@@ -22,6 +22,7 @@ package org.elasticsearch.index.mapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.lucene.index.IndexOptions;
 import org.elasticsearch.ElasticsearchParseException;
+import org.elasticsearch.Version;
 import org.elasticsearch.common.logging.DeprecationLogger;
 import org.elasticsearch.common.time.DateFormatter;
 import org.elasticsearch.common.xcontent.support.XContentMapValues;
@@ -33,6 +34,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.elasticsearch.common.xcontent.support.XContentMapValues.isArray;
 import static org.elasticsearch.common.xcontent.support.XContentMapValues.nodeFloatValue;
@@ -143,7 +146,7 @@ public class TypeParsers {
         }
     }
 
-    public static void parseNorms(FieldMapper.Builder builder, String fieldName, Object propNode) {
+    public static void parseNorms(FieldMapper.Builder<?,?> builder, String fieldName, Object propNode) {
         builder.omitNorms(XContentMapValues.nodeBooleanValue(propNode, fieldName + ".norms") == false);
     }
 
@@ -151,7 +154,7 @@ public class TypeParsers {
      * Parse text field attributes. In addition to {@link #parseField common attributes}
      * this will parse analysis and term-vectors related settings.
      */
-    public static void parseTextField(FieldMapper.Builder builder, String name, Map<String, Object> fieldNode,
+    public static void parseTextField(FieldMapper.Builder<?,?> builder, String name, Map<String, Object> fieldNode,
                                       Mapper.TypeParser.ParserContext parserContext) {
         parseField(builder, name, fieldNode, parserContext);
         parseAnalyzersAndTermVectors(builder, name, fieldNode, parserContext);
@@ -167,10 +170,57 @@ public class TypeParsers {
     }
 
     /**
+     * Parse the {@code meta} key of the mapping.
+     */
+    public static void parseMeta(FieldMapper.Builder<?,?> builder, String name, Map<String, Object> fieldNode) {
+        Object metaObject = fieldNode.remove("meta");
+        if (metaObject == null) {
+            // no meta
+            return;
+        }
+        if (metaObject instanceof Map == false) {
+            throw new MapperParsingException("[meta] must be an object, got " + metaObject.getClass().getSimpleName() +
+                    "[" + metaObject + "] for field [" + name +"]");
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, ?> meta = (Map<String, ?>) metaObject;
+        if (meta.size() > 5) {
+            throw new MapperParsingException("[meta] can't have more than 5 entries, but got " + meta.size() + " on field [" +
+                    name + "]");
+        }
+        for (String key : meta.keySet()) {
+            if (key.codePointCount(0, key.length()) > 20) {
+                throw new MapperParsingException("[meta] keys can't be longer than 20 chars, but got [" + key +
+                        "] for field [" + name + "]");
+            }
+        }
+        for (Object value : meta.values()) {
+            if (value instanceof String) {
+                String sValue = (String) value;
+                if (sValue.codePointCount(0, sValue.length()) > 50) {
+                    throw new MapperParsingException("[meta] values can't be longer than 50 chars, but got [" + value +
+                            "] for field [" + name + "]");
+                }
+            } else if (value == null) {
+                throw new MapperParsingException("[meta] values can't be null (field [" + name + "])");
+            } else {
+                throw new MapperParsingException("[meta] values can only be strings, but got " +
+                        value.getClass().getSimpleName() + "[" + value + "] for field [" + name + "]");
+            }
+        }
+        final Function<Map.Entry<String, ?>, Object> entryValueFunction = Map.Entry::getValue;
+        final Function<Object, String> stringCast = String.class::cast;
+        Map<String, String> checkedMeta = meta.entrySet().stream()
+                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, entryValueFunction.andThen(stringCast)));
+        builder.meta(checkedMeta);
+    }
+
+    /**
      * Parse common field attributes such as {@code doc_values} or {@code store}.
      */
-    public static void parseField(FieldMapper.Builder builder, String name, Map<String, Object> fieldNode,
+    public static void parseField(FieldMapper.Builder<?,?> builder, String name, Map<String, Object> fieldNode,
                                   Mapper.TypeParser.ParserContext parserContext) {
+        parseMeta(builder, name, fieldNode);
         for (Iterator<Map.Entry<String, Object>> iterator = fieldNode.entrySet().iterator(); iterator.hasNext();) {
             Map.Entry<String, Object> entry = iterator.next();
             final String propName = entry.getKey();
@@ -215,15 +265,23 @@ public class TypeParsers {
         }
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public static boolean parseMultiField(FieldMapper.Builder builder, String name, Mapper.TypeParser.ParserContext parserContext,
                                           String propName, Object propNode) {
         if (propName.equals("fields")) {
             if (parserContext.isWithinMultiField()) {
-                deprecationLogger.deprecatedAndMaybeLog("multifield_within_multifield", "At least one multi-field, [" + name + "], was " +
-                    "encountered that itself contains a multi-field. Defining multi-fields within a multi-field is deprecated and will " +
-                    "no longer be supported in 8.0. To resolve the issue, all instances of [fields] that occur within a [fields] block " +
-                    "should be removed from the mappings, either by flattening the chained [fields] blocks into a single level, or " +
-                    "switching to [copy_to] if appropriate.");
+                // For indices created prior to 8.0, we only emit a deprecation warning and do not fail type parsing. This is to
+                // maintain the backwards-compatibility guarantee that we can always load indexes from the previous major version.
+                if (parserContext.indexVersionCreated().before(Version.V_8_0_0)) {
+                    deprecationLogger.deprecatedAndMaybeLog("multifield_within_multifield", "At least one multi-field, [" + name + "], " +
+                        "was encountered that itself contains a multi-field. Defining multi-fields within a multi-field is deprecated " +
+                        "and is not supported for indices created in 8.0 and later. To migrate the mappings, all instances of [fields] " +
+                        "that occur within a [fields] block should be removed from the mappings, either by flattening the chained " +
+                        "[fields] blocks into a single level, or switching to [copy_to] if appropriate.");
+                } else {
+                    throw new IllegalArgumentException("Encountered a multi-field [" + name + "] which itself contains a multi-field. " +
+                        "Defining chained multi-fields is not supported.");
+                }
             }
 
             parserContext = parserContext.createMultiFieldContext(parserContext);
@@ -247,7 +305,6 @@ public class TypeParsers {
                 if (!(multiFieldEntry.getValue() instanceof Map)) {
                     throw new MapperParsingException("illegal field [" + multiFieldName + "], only fields can be specified inside fields");
                 }
-                @SuppressWarnings("unchecked")
                 Map<String, Object> multiFieldNodes = (Map<String, Object>) multiFieldEntry.getValue();
 
                 String type;
@@ -298,6 +355,7 @@ public class TypeParsers {
         throw new IllegalArgumentException("Invalid format: [" + node.toString() + "]: expected string value");
     }
 
+    @SuppressWarnings("rawtypes")
     public static void parseTermVector(String fieldName, String termVector, FieldMapper.Builder builder) throws MapperParsingException {
         if ("no".equals(termVector)) {
             builder.storeTermVectors(false);
@@ -322,7 +380,7 @@ public class TypeParsers {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static void parseCopyFields(Object propNode, FieldMapper.Builder builder) {
         FieldMapper.CopyTo.Builder copyToBuilder = new FieldMapper.CopyTo.Builder();
         if (isArray(propNode)) {

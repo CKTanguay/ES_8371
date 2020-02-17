@@ -43,7 +43,6 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.time.DateFormatter;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.IndexSettings;
-import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.action.RestResponseListener;
@@ -51,10 +50,10 @@ import org.elasticsearch.rest.action.RestResponseListener;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -62,6 +61,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static java.util.Arrays.asList;
 import static org.elasticsearch.action.support.master.MasterNodeRequest.DEFAULT_MASTER_NODE_TIMEOUT;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 
@@ -69,9 +69,11 @@ public class RestIndicesAction extends AbstractCatAction {
 
     private static final DateFormatter STRICT_DATE_TIME_FORMATTER = DateFormatter.forPattern("strict_date_time");
 
-    public RestIndicesAction(RestController controller) {
-        controller.registerHandler(GET, "/_cat/indices", this);
-        controller.registerHandler(GET, "/_cat/indices/{index}", this);
+    @Override
+    public List<Route> routes() {
+        return List.of(
+            new Route(GET, "/_cat/indices"),
+            new Route(GET, "/_cat/indices/{index}"));
     }
 
     @Override
@@ -94,14 +96,14 @@ public class RestIndicesAction extends AbstractCatAction {
         final boolean includeUnloadedSegments = request.paramAsBoolean("include_unloaded_segments", false);
 
         return channel -> {
-            final ActionListener<Table> listener = ActionListener.notifyOnce(new RestResponseListener<Table>(channel) {
+            final ActionListener<Table> listener = ActionListener.notifyOnce(new RestResponseListener<>(channel) {
                 @Override
                 public RestResponse buildResponse(final Table table) throws Exception {
                     return RestTable.buildResponse(table, channel);
                 }
             });
 
-            sendGetSettingsRequest(indices, indicesOptions, local, masterNodeTimeout, client, new ActionListener<GetSettingsResponse>() {
+            sendGetSettingsRequest(indices, indicesOptions, local, masterNodeTimeout, client, new ActionListener<>() {
                 @Override
                 public void onResponse(final GetSettingsResponse getSettingsResponse) {
                     final GroupedActionListener<ActionResponse> groupedListener = createGroupedListener(request, 4, listener);
@@ -204,7 +206,7 @@ public class RestIndicesAction extends AbstractCatAction {
 
     private GroupedActionListener<ActionResponse> createGroupedListener(final RestRequest request, final int size,
                                                                         final ActionListener<Table> listener) {
-        return new GroupedActionListener<>(new ActionListener<Collection<ActionResponse>>() {
+        return new GroupedActionListener<>(new ActionListener<>() {
             @Override
             public void onResponse(final Collection<ActionResponse> responses) {
                 GetSettingsResponse settingsResponse = extractResponse(responses, GetSettingsResponse.class);
@@ -234,7 +236,7 @@ public class RestIndicesAction extends AbstractCatAction {
     private static final Set<String> RESPONSE_PARAMS;
 
     static {
-        final Set<String> responseParams = new HashSet<>(Arrays.asList("local", "health"));
+        final Set<String> responseParams = new HashSet<>(asList("local", "health"));
         responseParams.addAll(AbstractCatAction.RESPONSE_PARAMS);
         RESPONSE_PARAMS = Collections.unmodifiableSet(responseParams);
     }

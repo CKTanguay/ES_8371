@@ -24,7 +24,7 @@ import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.search.suggest.document.Completion50PostingsFormat;
+import org.apache.lucene.search.suggest.document.Completion84PostingsFormat;
 import org.apache.lucene.search.suggest.document.CompletionAnalyzer;
 import org.apache.lucene.search.suggest.document.CompletionQuery;
 import org.apache.lucene.search.suggest.document.FuzzyCompletionQuery;
@@ -265,7 +265,7 @@ public class CompletionFieldMapper extends FieldMapper implements ArrayValueMapp
          */
         public static synchronized PostingsFormat postingsFormat() {
             if (postingsFormat == null) {
-                postingsFormat = new Completion50PostingsFormat();
+                postingsFormat = new Completion84PostingsFormat();
             }
             return postingsFormat;
         }
@@ -419,10 +419,15 @@ public class CompletionFieldMapper extends FieldMapper implements ArrayValueMapp
 
         private void checkCompletionContextsLimit(BuilderContext context) {
             if (this.contextMappings != null && this.contextMappings.size() > COMPLETION_CONTEXTS_LIMIT) {
-                deprecationLogger.deprecated("You have defined more than [" + COMPLETION_CONTEXTS_LIMIT + "] completion contexts" +
-                    " in the mapping for index [" + context.indexSettings().get(IndexMetaData.SETTING_INDEX_PROVIDED_NAME) + "]. " +
-                    "The maximum allowed number of completion contexts in a mapping will be limited to " +
-                    "[" + COMPLETION_CONTEXTS_LIMIT + "] starting in version [8.0].");
+                if (context.indexCreatedVersion().onOrAfter(Version.V_8_0_0)) {
+                    throw new IllegalArgumentException(
+                        "Limit of completion field contexts [" + COMPLETION_CONTEXTS_LIMIT + "] has been exceeded");
+                } else {
+                    deprecationLogger.deprecated("You have defined more than [" + COMPLETION_CONTEXTS_LIMIT + "] completion contexts" +
+                        " in the mapping for index [" + context.indexSettings().get(IndexMetaData.SETTING_INDEX_PROVIDED_NAME) + "]. " +
+                        "The maximum allowed number of completion contexts in a mapping will be limited to " +
+                        "[" + COMPLETION_CONTEXTS_LIMIT + "] starting in version [8.0].");
+                }
             }
         }
     }

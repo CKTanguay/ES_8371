@@ -8,6 +8,7 @@ package org.elasticsearch.xpack.enrich.action;
 
 import org.elasticsearch.ResourceNotFoundException;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.support.ActionTestUtils;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.util.concurrent.EsRejectedExecutionException;
@@ -54,7 +55,7 @@ public class TransportDeleteEnrichPolicyActionTests extends AbstractEnrichTestCa
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<Exception> reference = new AtomicReference<>();
         final TransportDeleteEnrichPolicyAction transportAction = node().injector().getInstance(TransportDeleteEnrichPolicyAction.class);
-        transportAction.execute(null, new DeleteEnrichPolicyAction.Request(fakeId), new ActionListener<AcknowledgedResponse>() {
+        ActionTestUtils.execute(transportAction, null, new DeleteEnrichPolicyAction.Request(fakeId), new ActionListener<>() {
             @Override
             public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                 fail();
@@ -86,7 +87,7 @@ public class TransportDeleteEnrichPolicyActionTests extends AbstractEnrichTestCa
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<AcknowledgedResponse> reference = new AtomicReference<>();
         final TransportDeleteEnrichPolicyAction transportAction = node().injector().getInstance(TransportDeleteEnrichPolicyAction.class);
-        transportAction.execute(null, new DeleteEnrichPolicyAction.Request(name), new ActionListener<AcknowledgedResponse>() {
+        ActionTestUtils.execute(transportAction, null, new DeleteEnrichPolicyAction.Request(name), new ActionListener<>() {
             @Override
             public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                 reference.set(acknowledgedResponse);
@@ -127,7 +128,7 @@ public class TransportDeleteEnrichPolicyActionTests extends AbstractEnrichTestCa
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<AcknowledgedResponse> reference = new AtomicReference<>();
         final TransportDeleteEnrichPolicyAction transportAction = node().injector().getInstance(TransportDeleteEnrichPolicyAction.class);
-        transportAction.execute(null, new DeleteEnrichPolicyAction.Request(name), new ActionListener<AcknowledgedResponse>() {
+        ActionTestUtils.execute(transportAction, null, new DeleteEnrichPolicyAction.Request(name), new ActionListener<>() {
             @Override
             public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                 reference.set(acknowledgedResponse);
@@ -177,7 +178,7 @@ public class TransportDeleteEnrichPolicyActionTests extends AbstractEnrichTestCa
         {
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<Exception> reference = new AtomicReference<>();
-            transportAction.execute(null, new DeleteEnrichPolicyAction.Request(name), new ActionListener<AcknowledgedResponse>() {
+            ActionTestUtils.execute(transportAction, null, new DeleteEnrichPolicyAction.Request(name), new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                     fail();
@@ -203,7 +204,7 @@ public class TransportDeleteEnrichPolicyActionTests extends AbstractEnrichTestCa
             final CountDownLatch latch = new CountDownLatch(1);
             final AtomicReference<AcknowledgedResponse> reference = new AtomicReference<>();
 
-            transportAction.execute(null, new DeleteEnrichPolicyAction.Request(name), new ActionListener<AcknowledgedResponse>() {
+            ActionTestUtils.execute(transportAction, null, new DeleteEnrichPolicyAction.Request(name), new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                     reference.set(acknowledgedResponse);

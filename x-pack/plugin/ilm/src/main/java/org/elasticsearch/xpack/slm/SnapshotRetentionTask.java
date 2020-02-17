@@ -23,8 +23,8 @@ import org.elasticsearch.cluster.RestoreInProgress;
 import org.elasticsearch.cluster.SnapshotDeletionsInProgress;
 import org.elasticsearch.cluster.SnapshotsInProgress;
 import org.elasticsearch.cluster.service.ClusterService;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.util.concurrent.CountDown;
 import org.elasticsearch.snapshots.SnapshotId;
 import org.elasticsearch.snapshots.SnapshotInfo;
 import org.elasticsearch.snapshots.SnapshotState;
@@ -40,15 +40,13 @@ import org.elasticsearch.xpack.core.slm.history.SnapshotHistoryStore;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -137,7 +135,7 @@ public class SnapshotRetentionTask implements SchedulerEngine.Listener {
                 // Finally, asynchronously retrieve all the snapshots, deleting them serially,
                 // before updating the cluster state with the new metrics and setting 'running'
                 // back to false
-                getAllRetainableSnapshots(repositioriesToFetch, new ActionListener<Map<String, List<SnapshotInfo>>>() {
+                getAllRetainableSnapshots(repositioriesToFetch, new ActionListener<>() {
                     @Override
                     public void onResponse(Map<String, List<SnapshotInfo>> allSnapshots) {
                         try {
@@ -235,46 +233,30 @@ public class SnapshotRetentionTask implements SchedulerEngine.Listener {
             listener.onResponse(Collections.emptyMap());
         }
 
-        threadPool.generic().execute(() -> {
-            final Map<String, List<SnapshotInfo>> snapshots = new ConcurrentHashMap<>();
-            final CountDown countDown = new CountDown(repositories.size());
-            final Runnable onComplete = () -> {
-                if (countDown.countDown()) {
+        client.admin().cluster()
+            .prepareGetSnapshots(repositories.toArray(Strings.EMPTY_ARRAY))
+            .setIgnoreUnavailable(true)
+            .execute(new ActionListener<>() {
+                @Override
+                public void onResponse(final GetSnapshotsResponse resp) {
+                    Map<String, List<SnapshotInfo>> snapshots = new HashMap<>();
+                    final Set<SnapshotState> retainableStates = Set.of(SnapshotState.SUCCESS, SnapshotState.FAILED, SnapshotState.PARTIAL);
+                    repositories.forEach(repo -> {
+                        snapshots.put(repo,
+                            // Only return snapshots in the SUCCESS state
+                            resp.getSnapshots(repo).stream()
+                                .filter(info -> retainableStates.contains(info.state()))
+                                .collect(Collectors.toList()));
+                    });
                     listener.onResponse(snapshots);
                 }
-            };
-            for (String repository : repositories) {
-                client.admin().cluster()
-                    .prepareGetSnapshots(repository)
-                    .execute(new ActionListener<GetSnapshotsResponse>() {
-                        @Override
-                        public void onResponse(GetSnapshotsResponse resp) {
-                            final Set<SnapshotState> retainableStates =
-                                new HashSet<>(Arrays.asList(SnapshotState.SUCCESS, SnapshotState.FAILED, SnapshotState.PARTIAL));
-                            try {
-                                snapshots.compute(repository, (k, previousSnaps) -> {
-                                    if (previousSnaps != null) {
-                                        throw new IllegalStateException("duplicate snapshot retrieval for repository" + repository);
-                                    }
-                                    return resp.getSnapshots().stream()
-                                        .filter(info -> retainableStates.contains(info.state()))
-                                        .collect(Collectors.toList());
-                                });
-                                onComplete.run();
-                            } catch (Exception e) {
-                                logger.error(new ParameterizedMessage("exception computing snapshots for repository {}", repository), e);
-                                throw e;
-                            }
-                        }
 
-                        @Override
-                        public void onFailure(Exception e) {
-                            logger.warn(new ParameterizedMessage("unable to retrieve snapshots for repository [{}]", repository), e);
-                            onComplete.run();
-                        }
-                    });
-            }
-        });
+                @Override
+                public void onFailure(Exception e) {
+                    logger.debug(new ParameterizedMessage("unable to retrieve snapshots for [{}] repositories", repositories), e);
+                    errorHandler.accept(e);
+                }
+            });
     }
 
     static String getPolicyId(SnapshotInfo snapshotInfo) {
@@ -407,7 +389,7 @@ public class SnapshotRetentionTask implements SchedulerEngine.Listener {
         logger.info("[{}] snapshot retention deleting snapshot [{}]", repo, snapshot);
         CountDownLatch latch = new CountDownLatch(1);
         client.admin().cluster().prepareDeleteSnapshot(repo, snapshot.getName())
-            .execute(new LatchedActionListener<>(new ActionListener<AcknowledgedResponse>() {
+            .execute(new LatchedActionListener<>(new ActionListener<>() {
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                     if (acknowledgedResponse.isAcknowledged()) {

@@ -121,8 +121,7 @@ import static org.hamcrest.Matchers.greaterThan;
  *     stale or dirty, i.e., come from a stale primary or belong to a write that ends up being discarded.</li>
  * </ul>
  */
-@ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.TEST, minNumDataNodes = 4, maxNumDataNodes = 6,
-    transportClientRatio = 0)
+@ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.TEST, minNumDataNodes = 4, maxNumDataNodes = 6)
 public class ConcurrentSeqNoVersioningIT extends AbstractDisruptionTestCase {
 
     private static final Pattern EXTRACT_VERSION = Pattern.compile("current document has seqNo \\[(\\d+)\\] and primary term \\[(\\d+)\\]");
@@ -148,7 +147,7 @@ public class ConcurrentSeqNoVersioningIT extends AbstractDisruptionTestCase {
         logger.info("--> Indexing initial doc for {} keys", numberOfKeys);
         List<Partition> partitions =
             IntStream.range(0, numberOfKeys)
-                .mapToObj(i -> client().prepareIndex("test", "type", "ID:" + i).setSource("value", -1).get())
+                .mapToObj(i -> client().prepareIndex("test").setId("ID:" + i).setSource("value", -1).get())
                 .map(response ->
                     new Partition(response.getId(), new Version(response.getPrimaryTerm(), response.getSeqNo())))
                 .collect(Collectors.toList());
@@ -247,7 +246,7 @@ public class ConcurrentSeqNoVersioningIT extends AbstractDisruptionTestCase {
                             version = version.previousTerm();
                         }
 
-                        IndexRequest indexRequest = new IndexRequest("test", "type", partition.id)
+                        IndexRequest indexRequest = new IndexRequest("test").id(partition.id)
                             .source("value", random.nextInt())
                             .setIfPrimaryTerm(version.primaryTerm)
                             .setIfSeqNo(version.seqNo);
@@ -753,7 +752,7 @@ public class ConcurrentSeqNoVersioningIT extends AbstractDisruptionTestCase {
         Version version2 = futureVersion(version1);
         Version version3 = futureVersion(version2);
 
-        List<Version> versions = Arrays.asList(version1, version2, version3);
+        List<Version> versions = List.of(version1, version2, version3);
 
         LinearizabilityChecker.SequentialSpec spec = new CASSequentialSpec(version1);
 

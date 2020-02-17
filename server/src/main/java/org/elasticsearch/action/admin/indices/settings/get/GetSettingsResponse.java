@@ -59,12 +59,9 @@ public class GetSettingsResponse extends ActionResponse implements ToXContentObj
             settingsBuilder.put(in.readString(), Settings.readSettingsFromStream(in));
         }
         ImmutableOpenMap.Builder<String, Settings> defaultSettingsBuilder = ImmutableOpenMap.builder();
-
-        if (in.getVersion().onOrAfter(org.elasticsearch.Version.V_6_4_0)) {
-            int defaultSettingsSize = in.readVInt();
-            for (int i = 0; i < defaultSettingsSize ; i++) {
-                defaultSettingsBuilder.put(in.readString(), Settings.readSettingsFromStream(in));
-            }
+        int defaultSettingsSize = in.readVInt();
+        for (int i = 0; i < defaultSettingsSize; i++) {
+            defaultSettingsBuilder.put(in.readString(), Settings.readSettingsFromStream(in));
         }
         indexToSettings = settingsBuilder.build();
         indexToDefaultSettings = defaultSettingsBuilder.build();
@@ -123,12 +120,10 @@ public class GetSettingsResponse extends ActionResponse implements ToXContentObj
             out.writeString(cursor.key);
             Settings.writeSettingsToStream(cursor.value, out);
         }
-        if (out.getVersion().onOrAfter(org.elasticsearch.Version.V_6_4_0)) {
-            out.writeVInt(indexToDefaultSettings.size());
-            for (ObjectObjectCursor<String, Settings> cursor : indexToDefaultSettings) {
-                out.writeString(cursor.key);
-                Settings.writeSettingsToStream(cursor.value, out);
-            }
+        out.writeVInt(indexToDefaultSettings.size());
+        for (ObjectObjectCursor<String, Settings> cursor : indexToDefaultSettings) {
+            out.writeString(cursor.key);
+            Settings.writeSettingsToStream(cursor.value, out);
         }
     }
 

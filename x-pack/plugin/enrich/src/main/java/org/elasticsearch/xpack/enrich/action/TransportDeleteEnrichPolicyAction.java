@@ -24,6 +24,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.ingest.IngestService;
 import org.elasticsearch.ingest.PipelineConfiguration;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xpack.core.enrich.EnrichPolicy;
@@ -86,6 +87,7 @@ public class TransportDeleteEnrichPolicyAction extends TransportMasterNodeAction
 
     @Override
     protected void masterOperation(
+        Task task,
         DeleteEnrichPolicyAction.Request request,
         ClusterState state,
         ActionListener<AcknowledgedResponse> listener

@@ -127,7 +127,7 @@ information, see https://www.elastic.co/subscriptions.
 xpack.security.audit.enabled: true
 ----------------------------
 +
-For more information, see <<auditing>> and <<auditing-settings>>. 
+For more information, see <<enable-audit-logging>> and <<auditing-settings>>. 
 
 .. Restart {es}.
 
@@ -137,8 +137,6 @@ Events are logged to a dedicated `<clustername>_audit.json` file in
 
 To walk through the configuration of {security-features} in {es}, {kib}, {ls}, and {metricbeat}, see <<security-getting-started>>.
 
-
-include::securing-communications/separating-node-client-traffic.asciidoc[]
 include::reference/files.asciidoc[]
 include::fips-140-compliance.asciidoc[]
 

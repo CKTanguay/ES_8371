@@ -50,6 +50,7 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=job-id-anomaly-detection-default]
 (Optional, boolean)
 include::{docdir}/ml/ml-shared.asciidoc[tag=allow-no-jobs]
 
+
 [[ml-get-job-results]]
 ==== {api-response-body-title}
 
@@ -61,8 +62,8 @@ properties, see <<ml-put-job-request-body,create {anomaly-jobs} API>>.
 property is informational; you cannot change its value.
   
 `finished_time`::
-(string) If the job closed or failed, this is the time the job finished.
-Otherwise, it is `null`. This property is informational; you cannot change its
+(string) If the job closed or failed, this is the time the job finished,
+otherwise it is `null`. This property is informational; you cannot change its
 value.
 
 `job_type`::
@@ -73,7 +74,7 @@ value.
 
 `model_snapshot_id`::
 (string)
-include::{docdir}/ml/ml-shared.asciidoc[tag=snapshot-id]
+include::{docdir}/ml/ml-shared.asciidoc[tag=model-snapshot-id]
 
 [[ml-get-job-response-codes]]
 ==== {api-response-codes-title}
@@ -101,13 +102,14 @@ The API returns the following results:
     {
       "job_id" : "high_sum_total_sales",
       "job_type" : "anomaly_detector",
-      "job_version" : "7.5.0",
+      "job_version" : "8.0.0",
       "groups" : [
         "kibana_sample_data",
         "kibana_sample_ecommerce"
       ],
       "description" : "Find customers spending an unusually high amount in an hour",
-      "create_time" : 1577221534700,
+      "create_time" : 1575402224732,
+      "finished_time" : 1575402238311,
       "analysis_config" : {
         "bucket_span" : "1h",
         "detectors" : [

@@ -38,9 +38,8 @@ For more information, see <<security-privileges>> and <<built-in-roles>>.
 ==== {api-path-parms-title}
 
 `<data_frame_analytics_id>`::
-(Required, string) 
+(Required, string)
 include::{docdir}/ml/ml-shared.asciidoc[tag=job-id-data-frame-analytics-define]
-
 
 [[ml-start-dfanalytics-query-params]]
 ==== {api-query-parms-title}
@@ -48,7 +47,6 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=job-id-data-frame-analytics-define]
 `timeout`::
 (Optional, <<time-units,time units>>) 
 include::{docdir}/ml/ml-shared.asciidoc[tag=timeout-start]
-
 
 [[ml-start-dfanalytics-example]]
 ==== {api-examples-title}

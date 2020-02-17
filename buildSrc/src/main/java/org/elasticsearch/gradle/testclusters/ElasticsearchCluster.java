@@ -62,22 +62,16 @@ public class ElasticsearchCluster implements TestClusterConfiguration, Named {
     private final LinkedHashMap<String, Predicate<TestClusterConfiguration>> waitConditions = new LinkedHashMap<>();
     private final Project project;
     private final ReaperService reaper;
-    private int nodeIndex  = 0;
+    private int nodeIndex = 0;
 
-    public ElasticsearchCluster(String path, String clusterName, Project project,
-                                ReaperService reaper, File workingDirBase) {
+    public ElasticsearchCluster(String path, String clusterName, Project project, ReaperService reaper, File workingDirBase) {
         this.path = path;
         this.clusterName = clusterName;
         this.project = project;
         this.reaper = reaper;
         this.workingDirBase = workingDirBase;
         this.nodes = project.container(ElasticsearchNode.class);
-        this.nodes.add(
-            new ElasticsearchNode(
-                path, clusterName + "-0",
-                project, reaper, workingDirBase
-                )
-        );
+        this.nodes.add(new ElasticsearchNode(path, clusterName + "-0", project, reaper, workingDirBase));
         // configure the cluster name eagerly so nodes know about it
         this.nodes.all((node) -> node.defaultConfig.put("cluster.name", safeName(clusterName)));
 
@@ -97,10 +91,8 @@ public class ElasticsearchCluster implements TestClusterConfiguration, Named {
             );
         }
 
-        for (int i = nodes.size() ; i < numberOfNodes; i++) {
-            this.nodes.add(new ElasticsearchNode(
-                path, clusterName + "-" + i, project, reaper, workingDirBase
-                ));
+        for (int i = nodes.size(); i < numberOfNodes; i++) {
+            this.nodes.add(new ElasticsearchNode(path, clusterName + "-" + i, project, reaper, workingDirBase));
         }
     }
 
@@ -180,6 +172,11 @@ public class ElasticsearchCluster implements TestClusterConfiguration, Named {
     }
 
     @Override
+    public void cliSetup(String binTool, CharSequence... args) {
+        nodes.all(each -> each.cliSetup(binTool, args));
+    }
+
+    @Override
     public void setting(String key, String value) {
         nodes.all(each -> each.setting(key, value));
     }
@@ -247,24 +244,9 @@ public class ElasticsearchCluster implements TestClusterConfiguration, Named {
     }
 
     @Override
-    public void setJavaHome(File javaHome) {
-        nodes.all(each -> each.setJavaHome(javaHome));
-    }
-
-    @Override
     public void start() {
         commonNodeConfig();
-        nodes
-            .stream()
-            .filter(node -> {
-                if (node.getVersion().onOrAfter("6.5.0")) {
-                    return true;
-                } else {
-                    // We already started it to set seed nodes
-                    return node.equals(nodes.iterator().next()) == false;
-                }
-            })
-            .forEach(ElasticsearchNode::start);
+        nodes.forEach(ElasticsearchNode::start);
     }
 
     private void commonNodeConfig() {
@@ -278,46 +260,35 @@ public class ElasticsearchCluster implements TestClusterConfiguration, Named {
         for (ElasticsearchNode node : nodes) {
             // Can only configure master nodes if we have node names defined
             if (nodeNames != null) {
-                commonNodeConfig(node, nodeNames, firstNode);
+                if (node.getVersion().onOrAfter("7.0.0")) {
+                    node.defaultConfig.keySet()
+                        .stream()
+                        .filter(name -> name.startsWith("discovery.zen."))
+                        .collect(Collectors.toList())
+                        .forEach(node.defaultConfig::remove);
+                    node.defaultConfig.put("cluster.initial_master_nodes", "[" + nodeNames + "]");
+                    node.defaultConfig.put("discovery.seed_providers", "file");
+                    node.defaultConfig.put("discovery.seed_hosts", "[]");
+                } else {
+                    node.defaultConfig.put("discovery.zen.master_election.wait_for_joins_timeout", "5s");
+                    if (nodes.size() > 1) {
+                        node.defaultConfig.put("discovery.zen.minimum_master_nodes", Integer.toString(nodes.size() / 2 + 1));
+                    }
+                    if (node.getVersion().onOrAfter("6.5.0")) {
+                        node.defaultConfig.put("discovery.zen.hosts_provider", "file");
+                        node.defaultConfig.put("discovery.zen.ping.unicast.hosts", "[]");
+                    } else {
+                        if (firstNode == null) {
+                            node.defaultConfig.put("discovery.zen.ping.unicast.hosts", "[]");
+                        } else {
+                            firstNode.waitForAllConditions();
+                            node.defaultConfig.put("discovery.zen.ping.unicast.hosts", "[\"" + firstNode.getTransportPortURI() + "\"]");
+                        }
+                    }
+                }
             }
             if (firstNode == null) {
                 firstNode = node;
-                if (node.getVersion().before("6.5.0")) {
-                    // We need to start the first node early to be able to provide unicast.hosts
-                    firstNode.start();
-                }
-            }
-        }
-    }
-
-    private void commonNodeConfig(ElasticsearchNode node, String nodeNames, ElasticsearchNode firstNode) {
-        if (node.getVersion().onOrAfter("7.0.0")) {
-            node.defaultConfig.keySet().stream()
-                .filter(name -> name.startsWith("discovery.zen."))
-                .collect(Collectors.toList())
-                .forEach(node.defaultConfig::remove);
-            if (nodeNames != null &&
-                node.settings.getOrDefault("discovery.type", "anything").equals("single-node") == false
-            ) {
-                node.defaultConfig.put("cluster.initial_master_nodes", "[" + nodeNames + "]");
-            }
-            node.defaultConfig.put("discovery.seed_providers", "file");
-            node.defaultConfig.put("discovery.seed_hosts", "[]");
-        } else {
-            node.defaultConfig.put("discovery.zen.master_election.wait_for_joins_timeout", "5s");
-            if (nodes.size() > 1) {
-                node.defaultConfig.put("discovery.zen.minimum_master_nodes", Integer.toString(nodes.size() / 2 + 1));
-            }
-            if (node.getVersion().onOrAfter("6.5.0")) {
-                node.defaultConfig.put("discovery.zen.hosts_provider", "file");
-                node.defaultConfig.put("discovery.zen.ping.unicast.hosts", "[]");
-            } else {
-                if (firstNode == null) {
-                    node.defaultConfig.put("discovery.zen.ping.unicast.hosts", "[]");
-                } else {
-                    firstNode.waitForAllConditions();
-                    node.defaultConfig.put("discovery.zen.ping.unicast.hosts", "[\"" + firstNode.getTransportPortURI() + "\"]");
-                }
             }
         }
     }
@@ -341,24 +312,7 @@ public class ElasticsearchCluster implements TestClusterConfiguration, Named {
         ElasticsearchNode node = nodes.getByName(clusterName + "-" + nodeIndex);
         node.stop(false);
         node.goToNextVersion();
-        commonNodeConfig(node, null, null);
-        // We need to translate these settings there as there's no support to do per version config for testclusters yet
-        if (node.getVersion().onOrAfter("7.0.0")) {
-            if (node.settings.containsKey("xpack.security.authc.realms.file1.type")) {
-                node.settings.remove("xpack.security.authc.realms.file1.type");
-                node.settings.put(
-                    "xpack.security.authc.realms.file.file1.order",
-                    node.settings.remove("xpack.security.authc.realms.file1.order")
-                );
-            }
-            if (node.settings.containsKey("xpack.security.authc.realms.native1.type")) {
-                node.settings.remove("xpack.security.authc.realms.native1.type");
-                node.settings.put(
-                    "xpack.security.authc.realms.native.native1.order",
-                    node.settings.remove("xpack.security.authc.realms.native1.order")
-                );
-            }
-        }
+        commonNodeConfig();
         nodeIndex += 1;
         node.start();
     }
@@ -371,6 +325,11 @@ public class ElasticsearchCluster implements TestClusterConfiguration, Named {
     @Override
     public void extraConfigFile(String destination, File from, PropertyNormalization normalization) {
         nodes.all(node -> node.extraConfigFile(destination, from, normalization));
+    }
+
+    @Override
+    public void extraJarFile(File from) {
+        nodes.all(node -> node.extraJarFile(from));
     }
 
     @Override
@@ -442,9 +401,7 @@ public class ElasticsearchCluster implements TestClusterConfiguration, Named {
 
     public ElasticsearchNode singleNode() {
         if (nodes.size() != 1) {
-            throw new IllegalStateException(
-                "Can't treat " + this + " as single node as it has " + nodes.size() + " nodes"
-            );
+            throw new IllegalStateException("Can't treat " + this + " as single node as it has " + nodes.size() + " nodes");
         }
         return getFirstNode();
     }
@@ -488,8 +445,7 @@ public class ElasticsearchCluster implements TestClusterConfiguration, Named {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ElasticsearchCluster that = (ElasticsearchCluster) o;
-        return Objects.equals(clusterName, that.clusterName) &&
-            Objects.equals(path, that.path);
+        return Objects.equals(clusterName, that.clusterName) && Objects.equals(path, that.path);
     }
 
     @Override

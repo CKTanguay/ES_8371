@@ -24,18 +24,15 @@ import org.elasticsearch.index.store.smbsimplefs.SmbSimpleFsDirectoryFactory;
 import org.elasticsearch.plugins.IndexStorePlugin;
 import org.elasticsearch.plugins.Plugin;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 public class SMBStorePlugin extends Plugin implements IndexStorePlugin {
 
     @Override
     public Map<String, DirectoryFactory> getDirectoryFactories() {
-        final Map<String, DirectoryFactory> indexStoreFactories = new HashMap<>(2);
-        indexStoreFactories.put("smb_mmap_fs", new SmbMmapFsDirectoryFactory());
-        indexStoreFactories.put("smb_simple_fs", new SmbSimpleFsDirectoryFactory());
-        return Collections.unmodifiableMap(indexStoreFactories);
+        return Map.of(
+                "smb_mmap_fs", new SmbMmapFsDirectoryFactory(),
+                "smb_simple_fs", new SmbSimpleFsDirectoryFactory());
     }
 
 }

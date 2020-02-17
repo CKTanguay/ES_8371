@@ -52,9 +52,6 @@ Returns documents that contain a minimum number of exact terms in a provided
 field. You can define the minimum number of matching terms using a field or
 script.
 
-<<query-dsl-type-query,`type` query>>::
-Returns documents of the specified type.
-
 <<query-dsl-wildcard-query,`wildcard` query>>::
 Returns documents that contain terms matching a wildcard pattern.
 
@@ -76,7 +73,5 @@ include::term-query.asciidoc[]
 include::terms-query.asciidoc[]
 
 include::terms-set-query.asciidoc[]
-
-include::type-query.asciidoc[]
 
 include::wildcard-query.asciidoc[]

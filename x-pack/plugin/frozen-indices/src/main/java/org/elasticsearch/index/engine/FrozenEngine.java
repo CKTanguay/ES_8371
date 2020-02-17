@@ -87,8 +87,7 @@ public final class FrozenEngine extends ReadOnlyEngine {
                 SegmentReader segmentReader = Lucene.segmentReader(ctx.reader());
                 fillSegmentStats(segmentReader, true, stats);
             }
-            final DirectoryReader wrappedReader = config.getIndexSettings().isSoftDeleteEnabled() ?
-                new SoftDeletesDirectoryReaderWrapper(reader, Lucene.SOFT_DELETES_FIELD) : reader;
+            final DirectoryReader wrappedReader = new SoftDeletesDirectoryReaderWrapper(reader, Lucene.SOFT_DELETES_FIELD);
             canMatchReader = ElasticsearchDirectoryReader.wrap(
                 new RewriteCachingDirectoryReader(directory, wrappedReader.leaves()), config.getShardId());
             success = true;
@@ -171,8 +170,7 @@ public final class FrozenEngine extends ReadOnlyEngine {
                 for (ReferenceManager.RefreshListener listeners : config ().getInternalRefreshListener()) {
                     listeners.beforeRefresh();
                 }
-                final DirectoryReader dirReader = openDirectory(engineConfig.getStore().directory(),
-                    engineConfig.getIndexSettings().isSoftDeleteEnabled());
+                final DirectoryReader dirReader = openDirectory(engineConfig.getStore().directory(), true);
                 reader = lastOpenedReader = wrapReader(dirReader, Function.identity());
                 processReader(reader);
                 reader.getReaderCacheHelper().addClosedListener(this::onReaderClosed);

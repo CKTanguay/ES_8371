@@ -34,6 +34,7 @@ import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.regex.Regex;
 import org.elasticsearch.repositories.RepositoryMissingException;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -47,8 +48,7 @@ import java.util.Set;
 /**
  * Transport action for get repositories operation
  */
-public class TransportGetRepositoriesAction extends
-    TransportMasterNodeReadAction<GetRepositoriesRequest, GetRepositoriesResponse> {
+public class TransportGetRepositoriesAction extends TransportMasterNodeReadAction<GetRepositoriesRequest, GetRepositoriesResponse> {
 
     @Inject
     public TransportGetRepositoriesAction(TransportService transportService, ClusterService clusterService,
@@ -74,7 +74,7 @@ public class TransportGetRepositoriesAction extends
     }
 
     @Override
-    protected void masterOperation(final GetRepositoriesRequest request, ClusterState state,
+    protected void masterOperation(Task task, final GetRepositoriesRequest request, ClusterState state,
                                    final ActionListener<GetRepositoriesResponse> listener) {
         MetaData metaData = state.metaData();
         RepositoriesMetaData repositories = metaData.custom(RepositoriesMetaData.TYPE);

@@ -28,10 +28,6 @@ Like the `match_phrase` query, but does a wildcard search on the final word.
 <<query-dsl-multi-match-query,`multi_match` query>>::
 The multi-field version of the `match` query.
 
-<<query-dsl-common-terms-query,`common` terms query>>::
-
-    A more specialized query which gives more preference to uncommon words.
-
 <<query-dsl-query-string-query,`query_string` query>>::
 Supports the compact Lucene <<query-string-syntax,query string syntax>>,
 allowing you to specify AND|OR|NOT conditions and multi-field search
@@ -53,8 +49,6 @@ include::match-phrase-query.asciidoc[]
 include::match-phrase-prefix-query.asciidoc[]
 
 include::multi-match-query.asciidoc[]
-
-include::common-terms-query.asciidoc[]
 
 include::query-string-query.asciidoc[]
 

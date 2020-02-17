@@ -25,7 +25,7 @@ import org.elasticsearch.common.xcontent.ToXContentObject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.mapper.DateFieldMapper;
-import org.elasticsearch.xpack.core.XPackPlugin;
+import org.elasticsearch.persistent.PersistentTaskParams;
 import org.elasticsearch.xpack.core.ml.MlTasks;
 import org.elasticsearch.xpack.core.ml.datafeed.DatafeedConfig;
 import org.elasticsearch.xpack.core.ml.job.config.Job;
@@ -132,11 +132,15 @@ public class StartDatafeedAction extends ActionType<AcknowledgedResponse> {
         }
     }
 
-    public static class DatafeedParams implements XPackPlugin.XPackPersistentTaskParams {
+    public static class DatafeedParams implements PersistentTaskParams {
 
         public static final ParseField INDICES = new ParseField("indices");
 
-        public static ObjectParser<DatafeedParams, Void> PARSER = new ObjectParser<>(MlTasks.DATAFEED_TASK_NAME, true, DatafeedParams::new);
+        public static final ObjectParser<DatafeedParams, Void> PARSER = new ObjectParser<>(
+            MlTasks.DATAFEED_TASK_NAME,
+            true,
+            DatafeedParams::new
+        );
         static {
             PARSER.declareString((params, datafeedId) -> params.datafeedId = datafeedId, DatafeedConfig.ID);
             PARSER.declareString((params, startTime) -> params.startTime = parseDateOrThrow(
@@ -185,10 +189,8 @@ public class StartDatafeedAction extends ActionType<AcknowledgedResponse> {
             startTime = in.readVLong();
             endTime = in.readOptionalLong();
             timeout = TimeValue.timeValueMillis(in.readVLong());
-            if (in.getVersion().onOrAfter(Version.V_6_6_0)) {
-                jobId = in.readOptionalString();
-                datafeedIndices = in.readStringList();
-            }
+            jobId = in.readOptionalString();
+            datafeedIndices = in.readStringList();
         }
 
         DatafeedParams() {
@@ -262,10 +264,8 @@ public class StartDatafeedAction extends ActionType<AcknowledgedResponse> {
             out.writeVLong(startTime);
             out.writeOptionalLong(endTime);
             out.writeVLong(timeout.millis());
-            if (out.getVersion().onOrAfter(Version.V_6_6_0)) {
-                out.writeOptionalString(jobId);
-                out.writeStringCollection(datafeedIndices);
-            }
+            out.writeOptionalString(jobId);
+            out.writeStringCollection(datafeedIndices);
         }
 
         @Override

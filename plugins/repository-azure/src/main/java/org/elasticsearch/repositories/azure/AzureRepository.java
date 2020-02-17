@@ -24,6 +24,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.elasticsearch.cluster.metadata.RepositoryMetaData;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.blobstore.BlobPath;
 import org.elasticsearch.common.blobstore.BlobStore;
@@ -32,7 +33,6 @@ import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.repositories.blobstore.BlobStoreRepository;
-import org.elasticsearch.threadpool.ThreadPool;
 
 import java.util.Locale;
 import java.util.function.Function;
@@ -68,11 +68,9 @@ public class AzureRepository extends BlobStoreRepository {
                 s -> LocationMode.PRIMARY_ONLY.toString(), s -> LocationMode.valueOf(s.toUpperCase(Locale.ROOT)), Property.NodeScope);
         public static final Setting<ByteSizeValue> CHUNK_SIZE_SETTING =
             Setting.byteSizeSetting("chunk_size", MAX_CHUNK_SIZE, MIN_CHUNK_SIZE, MAX_CHUNK_SIZE, Property.NodeScope);
-        public static final Setting<Boolean> COMPRESS_SETTING = Setting.boolSetting("compress", false, Property.NodeScope);
         public static final Setting<Boolean> READONLY_SETTING = Setting.boolSetting("readonly", false, Property.NodeScope);
     }
 
-    private final BlobPath basePath;
     private final ByteSizeValue chunkSize;
     private final AzureStorageService storageService;
     private final boolean readonly;
@@ -81,22 +79,10 @@ public class AzureRepository extends BlobStoreRepository {
         final RepositoryMetaData metadata,
         final NamedXContentRegistry namedXContentRegistry,
         final AzureStorageService storageService,
-        final ThreadPool threadPool) {
-        super(metadata, Repository.COMPRESS_SETTING.get(metadata.settings()), namedXContentRegistry, threadPool);
+        final ClusterService clusterService) {
+        super(metadata, namedXContentRegistry, clusterService, buildBasePath(metadata));
         this.chunkSize = Repository.CHUNK_SIZE_SETTING.get(metadata.settings());
         this.storageService = storageService;
-
-        final String basePath = Strings.trimLeadingCharacter(Repository.BASE_PATH_SETTING.get(metadata.settings()), '/');
-        if (Strings.hasLength(basePath)) {
-            // Remove starting / if any
-            BlobPath path = new BlobPath();
-            for(final String elem : basePath.split("/")) {
-                path = path.add(elem);
-            }
-            this.basePath = path;
-        } else {
-            this.basePath = BlobPath.cleanPath();
-        }
 
         // If the user explicitly did not define a readonly value, we set it by ourselves depending on the location mode setting.
         // For secondary_only setting, the repository should be read only
@@ -105,6 +91,20 @@ public class AzureRepository extends BlobStoreRepository {
             this.readonly = Repository.READONLY_SETTING.get(metadata.settings());
         } else {
             this.readonly = locationMode == LocationMode.SECONDARY_ONLY;
+        }
+    }
+
+    private static BlobPath buildBasePath(RepositoryMetaData metadata) {
+        final String basePath = Strings.trimLeadingCharacter(Repository.BASE_PATH_SETTING.get(metadata.settings()), '/');
+        if (Strings.hasLength(basePath)) {
+            // Remove starting / if any
+            BlobPath path = new BlobPath();
+            for(final String elem : basePath.split("/")) {
+                path = path.add(elem);
+            }
+            return path;
+        } else {
+            return BlobPath.cleanPath();
         }
     }
 
@@ -119,13 +119,8 @@ public class AzureRepository extends BlobStoreRepository {
 
         logger.debug(() -> new ParameterizedMessage(
             "using container [{}], chunk_size [{}], compress [{}], base_path [{}]",
-            blobStore, chunkSize, isCompress(), basePath));
+            blobStore, chunkSize, isCompress(), basePath()));
         return blobStore;
-    }
-
-    @Override
-    public BlobPath basePath() {
-        return basePath;
     }
 
     @Override

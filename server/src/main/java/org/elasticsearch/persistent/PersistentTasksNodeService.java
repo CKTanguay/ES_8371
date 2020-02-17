@@ -47,7 +47,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * This component is responsible for coordination of execution of persistent tasks on individual nodes. It runs on all
- * non-transport client nodes in the cluster and monitors cluster state changes to detect started commands.
+ * nodes in the cluster and monitors cluster state changes to detect started commands.
  */
 public class PersistentTasksNodeService implements ClusterStateListener {
 
@@ -207,7 +207,7 @@ public class PersistentTasksNodeService implements ClusterStateListener {
     private <Params extends PersistentTaskParams> void notifyMasterOfFailedTask(PersistentTask<Params> taskInProgress,
                                                                                 Exception originalException) {
         persistentTasksService.sendCompletionRequest(taskInProgress.getId(), taskInProgress.getAllocationId(), originalException,
-            new ActionListener<PersistentTask<?>>() {
+            new ActionListener<>() {
                 @Override
                 public void onResponse(PersistentTask<?> persistentTask) {
                     logger.trace("completion notification for failed task [{}] with id [{}] was successful", taskInProgress.getTaskName(),

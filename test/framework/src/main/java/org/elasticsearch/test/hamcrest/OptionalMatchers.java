@@ -31,7 +31,7 @@ public class OptionalMatchers {
         @Override
         protected boolean matchesSafely(final Optional<?> item) {
             // noinspection OptionalAssignedToNull
-            return item != null && item.isPresent() == false;
+            return item != null && item.isEmpty();
         }
 
         @Override

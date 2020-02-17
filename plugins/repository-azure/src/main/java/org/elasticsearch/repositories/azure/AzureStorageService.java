@@ -38,7 +38,6 @@ import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
 import com.microsoft.azure.storage.blob.DeleteSnapshotsOption;
 import com.microsoft.azure.storage.blob.ListBlobItem;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
@@ -47,7 +46,6 @@ import org.elasticsearch.common.blobstore.BlobMetaData;
 import org.elasticsearch.common.blobstore.BlobPath;
 import org.elasticsearch.common.blobstore.DeleteResult;
 import org.elasticsearch.common.blobstore.support.PlainBlobMetaData;
-import org.elasticsearch.common.collect.MapBuilder;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsException;
@@ -66,6 +64,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -155,7 +154,7 @@ public class AzureStorageService {
      */
     public Map<String, AzureStorageSettings> refreshAndClearCache(Map<String, AzureStorageSettings> clientsSettings) {
         final Map<String, AzureStorageSettings> prevSettings = this.storageSettings;
-        this.storageSettings = MapBuilder.newMapBuilder(clientsSettings).immutableMap();
+        this.storageSettings = Map.copyOf(clientsSettings);
         // clients are built lazily by {@link client(String)}
         return prevSettings;
     }
@@ -272,7 +271,7 @@ public class AzureStorageService {
         // NOTE: this should be here: if (prefix == null) prefix = "";
         // however, this is really inefficient since deleteBlobsByPrefix enumerates everything and
         // then does a prefix match on the result; it should just call listBlobsByPrefix with the prefix!
-        final MapBuilder<String, BlobMetaData> blobsBuilder = MapBuilder.newMapBuilder();
+        final var blobsBuilder = new HashMap<String, BlobMetaData>();
         final EnumSet<BlobListingDetails> enumBlobListingDetails = EnumSet.of(BlobListingDetails.METADATA);
         final Tuple<CloudBlobClient, Supplier<OperationContext>> client = client(account);
         final CloudBlobContainer blobContainer = client.v1().getContainerReference(container);
@@ -293,11 +292,11 @@ public class AzureStorageService {
                 }
             }
         });
-        return blobsBuilder.immutableMap();
+        return Map.copyOf(blobsBuilder);
     }
 
     public Set<String> children(String account, String container, BlobPath path) throws URISyntaxException, StorageException, IOException {
-        final Set<String> blobsBuilder = new HashSet<>();
+        final var blobsBuilder = new HashSet<String>();
         final Tuple<CloudBlobClient, Supplier<OperationContext>> client = client(account);
         final CloudBlobContainer blobContainer = client.v1().getContainerReference(container);
         final String keyPath = path.buildAsString();
@@ -316,7 +315,7 @@ public class AzureStorageService {
                 }
             }
         });
-        return Collections.unmodifiableSet(blobsBuilder);
+        return Set.copyOf(blobsBuilder);
     }
 
     public void writeBlob(String account, String container, String blobName, InputStream inputStream, long blobSize,

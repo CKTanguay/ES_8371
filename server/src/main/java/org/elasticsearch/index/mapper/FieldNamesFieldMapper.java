@@ -34,7 +34,6 @@ import org.elasticsearch.index.query.QueryShardContext;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -48,8 +47,7 @@ import java.util.Objects;
  */
 public class FieldNamesFieldMapper extends MetadataFieldMapper {
 
-    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(
-            LogManager.getLogger(FieldNamesFieldMapper.class));
+    private static final DeprecationLogger deprecationLogger = new DeprecationLogger(LogManager.getLogger(FieldNamesFieldMapper.class));
 
     public static final String NAME = "_field_names";
 
@@ -104,7 +102,7 @@ public class FieldNamesFieldMapper extends MetadataFieldMapper {
         @Override
         public MetadataFieldMapper.Builder<?,?> parse(String name, Map<String, Object> node,
                                                       ParserContext parserContext) throws MapperParsingException {
-            Builder builder = new Builder(parserContext.mapperService().fullName(NAME));
+            Builder builder = new Builder(parserContext.mapperService().fieldType(NAME));
 
             for (Iterator<Map.Entry<String, Object>> iterator = node.entrySet().iterator(); iterator.hasNext();) {
                 Map.Entry<String, Object> entry = iterator.next();
@@ -112,8 +110,13 @@ public class FieldNamesFieldMapper extends MetadataFieldMapper {
                 Object fieldNode = entry.getValue();
                 if (fieldName.equals("enabled")) {
                     String indexName = parserContext.mapperService().index().getName();
-                    deprecationLogger.deprecatedAndMaybeLog("field_names_enabled_parameter", ENABLED_DEPRECATION_MESSAGE, indexName);
-                    builder.enabled(XContentMapValues.nodeBooleanValue(fieldNode, name + ".enabled"));
+                    if (parserContext.indexVersionCreated().onOrAfter(Version.V_8_0_0)) {
+                        throw new MapperParsingException("The `enabled` setting for the `_field_names` field has been deprecated and "
+                                + "removed but is still used in index [{}]. Please remove it from your mappings and templates.");
+                    } else {
+                        deprecationLogger.deprecatedAndMaybeLog("field_names_enabled_parameter", ENABLED_DEPRECATION_MESSAGE, indexName);
+                        builder.enabled(XContentMapValues.nodeBooleanValue(fieldNode, name + ".enabled"));
+                    }
                     iterator.remove();
                 }
             }
@@ -121,14 +124,9 @@ public class FieldNamesFieldMapper extends MetadataFieldMapper {
         }
 
         @Override
-        public MetadataFieldMapper getDefault(MappedFieldType fieldType, ParserContext context) {
+        public MetadataFieldMapper getDefault(ParserContext context) {
             final Settings indexSettings = context.mapperService().getIndexSettings().getSettings();
-            if (fieldType != null) {
-                return new FieldNamesFieldMapper(indexSettings, fieldType);
-            } else {
-                return parse(NAME, Collections.emptyMap(), context)
-                        .build(new BuilderContext(indexSettings, new ContentPath(1)));
-            }
+            return new FieldNamesFieldMapper(Defaults.FIELD_TYPE, indexSettings);
         }
     }
 
@@ -191,10 +189,6 @@ public class FieldNamesFieldMapper extends MetadataFieldMapper {
         }
     }
 
-    private FieldNamesFieldMapper(Settings indexSettings, MappedFieldType existing) {
-        this(existing.clone(), indexSettings);
-    }
-
     private FieldNamesFieldMapper(MappedFieldType fieldType, Settings indexSettings) {
         super(NAME, fieldType, Defaults.FIELD_TYPE, indexSettings);
     }
@@ -209,10 +203,7 @@ public class FieldNamesFieldMapper extends MetadataFieldMapper {
     }
 
     @Override
-    public void postParse(ParseContext context) throws IOException {
-        if (context.indexSettings().getIndexVersionCreated().before(Version.V_6_1_0)) {
-            super.parse(context);
-        }
+    public void postParse(ParseContext context) {
     }
 
     @Override

@@ -10,8 +10,8 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.xpack.ql.execution.search.extractor.HitExtractor;
 import org.elasticsearch.xpack.sql.SqlIllegalArgumentException;
-import org.elasticsearch.xpack.sql.execution.search.extractor.HitExtractor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -151,7 +151,7 @@ class SearchHitRowSet extends ResultRowSet<HitExtractor> {
         List<SearchHit> sortedList = new ArrayList<>(lhm.values());
         Collections.sort(sortedList, new NestedHitOffsetComparator());
 
-        return sortedList.toArray(new SearchHit[sortedList.size()]);
+        return sortedList.toArray(SearchHit[]::new);
     }
     
     private class NestedHitOffsetComparator implements Comparator<SearchHit> {

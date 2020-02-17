@@ -212,6 +212,10 @@ public class CcrRollingUpgradeIT extends AbstractMultiClusterUpgradeTestCase {
         if (upgradeState != UpgradeState.ALL) {
             return;
         }
+        if (Version.CURRENT.equals(UPGRADE_FROM_VERSION)) {
+            // can't run this test when executing rolling upgrade against current version.
+            return;
+        }
 
         if (clusterName == ClusterName.FOLLOWER) {
             // At this point the leader cluster has not been upgraded, but follower cluster has been upgrade.
@@ -296,7 +300,7 @@ public class CcrRollingUpgradeIT extends AbstractMultiClusterUpgradeTestCase {
         Settings.Builder indexSettings = Settings.builder()
             .put("index.number_of_shards", 1)
             .put("index.number_of_replicas", 0);
-        if (UPGRADE_FROM_VERSION.before(Version.V_7_0_0) || randomBoolean()) {
+        if (randomBoolean()) {
             indexSettings.put("index.soft_deletes.enabled", true);
         }
         createIndex(client, indexName, indexSettings.build());

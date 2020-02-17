@@ -19,7 +19,6 @@
 
 package org.elasticsearch.search.aggregations.bucket.composite;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
@@ -28,11 +27,12 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.search.aggregations.support.ValueType;
-import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
+import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
 import org.elasticsearch.search.sort.SortOrder;
 
 import java.io.IOException;
+import java.time.ZoneId;
 import java.util.Objects;
 
 /**
@@ -66,21 +66,9 @@ public abstract class CompositeValuesSourceBuilder<AB extends CompositeValuesSou
         if (in.readBoolean()) {
             this.valueType = ValueType.readFromStream(in);
         }
-        if (in.getVersion().onOrAfter(Version.V_6_4_0)) {
-            this.missingBucket = in.readBoolean();
-        } else {
-            this.missingBucket = false;
-        }
-        if (in.getVersion().before(Version.V_7_0_0)) {
-            // skip missing value for BWC
-            in.readGenericValue();
-        }
+        this.missingBucket = in.readBoolean();
         this.order = SortOrder.readFromStream(in);
-        if (in.getVersion().onOrAfter(Version.V_6_3_0)) {
-            this.format = in.readOptionalString();
-        } else {
-            this.format = null;
-        }
+        this.format = in.readOptionalString();
     }
 
     @Override
@@ -97,17 +85,9 @@ public abstract class CompositeValuesSourceBuilder<AB extends CompositeValuesSou
         if (hasValueType) {
             valueType.writeTo(out);
         }
-        if (out.getVersion().onOrAfter(Version.V_6_4_0)) {
-            out.writeBoolean(missingBucket);
-        }
-        if (out.getVersion().before(Version.V_7_0_0)) {
-            // write missing value for BWC
-            out.writeGenericValue(null);
-        }
+        out.writeBoolean(missingBucket);
         order.writeTo(out);
-        if (out.getVersion().onOrAfter(Version.V_6_3_0)) {
-            out.writeOptionalString(format);
-        }
+        out.writeOptionalString(format);
         innerWriteTo(out);
     }
 
@@ -221,7 +201,7 @@ public abstract class CompositeValuesSourceBuilder<AB extends CompositeValuesSou
     }
 
     /**
-     * If true an explicit `null bucket will represent documents with missing values.
+     * If <code>true</code> an explicit <code>null</code> bucket will represent documents with missing values.
      */
     @SuppressWarnings("unchecked")
     public AB missingBucket(boolean missingBucket) {
@@ -297,7 +277,15 @@ public abstract class CompositeValuesSourceBuilder<AB extends CompositeValuesSou
 
     public final CompositeValuesSourceConfig build(QueryShardContext queryShardContext) throws IOException {
         ValuesSourceConfig<?> config = ValuesSourceConfig.resolve(queryShardContext,
-            valueType, field, script, null,null, format);
+            valueType, field, script, null, timeZone(), format);
         return innerBuild(queryShardContext, config);
+    }
+
+    /**
+     * The time zone for this value source. Default implementation returns {@code null}
+     * because most value source types don't support time zone.
+     */
+    protected ZoneId timeZone() {
+        return null;
     }
 }

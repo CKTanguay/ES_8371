@@ -45,18 +45,11 @@ public class AcknowledgedResponse extends ActionResponse implements ToXContentOb
             ObjectParser.ValueType.BOOLEAN);
     }
 
-    protected boolean acknowledged;
+    protected final boolean acknowledged;
 
     public AcknowledgedResponse(StreamInput in) throws IOException {
         super(in);
         acknowledged = in.readBoolean();
-    }
-
-    public AcknowledgedResponse(StreamInput in, boolean readAcknowledged) throws IOException {
-        super(in);
-        if (readAcknowledged) {
-            acknowledged = in.readBoolean();
-        }
     }
 
     public AcknowledgedResponse(boolean acknowledged) {

@@ -330,23 +330,23 @@ public abstract class SocketChannelContext extends ChannelContext<SocketChannel>
             socket.setReuseAddress(socketConfig.tcpReuseAddress());
             socket.setKeepAlive(socketConfig.tcpKeepAlive());
             if (socketConfig.tcpKeepAlive()) {
-                final Set<SocketOption<?>> supportedOptions = socket.getChannel().supportedOptions();
+                final Set<SocketOption<?>> supportedOptions = socket.supportedOptions();
                 if (socketConfig.tcpKeepIdle() >= 0) {
                     final SocketOption<Integer> keepIdleOption = NetUtils.getTcpKeepIdleSocketOptionOrNull();
                     if (keepIdleOption != null && supportedOptions.contains(keepIdleOption)) {
-                        socket.getChannel().setOption(keepIdleOption, socketConfig.tcpKeepIdle());
+                        socket.setOption(keepIdleOption, socketConfig.tcpKeepIdle());
                     }
                 }
                 if (socketConfig.tcpKeepInterval() >= 0) {
                     final SocketOption<Integer> keepIntervalOption = NetUtils.getTcpKeepIntervalSocketOptionOrNull();
                     if (keepIntervalOption != null && supportedOptions.contains(keepIntervalOption)) {
-                        socket.getChannel().setOption(keepIntervalOption, socketConfig.tcpKeepInterval());
+                        socket.setOption(keepIntervalOption, socketConfig.tcpKeepInterval());
                     }
                 }
                 if (socketConfig.tcpKeepCount() >= 0) {
                     final SocketOption<Integer> keepCountOption = NetUtils.getTcpKeepCountSocketOptionOrNull();
                     if (keepCountOption != null && supportedOptions.contains(keepCountOption)) {
-                        socket.getChannel().setOption(keepCountOption, socketConfig.tcpKeepCount());
+                        socket.setOption(keepCountOption, socketConfig.tcpKeepCount());
                     }
                 }
             }

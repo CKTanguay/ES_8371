@@ -38,11 +38,12 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=snapshot-id]
 The following properties can be updated after the model snapshot is created:
 
 `description`::
-(Optional, string) A description of the model snapshot. 
+(Optional, string) A description of the model snapshot.
 
 `retain`::
 (Optional, boolean)
 include::{docdir}/ml/ml-shared.asciidoc[tag=retain]
+
 
 [[ml-update-snapshot-example]]
 ==== {api-examples-title}

@@ -19,13 +19,12 @@
 
 package org.elasticsearch.gradle;
 
-import org.elasticsearch.gradle.tool.ClasspathUtils;
+import org.elasticsearch.gradle.info.BuildParams;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.gradle.internal.jvm.Jvm;
 
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -33,7 +32,6 @@ import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,7 +48,7 @@ public class ReaperService {
 
     public ReaperService(Project project, Path buildDir, Path inputDir) {
         this.logger = project.getLogger();
-        this.isInternal = ClasspathUtils.isElasticsearchProject(project);
+        this.isInternal = BuildParams.isInternal();
         this.buildDir = buildDir;
         this.inputDir = inputDir;
         this.logFile = inputDir.resolve("reaper.log");
@@ -61,8 +59,8 @@ public class ReaperService {
      */
     public void registerPid(String serviceId, long pid) {
         String[] killPidCommand = OS.<String[]>conditional()
-            .onWindows(() -> new String[]{"Taskill", "/F", "/PID", String.valueOf(pid)})
-            .onUnix(() -> new String[]{"kill", "-9", String.valueOf(pid)})
+            .onWindows(() -> new String[] { "Taskill", "/F", "/PID", String.valueOf(pid) })
+            .onUnix(() -> new String[] { "kill", "-9", String.valueOf(pid) })
             .supply();
         registerCommand(serviceId, killPidCommand);
     }
@@ -73,17 +71,15 @@ public class ReaperService {
     public void registerCommand(String serviceId, String... command) {
         ensureReaperStarted();
 
-        try (FileWriter writer = new FileWriter(getCmdFile(serviceId).toFile())) {
-            writer.write(String.join(" ", command));
+        try {
+            Files.writeString(getCmdFile(serviceId), String.join(" ", command));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
     private Path getCmdFile(String serviceId) {
-        return inputDir.resolve(
-            serviceId.replaceAll("[^a-zA-Z0-9]","-") + ".cmd"
-        );
+        return inputDir.resolve(serviceId.replaceAll("[^a-zA-Z0-9]", "-") + ".cmd");
     }
 
     public void unregister(String serviceId) {
@@ -101,8 +97,7 @@ public class ReaperService {
                 reaperProcess.getOutputStream().close();
                 logger.info("Waiting for reaper to exit normally");
                 if (reaperProcess.waitFor() != 0) {
-                    throw new GradleException("Reaper process failed. Check log at "
-                        + inputDir.resolve("error.log") + " for details");
+                    throw new GradleException("Reaper process failed. Check log at " + inputDir.resolve("error.log") + " for details");
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -122,9 +117,12 @@ public class ReaperService {
                 // start the reaper
                 ProcessBuilder builder = new ProcessBuilder(
                     Jvm.current().getJavaExecutable().toString(), // same jvm as gradle
-                    "-Xms4m", "-Xmx16m", // no need for a big heap, just need to read some files and execute
-                    "-jar", jarPath.toString(),
-                    inputDir.toString());
+                    "-Xms4m",
+                    "-Xmx16m", // no need for a big heap, just need to read some files and execute
+                    "-jar",
+                    jarPath.toString(),
+                    inputDir.toString()
+                );
                 logger.info("Launching reaper: " + String.join(" ", builder.command()));
                 // be explicit for stdin, we use closing of the pipe to signal shutdown to the reaper
                 builder.redirectInput(ProcessBuilder.Redirect.PIPE);
@@ -148,12 +146,7 @@ public class ReaperService {
 
             if (matcher.matches()) {
                 String path = matcher.group(1);
-                return Paths.get(
-                    OS.<String>conditional()
-                        .onWindows(() -> path.substring(1))
-                        .onUnix(() -> path)
-                        .supply()
-                );
+                return Path.of(OS.<String>conditional().onWindows(() -> path.substring(1)).onUnix(() -> path).supply());
             } else {
                 throw new RuntimeException("Unable to locate " + REAPER_CLASS + " on build classpath.");
             }

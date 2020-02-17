@@ -28,9 +28,7 @@ import org.elasticsearch.protocol.xpack.XPackInfoResponse.LicenseInfo;
 import org.elasticsearch.protocol.xpack.license.LicenseStatus;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -51,7 +49,7 @@ public class XPackInfoResponseTests extends AbstractResponseTestCase<XPackInfoRe
     private FeatureSetsInfo convertHlrcToInternal(org.elasticsearch.client.xpack.XPackInfoResponse.FeatureSetsInfo featureSetsInfo) {
         return featureSetsInfo != null
             ? new FeatureSetsInfo(featureSetsInfo.getFeatureSets().values().stream()
-            .map(fs -> new FeatureSet(fs.name(), fs.available(), fs.enabled(), fs.nativeCodeInfo()))
+            .map(fs -> new FeatureSet(fs.name(), fs.available(), fs.enabled()))
             .collect(Collectors.toSet()))
             : null;
     }
@@ -84,20 +82,7 @@ public class XPackInfoResponseTests extends AbstractResponseTestCase<XPackInfoRe
         return new FeatureSet(
             randomAlphaOfLength(5),
             randomBoolean(),
-            randomBoolean(),
-            randomNativeCodeInfo());
-    }
-
-    private Map<String, Object> randomNativeCodeInfo() {
-        if (randomBoolean()) {
-            return null;
-        }
-        int size = between(0, 10);
-        Map<String, Object> nativeCodeInfo = new HashMap<>(size);
-        while (nativeCodeInfo.size() < size) {
-            nativeCodeInfo.put(randomAlphaOfLength(5), randomAlphaOfLength(5));
-        }
-        return nativeCodeInfo;
+            randomBoolean());
     }
 
     @Override

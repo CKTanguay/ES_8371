@@ -183,9 +183,10 @@ public final class RequestOptions {
          * response body gets streamed from a non-blocking HTTP connection on the
          * client side.
          */
-        public void setHttpAsyncResponseConsumerFactory(HttpAsyncResponseConsumerFactory httpAsyncResponseConsumerFactory) {
+        public Builder setHttpAsyncResponseConsumerFactory(HttpAsyncResponseConsumerFactory httpAsyncResponseConsumerFactory) {
             this.httpAsyncResponseConsumerFactory =
                     Objects.requireNonNull(httpAsyncResponseConsumerFactory, "httpAsyncResponseConsumerFactory cannot be null");
+            return this;
         }
 
         /**
@@ -205,8 +206,9 @@ public final class RequestOptions {
          * fail the request if the warnings returned don't
          * <strong>exactly</strong> match some set.
          */
-        public void setWarningsHandler(WarningsHandler warningsHandler) {
+        public Builder setWarningsHandler(WarningsHandler warningsHandler) {
             this.warningsHandler = warningsHandler;
+            return this;
         }
     }
 

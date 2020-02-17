@@ -18,7 +18,6 @@
  */
 package org.elasticsearch.test.rest.yaml.restspec;
 
-import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.yaml.YamlXContent;
 import org.elasticsearch.test.ESTestCase;
@@ -26,6 +25,7 @@ import org.elasticsearch.test.ESTestCase;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class ClientYamlSuiteRestApiTests extends ESTestCase {
 
@@ -60,19 +60,19 @@ public class ClientYamlSuiteRestApiTests extends ESTestCase {
             assertEquals("/{index}/_doc", paths.get(0).getPath());
         }
         {
-            List<ClientYamlSuiteRestApi.Path> paths = restApi.getBestMatchingPaths(Sets.newHashSet("index", "id"));
+            List<ClientYamlSuiteRestApi.Path> paths = restApi.getBestMatchingPaths(Set.of("index", "id"));
             assertEquals(1, paths.size());
             assertEquals("/{index}/_doc/{id}", paths.get(0).getPath());
         }
         {
-            List<ClientYamlSuiteRestApi.Path> paths = restApi.getBestMatchingPaths(Sets.newHashSet("index", "type"));
+            List<ClientYamlSuiteRestApi.Path> paths = restApi.getBestMatchingPaths(Set.of("index", "type"));
             assertEquals(3, paths.size());
             assertEquals("/{index}/_mapping/{type}", paths.get(0).getPath());
             assertEquals("/{index}/{type}", paths.get(1).getPath());
             assertEquals("/{index}/_mappings/{type}", paths.get(2).getPath());
         }
         {
-            List<ClientYamlSuiteRestApi.Path> paths = restApi.getBestMatchingPaths(Sets.newHashSet("index", "type", "id"));
+            List<ClientYamlSuiteRestApi.Path> paths = restApi.getBestMatchingPaths(Set.of("index", "type", "id"));
             assertEquals(1, paths.size());
             assertEquals("/{index}/{type}/{id}", paths.get(0).getPath());
         }
@@ -114,7 +114,7 @@ public class ClientYamlSuiteRestApiTests extends ESTestCase {
     private static final String REST_SPEC_API = "{\n" +
         "  \"index\":{\n" +
         "    \"documentation\":{\n" +
-        "      \"url\":\"http://www.elastic.co/guide/en/elasticsearch/reference/master/docs-index_.html\",\n" +
+        "      \"url\":\"https://www.elastic.co/guide/en/elasticsearch/reference/master/docs-index_.html\",\n" +
         "      \"description\":\"Creates or updates a document in an index.\"\n" +
         "    },\n" +
         "    \"stability\":\"stable\",\n" +

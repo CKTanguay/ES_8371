@@ -29,8 +29,9 @@ import org.elasticsearch.xpack.enrich.EnrichPolicyLocks;
 
 import java.io.IOException;
 
-public class TransportExecuteEnrichPolicyAction extends
-    TransportMasterNodeAction<ExecuteEnrichPolicyAction.Request, ExecuteEnrichPolicyAction.Response> {
+public class TransportExecuteEnrichPolicyAction extends TransportMasterNodeAction<
+    ExecuteEnrichPolicyAction.Request,
+    ExecuteEnrichPolicyAction.Response> {
 
     private final EnrichPolicyExecutor executor;
 
@@ -78,6 +79,7 @@ public class TransportExecuteEnrichPolicyAction extends
 
     @Override
     protected void masterOperation(
+        Task task,
         ExecuteEnrichPolicyAction.Request request,
         ClusterState state,
         ActionListener<ExecuteEnrichPolicyAction.Response> listener
@@ -89,7 +91,7 @@ public class TransportExecuteEnrichPolicyAction extends
         }
 
         if (request.isWaitForCompletion()) {
-            executor.runPolicy(request, new ActionListener<ExecuteEnrichPolicyStatus>() {
+            executor.runPolicy(request, new ActionListener<>() {
                 @Override
                 public void onResponse(ExecuteEnrichPolicyStatus executionStatus) {
                     listener.onResponse(new ExecuteEnrichPolicyAction.Response(executionStatus));

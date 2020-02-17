@@ -10,7 +10,6 @@ package org.elasticsearch.xpack.core.security.authz.privilege;
 
 import org.elasticsearch.xpack.core.security.authz.permission.ClusterPermission;
 
-import java.util.Collections;
 import java.util.Set;
 
 /**
@@ -28,7 +27,7 @@ public class ActionClusterPrivilege implements NamedClusterPrivilege {
      * @param allowedActionPatterns a set of cluster action patterns that are allowed for the user with this privilege.
      */
     public ActionClusterPrivilege(final String name, final Set<String> allowedActionPatterns) {
-        this(name, allowedActionPatterns, Collections.emptySet());
+        this(name, allowedActionPatterns, Set.of());
     }
 
     /**

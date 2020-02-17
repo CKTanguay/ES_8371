@@ -32,5 +32,6 @@ public class GetRepositoriesAction extends ActionType<GetRepositoriesResponse> {
     private GetRepositoriesAction() {
         super(NAME, GetRepositoriesResponse::new);
     }
+
 }
 

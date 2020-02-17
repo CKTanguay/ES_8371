@@ -21,7 +21,6 @@ package org.elasticsearch.search.aggregations.support;
 import org.elasticsearch.Version;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.common.time.DateUtils;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.script.Script;
@@ -152,11 +151,7 @@ public abstract class ValuesSourceAggregationBuilder<VS extends ValuesSource, AB
         }
         format = in.readOptionalString();
         missing = in.readGenericValue();
-        if (in.getVersion().before(Version.V_7_0_0)) {
-            timeZone = DateUtils.dateTimeZoneToZoneId(in.readOptionalTimeZone());
-        } else {
-            timeZone = in.readOptionalZoneId();
-        }
+        timeZone = in.readOptionalZoneId();
     }
 
     @Override
@@ -177,11 +172,7 @@ public abstract class ValuesSourceAggregationBuilder<VS extends ValuesSource, AB
         }
         out.writeOptionalString(format);
         out.writeGenericValue(missing);
-        if (out.getVersion().before(Version.V_7_0_0)) {
-            out.writeOptionalTimeZone(DateUtils.zoneIdToDateTimeZone(timeZone));
-        } else {
-            out.writeOptionalZoneId(timeZone);
-        }
+        out.writeOptionalZoneId(timeZone);
         innerWriteTo(out);
     }
 
@@ -324,14 +315,14 @@ public abstract class ValuesSourceAggregationBuilder<VS extends ValuesSource, AB
     }
 
     /**
-     * Provide a hook for aggregations to have finer grained control of the ValuesSourceType for script values.  This will only be called if
-     * the user did not supply a type hint for the script.  The script object is provided for reference.
+     * Provide a hook for aggregations to have finer grained control of the CoreValuesSourceType for script values.  This will only be
+     * called if the user did not supply a type hint for the script.  The script object is provided for reference.
      *
      * @param script - The user supplied script
-     * @return The ValuesSourceType we expect this script to yield.
+     * @return The CoreValuesSourceType we expect this script to yield.
      */
     protected ValuesSourceType resolveScriptAny(Script script) {
-        return ValuesSourceType.BYTES;
+        return CoreValuesSourceType.BYTES;
     }
 
     /**

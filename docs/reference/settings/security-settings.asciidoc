@@ -189,7 +189,7 @@ namespace in `elasticsearch.yml`. For example:
 xpack.security.authc.realms:
 
     native.realm1: <1>
-        order: 0
+        order: 0 <2>
         ...
 
     ldap.realm2:
@@ -204,6 +204,8 @@ xpack.security.authc.realms:
 <1> Specifies the type of realm (for example, `native`, `ldap`,
 `active_directory`, `pki`, `file`, `kerberos`, `saml`) and the realm name. This
 information is required.
+<2> Specifies priority of a realm in the realm chain. This information
+is required.
 
 The valid settings vary depending on the realm type. For more
 information, see <<setting-up-authentication>>.
@@ -214,8 +216,7 @@ information, see <<setting-up-authentication>>.
 
 `order`::
 The priority of the realm within the realm chain. Realms with a lower order are
-consulted first. Although not required, use of this setting is strongly
-recommended when you configure multiple realms. Defaults to `Integer.MAX_VALUE`.
+consulted first. The value must be unique for each realm. This setting is required.
 
 `enabled`::
 Indicates whether a realm is enabled. You can use this setting to disable a
@@ -442,12 +443,19 @@ An `s` at the end indicates seconds, or `ms` indicates milliseconds.
 Defaults to `5s` (5 seconds ).
 
 `timeout.tcp_read`::
-The TCP read timeout period after establishing an LDAP connection.
-An `s` at the end indicates seconds, or `ms` indicates milliseconds.
-Defaults to `5s` (5 seconds ).
+deprecated[7.7] The TCP read timeout period after establishing an LDAP
+connection. This is equivalent to and is deprecated in favor of
+`timeout.response` and they cannot be used simultaneously. An `s` at the end
+indicates seconds, or `ms` indicates milliseconds.
+
+`timeout.response`::
+The time interval to wait for the response from the LDAP server. An `s` at the
+end indicates seconds, or `ms` indicates milliseconds. Defaults to the value of
+`timeout.ldap_search`.
 
 `timeout.ldap_search`::
-The LDAP Server enforced timeout period for an LDAP search.
+The timeout period for an LDAP search. The value is specified in the request
+and is enforced by the receiving LDAP Server.
 An `s` at the end indicates seconds, or `ms` indicates milliseconds.
 Defaults to `5s` (5 seconds ).
 
@@ -516,8 +524,7 @@ and `full`. Defaults to `full`.
 See <<ssl-tls-settings,`ssl.verification_mode`>> for an explanation of these values.
 
 `ssl.supported_protocols`::
-Supported protocols for TLS/SSL (with versions). Defaults to `TLSv1.3,TLSv1.2,TLSv1.1` if
-the JVM supports TLSv1.3, otherwise `TLSv1.2,TLSv1.1`.
+Supported protocols for TLS/SSL (with versions). Defaults to `TLSv1.3,TLSv1.2,TLSv1.1`.
 
 `ssl.cipher_suites`:: Specifies the cipher suites that should be supported when 
 communicating with the LDAP server. 
@@ -691,12 +698,20 @@ An `s` at the end indicates seconds, or `ms` indicates milliseconds.
 Defaults to `5s` (5 seconds ).
 
 `timeout.tcp_read`::
-The TCP read timeout period after establishing an LDAP connection.
-An `s` at the end indicates seconds, or `ms` indicates milliseconds.
-Defaults to `5s` (5 seconds ).
+deprecated[7.7] The TCP read timeout period after establishing an LDAP
+connection.  This is equivalent to and is deprecated in favor of
+`timeout.response` and they cannot be used simultaneously. An `s` at the end
+indicates seconds, or `ms` indicates milliseconds. Defaults to the value of
+`timeout.ldap_search`.
+
+`timeout.response`::
+The time interval to wait for the response from the AD server. An `s` at the
+end indicates seconds, or `ms` indicates milliseconds. Defaults to the value of
+`timeout.ldap_search`.
 
 `timeout.ldap_search`::
-The LDAP Server enforced timeout period for an LDAP search.
+The timeout period for an LDAP search. The value is specified in the request
+and is enforced by the receiving LDAP Server.
 An `s` at the end indicates seconds, or `ms` indicates milliseconds.
 Defaults to `5s` (5 seconds ).
 
@@ -768,8 +783,7 @@ and `full`. Defaults to `full`.
 See <<ssl-tls-settings,`ssl.verification_mode`>> for an explanation of these values.
 
 `ssl.supported_protocols`::
-Supported protocols for TLS/SSL (with versions). Defaults to `TLSv1.3,TLSv1.2,TLSv1.1` if
-the JVM supports TLSv1.3, otherwise `TLSv1.2,TLSv1.1`.
+Supported protocols for TLS/SSL (with versions). Defaults to `TLSv1.3,TLSv1.2,TLSv1.1`.
 
 `ssl.cipher_suites`:: Specifies the cipher suites that should be supported when 
 communicating with the Active Directory server. 
@@ -908,8 +922,8 @@ URI. We recommend that you use the base URL of your Kibana instance. For example
 
 `sp.acs`::
 The URL of the Assertion Consumer Service within {kib}. Typically this is the 
-"api/security/v1/saml" endpoint of your Kibana server. For example, 
-`https://kibana.example.com/api/security/v1/saml`. 
+"api/security/saml/callback" endpoint of your Kibana server. For example,
+`https://kibana.example.com/api/security/saml/callback`.
 
 `sp.logout`::
 The URL of the Single Logout service within {kib}. Typically this is the 
@@ -954,11 +968,10 @@ As per `attribute_patterns.principal`, but for the _dn_ property.
 
 `nameid_format`::
 The NameID format that should be requested when asking the IdP to authenticate
-the current user. Defaults to requesting _transient_ names 
-(`urn:oasis:names:tc:SAML:2.0:nameid-format:transient`). 
+the current user. The default is to not  include the `nameid_format` attribute.
 
 `nameid.allow_create`:: The value of the `AllowCreate` attribute of the 
-`NameIdPolicy` element in an authentication request. Defaults to `false`. 
+`NameIdPolicy` element in an authentication request. The default value is false.
 
 `nameid.sp_qualifier`:: The value of the `SPNameQualifier` attribute of the 
 `NameIdPolicy` element in an authentication request. The default is to not 
@@ -1187,8 +1200,7 @@ Defaults to `full`.
 See <<ssl-tls-settings,`ssl.verification_mode`>> for a more detailed explanation of these values.
 
 `ssl.supported_protocols`::
-Specifies the supported protocols for TLS/SSL. Defaults to `TLSv1.3,TLSv1.2,TLSv1.1` if
-the JVM supports TLSv1.3, otherwise `TLSv1.2,TLSv1.1`.
+Specifies the supported protocols for TLS/SSL. Defaults to `TLSv1.3,TLSv1.2,TLSv1.1`.
 
 `ssl.cipher_suites`::
 Specifies the
@@ -1496,6 +1508,16 @@ through the list of URLs will continue until a successful connection is made.
 
 [float]
 [[ssl-tls-settings]]
+==== General TLS settings
+`xpack.security.ssl.diagnose.trust`::
+Controls whether to output diagnostic messages for SSL/TLS trust failures.
+If this is `true` (the default), a message will be printed to the Elasticsearch
+log whenever an SSL connection (incoming or outgoing) is rejected due to a failure
+to establish trust.
+This diagnostic message contains information that can be used to determine the
+cause of the failure and assist with resolving the problem.
+Set to `false` to disable these messages.
+
 ==== Default values for TLS/SSL settings
 In general, the values below represent the default values for the various TLS
 settings.
@@ -1508,8 +1530,7 @@ For more information, see
 
 `*.ssl.supported_protocols`::
 Supported protocols with versions. Valid protocols: `SSLv2Hello`,
-`SSLv3`, `TLSv1`, `TLSv1.1`, `TLSv1.2`, `TLSv1.3`. Defaults to `TLSv1.3,TLSv1.2,TLSv1.1` if
-the JVM supports TLSv1.3, otherwise `TLSv1.2,TLSv1.1`.
+`SSLv3`, `TLSv1`, `TLSv1.1`, `TLSv1.2`, `TLSv1.3`. Defaults to `TLSv1.3,TLSv1.2,TLSv1.1`.
 +
 --
 NOTE: If `xpack.security.fips_mode.enabled` is `true`, you cannot use `SSLv2Hello` 
@@ -1541,8 +1562,7 @@ The default value is `full`.
 
 `*.ssl.cipher_suites`::
 Supported cipher suites can be found in Oracle's
-https://docs.oracle.com/en/java/javase/11/security/oracle-providers.html#GUID-7093246A-31A3-4304-AC5F-5FB6400405E2[Java
- Cryptography Architecture documentation].
+https://docs.oracle.com/en/java/javase/11/security/oracle-providers.html#GUID-7093246A-31A3-4304-AC5F-5FB6400405E2[Java Cryptography Architecture documentation].
 Defaults to `TLS_AES_256_GCM_SHA384`, `TLS_AES_128_GCM_SHA256`,
 `TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384`, `TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256`,
 `TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`, `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`,
@@ -1553,17 +1573,6 @@ Defaults to `TLS_AES_256_GCM_SHA384`, `TLS_AES_128_GCM_SHA256`,
 `TLS_RSA_WITH_AES_256_GCM_SHA384`, `TLS_RSA_WITH_AES_128_GCM_SHA256`,
 `TLS_RSA_WITH_AES_256_CBC_SHA256`, `TLS_RSA_WITH_AES_128_CBC_SHA256`,
 `TLS_RSA_WITH_AES_256_CBC_SHA`, `TLS_RSA_WITH_AES_128_CBC_SHA`.
-+
---
-NOTE: The default cipher suites list above includes TLSv1.3 ciphers and ciphers
-that require the _Java Cryptography Extension (JCE) Unlimited Strength
-Jurisdiction Policy Files_ for 256-bit AES encryption. If TLSv1.3 is not
-available, the TLSv1.3 ciphers TLS_AES_256_GCM_SHA384`, `TLS_AES_128_GCM_SHA256`
-will not be included in the default list. If 256-bit AES is unavailable, ciphers
-with `AES_256` in their names wil not be included in the default list. Finally,
-AES GCM has known performance issues in Java versions prior to 11 and will only
-be included in the default list when using Java 11 or above.
---
 
 [float]
 [[tls-ssl-key-settings]]

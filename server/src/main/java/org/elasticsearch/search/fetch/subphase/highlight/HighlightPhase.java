@@ -65,16 +65,16 @@ public class HighlightPhase implements FetchSubPhase {
             }
 
             if (highlight.forceSource(field)) {
-                SourceFieldMapper sourceFieldMapper = context.getMapperService().documentMapper(hitContext.hit().getType()).sourceMapper();
-                if (!sourceFieldMapper.enabled()) {
+                SourceFieldMapper sourceFieldMapper = context.getMapperService().documentMapper().sourceMapper();
+                if (sourceFieldMapper.enabled() == false) {
                     throw new IllegalArgumentException("source is forced for fields " +  fieldNamesToHighlight
-                            + " but type [" + hitContext.hit().getType() + "] has disabled _source");
+                        + " but _source is disabled");
                 }
             }
 
             boolean fieldNameContainsWildcards = field.field().contains("*");
             for (String fieldName : fieldNamesToHighlight) {
-                MappedFieldType fieldType = context.getMapperService().fullName(fieldName);
+                MappedFieldType fieldType = context.getMapperService().fieldType(fieldName);
                 if (fieldType == null) {
                     continue;
                 }

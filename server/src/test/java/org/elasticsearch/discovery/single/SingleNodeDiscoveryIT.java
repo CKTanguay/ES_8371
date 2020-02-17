@@ -28,7 +28,7 @@ import org.elasticsearch.cluster.coordination.JoinHelper;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.discovery.DiscoverySettings;
+import org.elasticsearch.node.Node;
 import org.elasticsearch.test.ESIntegTestCase;
 import org.elasticsearch.test.InternalTestCluster;
 import org.elasticsearch.test.MockHttpTransport;
@@ -100,7 +100,7 @@ public class SingleNodeDiscoveryIT extends ESIntegTestCase {
                         "other",
                         Arrays.asList(getTestTransportPlugin(), MockHttpTransport.TestPlugin.class),
                         Function.identity())) {
-            other.beforeTest(random(), 0);
+            other.beforeTest(random());
             final ClusterState first = internalCluster().getInstance(ClusterService.class).state();
             final ClusterState second = other.getInstance(ClusterService.class).state();
             assertThat(first.nodes().getSize(), equalTo(1));
@@ -143,7 +143,7 @@ public class SingleNodeDiscoveryIT extends ESIntegTestCase {
                     .builder()
                     .put("discovery.type", "zen")
                     .put("transport.type", getTestTransportType())
-                    .put(DiscoverySettings.INITIAL_STATE_TIMEOUT_SETTING.getKey(), "0s")
+                    .put(Node.INITIAL_STATE_TIMEOUT_SETTING.getKey(), "0s")
                     /*
                      * We align the port ranges of the two as then with zen discovery these two
                      * nodes would find each other.
@@ -175,7 +175,7 @@ public class SingleNodeDiscoveryIT extends ESIntegTestCase {
             Logger clusterLogger = LogManager.getLogger(JoinHelper.class);
             Loggers.addAppender(clusterLogger, mockAppender);
             try {
-                other.beforeTest(random(), 0);
+                other.beforeTest(random());
                 final ClusterState first = internalCluster().getInstance(ClusterService.class).state();
                 assertThat(first.nodes().getSize(), equalTo(1));
                 assertBusy(() -> mockAppender.assertAllExpectationsMatched());
@@ -189,7 +189,6 @@ public class SingleNodeDiscoveryIT extends ESIntegTestCase {
     public void testStatePersistence() throws Exception {
         createIndex("test");
         internalCluster().fullRestart();
-        assertTrue(client().admin().indices().prepareExists("test").get().isExists());
+        assertTrue(indexExists("test"));
     }
-
 }

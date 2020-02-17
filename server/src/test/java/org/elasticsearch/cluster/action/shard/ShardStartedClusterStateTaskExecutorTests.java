@@ -55,7 +55,8 @@ public class ShardStartedClusterStateTaskExecutorTests extends ESAllocationTestC
 
     private ShardStateAction.ShardStartedClusterStateTaskExecutor executor;
 
-    private static void neverReroutes(String reason, Priority priority, ActionListener<Void> listener) {
+    @SuppressWarnings("unused")
+    private static void neverReroutes(String reason, Priority priority, ActionListener<ClusterState> listener) {
         fail("unexpectedly ran a deferred reroute");
     }
 
@@ -66,7 +67,7 @@ public class ShardStartedClusterStateTaskExecutorTests extends ESAllocationTestC
             .put(CLUSTER_ROUTING_ALLOCATION_NODE_CONCURRENT_RECOVERIES_SETTING.getKey(), Integer.MAX_VALUE)
             .build());
         executor = new ShardStateAction.ShardStartedClusterStateTaskExecutor(allocationService,
-            ShardStartedClusterStateTaskExecutorTests::neverReroutes, () -> Priority.NORMAL, logger);
+            ShardStartedClusterStateTaskExecutorTests::neverReroutes, logger);
     }
 
     public void testEmptyTaskListProducesSameClusterState() throws Exception {

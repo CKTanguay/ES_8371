@@ -6,7 +6,7 @@
 package org.elasticsearch.xpack.core.security.authz;
 
 import org.elasticsearch.ElasticsearchParseException;
-import org.elasticsearch.Version;
+import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.Strings;
@@ -24,6 +24,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
+import org.elasticsearch.xpack.core.security.authz.permission.FieldPermissions;
 import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableClusterPrivilege;
 import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableClusterPrivileges;
 import org.elasticsearch.xpack.core.security.support.Validation;
@@ -121,13 +122,9 @@ public class RoleDescriptor implements ToXContentObject, Writeable {
         this.runAs = in.readStringArray();
         this.metadata = in.readMap();
         this.transientMetadata = in.readMap();
-        if (in.getVersion().onOrAfter(Version.V_6_4_0)) {
-            this.applicationPrivileges = in.readArray(ApplicationResourcePrivileges::new, ApplicationResourcePrivileges[]::new);
-            this.configurableClusterPrivileges = ConfigurableClusterPrivileges.readArray(in);
-        } else {
-            this.applicationPrivileges = ApplicationResourcePrivileges.NONE;
-            this.configurableClusterPrivileges = ConfigurableClusterPrivileges.EMPTY_ARRAY;
-        }
+
+        this.applicationPrivileges = in.readArray(ApplicationResourcePrivileges::new, ApplicationResourcePrivileges[]::new);
+        this.configurableClusterPrivileges = ConfigurableClusterPrivileges.readArray(in);
     }
 
     public String getName() {
@@ -263,10 +260,8 @@ public class RoleDescriptor implements ToXContentObject, Writeable {
         out.writeStringArray(runAs);
         out.writeMap(metadata);
         out.writeMap(transientMetadata);
-        if (out.getVersion().onOrAfter(Version.V_6_4_0)) {
-            out.writeArray(ApplicationResourcePrivileges::write, applicationPrivileges);
-            ConfigurableClusterPrivileges.writeArray(out, getConditionalClusterPrivileges());
-        }
+        out.writeArray(ApplicationResourcePrivileges::write, applicationPrivileges);
+        ConfigurableClusterPrivileges.writeArray(out, getConditionalClusterPrivileges());
     }
 
     public static RoleDescriptor parse(String name, BytesReference source, boolean allow2xFormat, XContentType xContentType)
@@ -539,6 +534,7 @@ public class RoleDescriptor implements ToXContentObject, Writeable {
             throw new ElasticsearchParseException("failed to parse indices privileges for role [{}]. {} requires {} if {} is given",
                     roleName, Fields.FIELD_PERMISSIONS, Fields.GRANT_FIELDS, Fields.EXCEPT_FIELDS);
         }
+        checkIfExceptFieldsIsSubsetOfGrantedFields(roleName, grantedFields, deniedFields);
         return RoleDescriptor.IndicesPrivileges.builder()
                 .indices(names)
                 .privileges(privileges)
@@ -547,6 +543,14 @@ public class RoleDescriptor implements ToXContentObject, Writeable {
                 .query(query)
                 .allowRestrictedIndices(allowRestrictedIndices)
                 .build();
+    }
+
+    private static void checkIfExceptFieldsIsSubsetOfGrantedFields(String roleName, String[] grantedFields, String[] deniedFields) {
+        try {
+            FieldPermissions.buildPermittedFieldsAutomaton(grantedFields, deniedFields);
+        } catch (ElasticsearchSecurityException e) {
+            throw new ElasticsearchParseException("failed to parse indices privileges for role [{}] - {}", e, roleName, e.getMessage());
+        }
     }
 
     private static ApplicationResourcePrivileges[] parseApplicationPrivileges(String roleName, XContentParser parser)
@@ -607,11 +611,7 @@ public class RoleDescriptor implements ToXContentObject, Writeable {
             this.deniedFields = in.readOptionalStringArray();
             this.privileges = in.readStringArray();
             this.query = in.readOptionalBytesReference();
-            if (in.getVersion().onOrAfter(Version.V_6_7_0)) {
-                allowRestrictedIndices = in.readBoolean();
-            } else {
-                allowRestrictedIndices = false;
-            }
+            this.allowRestrictedIndices = in.readBoolean();
         }
 
         @Override
@@ -621,9 +621,7 @@ public class RoleDescriptor implements ToXContentObject, Writeable {
             out.writeOptionalStringArray(deniedFields);
             out.writeStringArray(privileges);
             out.writeOptionalBytesReference(query);
-            if (out.getVersion().onOrAfter(Version.V_6_7_0)) {
-                out.writeBoolean(allowRestrictedIndices);
-            }
+            out.writeBoolean(allowRestrictedIndices);
         }
 
         public static Builder builder() {

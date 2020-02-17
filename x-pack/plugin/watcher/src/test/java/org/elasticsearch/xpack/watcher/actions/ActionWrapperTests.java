@@ -5,7 +5,6 @@
  */
 package org.elasticsearch.xpack.watcher.actions;
 
-import com.google.common.collect.ImmutableMap;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -88,12 +87,12 @@ public class ActionWrapperTests extends ESTestCase {
             "ctx.payload.my_path", null);
 
         WatchExecutionContext ctx = mockExecutionContent(watch);
-
-        List<Map<String, String>> payloads = new ArrayList<>();
-        payloads.add(Collections.singletonMap("key", "first"));
-        payloads.add(Collections.singletonMap("key", "second"));
-        payloads.add(Collections.singletonMap("key", "third"));
-        Payload.Simple payload = new Payload.Simple(Collections.singletonMap("my_path", payloads));
+        Payload.Simple payload = new Payload.Simple(Map.of("my_path",
+            List.of(
+                Map.of("key", "first"),
+                Map.of("key", "second"),
+                Map.of("key", "third")
+            )));
         when(ctx.payload()).thenReturn(payload);
 
         ActionWrapperResult result = wrapper.execute(ctx);
@@ -114,7 +113,7 @@ public class ActionWrapperTests extends ESTestCase {
         ActionWrapper wrapper = new ActionWrapper("_action", null, InternalAlwaysCondition.INSTANCE, null, executableAction,
             "ctx.payload.my_path", null);
         WatchExecutionContext ctx = mockExecutionContent(watch);
-        Payload.Simple payload = new Payload.Simple(Collections.singletonMap("my_path", "not a map"));
+        Payload.Simple payload = new Payload.Simple(Map.of("my_path", "not a map"));
         when(ctx.payload()).thenReturn(payload);
         when(executableAction.logger()).thenReturn(logger);
 
@@ -130,7 +129,7 @@ public class ActionWrapperTests extends ESTestCase {
         ActionWrapper wrapper = new ActionWrapper("_action", null, InternalAlwaysCondition.INSTANCE, null, executableAction,
             "ctx.payload.my_path", null);
         WatchExecutionContext ctx = mockExecutionContent(watch);
-        Payload.Simple payload = new Payload.Simple(Collections.singletonMap("my_path", Collections.emptyList()));
+        Payload.Simple payload = new Payload.Simple(Map.of("my_path", Collections.emptyList()));
         when(ctx.payload()).thenReturn(payload);
         when(executableAction.logger()).thenReturn(logger);
 
@@ -146,20 +145,20 @@ public class ActionWrapperTests extends ESTestCase {
         ActionWrapper wrapper = new ActionWrapper("_action", null, InternalAlwaysCondition.INSTANCE, null, executableAction,
             "ctx.payload.my_path", null);
         WatchExecutionContext ctx = mockExecutionContent(watch);
-
-        List<Map<String, String>> payloads = new ArrayList<>();
-        payloads.add(Collections.singletonMap("key", "first"));
-        payloads.add(Collections.singletonMap("key", "second"));
-        Payload.Simple payload = new Payload.Simple(Collections.singletonMap("my_path", payloads));
+        Payload.Simple payload = new Payload.Simple(Map.of("my_path",
+            List.of(
+                Map.of("key", "first"),
+                Map.of("key", "second")
+            )));
         when(ctx.payload()).thenReturn(payload);
         when(executableAction.logger()).thenReturn(logger);
 
         final Action.Result firstResult = new LoggingAction.Result.Success("log_message");;
-        final Payload firstPayload = new Payload.Simple(Collections.singletonMap("key", "first"));
+        final Payload firstPayload = new Payload.Simple(Map.of("key", "first"));
         when(executableAction.execute(eq("_action"), eq(ctx), eq(firstPayload))).thenReturn(firstResult);
 
         final Action.Result secondResult = new Action.Result.Failure("MY_TYPE", "second reason");
-        final Payload secondPayload = new Payload.Simple(Collections.singletonMap("key", "second"));
+        final Payload secondPayload = new Payload.Simple(Map.of("key", "second"));
         when(executableAction.execute(eq("_action"), eq(ctx), eq(secondPayload))).thenReturn(secondResult);
 
         ActionWrapperResult result = wrapper.execute(ctx);
@@ -173,12 +172,12 @@ public class ActionWrapperTests extends ESTestCase {
         List<Map<String, String>> itemsPayload = new ArrayList<>();
         for (int i = 0; i < 101; i++) {
             final Action.Result actionResult = new LoggingAction.Result.Success("log_message " + i);;
-            final Payload singleItemPayload = new Payload.Simple(Collections.singletonMap("key", String.valueOf(i)));
-            itemsPayload.add(Collections.singletonMap("key", String.valueOf(i)));
+            final Payload singleItemPayload = new Payload.Simple(Map.of("key", String.valueOf(i)));
+            itemsPayload.add(Map.of("key", String.valueOf(i)));
             when(executableAction.execute(eq("_action"), eq(ctx), eq(singleItemPayload))).thenReturn(actionResult);
         }
 
-        Payload.Simple payload = new Payload.Simple(Collections.singletonMap("my_path", itemsPayload));
+        Payload.Simple payload = new Payload.Simple(Map.of("my_path", itemsPayload));
         when(ctx.payload()).thenReturn(payload);
         when(executableAction.logger()).thenReturn(logger);
 
@@ -209,12 +208,12 @@ public class ActionWrapperTests extends ESTestCase {
         List<Map<String, String>> itemsPayload = new ArrayList<>();
         for (int i = 0; i < randomMaxIterations + 1; i++) {
             final Action.Result actionResult = new LoggingAction.Result.Success("log_message " + i);;
-            final Payload singleItemPayload = new Payload.Simple(ImmutableMap.of("key", String.valueOf(i)));
-            itemsPayload.add(ImmutableMap.of("key", String.valueOf(i)));
+            final Payload singleItemPayload = new Payload.Simple(Map.of("key", String.valueOf(i)));
+            itemsPayload.add(Map.of("key", String.valueOf(i)));
             when(executableAction.execute(eq("_action"), eq(ctx), eq(singleItemPayload))).thenReturn(actionResult);
         }
 
-        Payload.Simple payload = new Payload.Simple(ImmutableMap.of("my_path", itemsPayload));
+        Payload.Simple payload = new Payload.Simple(Map.of("my_path", itemsPayload));
         when(ctx.payload()).thenReturn(payload);
         when(executableAction.logger()).thenReturn(logger);
 

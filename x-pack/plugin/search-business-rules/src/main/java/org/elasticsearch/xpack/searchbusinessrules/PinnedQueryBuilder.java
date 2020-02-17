@@ -133,13 +133,13 @@ public class PinnedQueryBuilder extends AbstractQueryBuilder<PinnedQueryBuilder>
     
     
     
-    private static final ConstructingObjectParser<PinnedQueryBuilder, XContentParser> PARSER = new ConstructingObjectParser<>(NAME,
+    private static final ConstructingObjectParser<PinnedQueryBuilder, Void> PARSER = new ConstructingObjectParser<>(NAME,
             a -> 
                 {
                     QueryBuilder organicQuery = (QueryBuilder) a[0];
                     @SuppressWarnings("unchecked")
                     List<String> ids = (List<String>) a[1];
-                    return new PinnedQueryBuilder(organicQuery, ids.toArray(new String[0]));
+                    return new PinnedQueryBuilder(organicQuery, ids.toArray(String[]::new));
                 }
              );
     static {
@@ -165,7 +165,7 @@ public class PinnedQueryBuilder extends AbstractQueryBuilder<PinnedQueryBuilder>
     protected QueryBuilder doRewrite(QueryRewriteContext queryShardContext) throws IOException {
         QueryBuilder newOrganicQuery = organicQuery.rewrite(queryShardContext);
         if (newOrganicQuery != organicQuery) {
-            PinnedQueryBuilder result = new PinnedQueryBuilder(newOrganicQuery, ids.toArray(new String[0]));
+            PinnedQueryBuilder result = new PinnedQueryBuilder(newOrganicQuery, ids.toArray(String[]::new));
             result.boost(this.boost);
             return result;
         }

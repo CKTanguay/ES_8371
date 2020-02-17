@@ -29,7 +29,6 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.test.ESTestCase;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -508,7 +507,7 @@ public class SettingsUpdaterTests extends ESTestCase {
 
     private static Setting<String> invalidInIsolationSetting(int index) {
         return Setting.simpleString("invalid.setting" + index,
-            new Setting.Validator<String>() {
+            new Setting.Validator<>() {
 
                 @Override
                 public void validate(final String value) {
@@ -526,7 +525,7 @@ public class SettingsUpdaterTests extends ESTestCase {
 
     private static Setting<String> invalidWithDependenciesSetting(int index) {
         return Setting.simpleString("invalid.setting" + index,
-            new Setting.Validator<String>() {
+            new Setting.Validator<>() {
 
                 @Override
                 public void validate(final String value) {
@@ -556,7 +555,7 @@ public class SettingsUpdaterTests extends ESTestCase {
 
         @Override
         public Iterator<Setting<?>> settings() {
-            final List<Setting<?>> settings = Collections.singletonList(SETTING_FOO_HIGH);
+            final List<Setting<?>> settings = List.of(SETTING_FOO_HIGH);
             return settings.iterator();
         }
 
@@ -578,7 +577,7 @@ public class SettingsUpdaterTests extends ESTestCase {
 
         @Override
         public Iterator<Setting<?>> settings() {
-            final List<Setting<?>> settings = Collections.singletonList(SETTING_FOO_LOW);
+            final List<Setting<?>> settings = List.of(SETTING_FOO_LOW);
             return settings.iterator();
         }
 

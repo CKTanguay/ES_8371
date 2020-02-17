@@ -32,7 +32,7 @@ public interface RejectAwareActionListener<T> extends ActionListener<T> {
      * Return a new listener that delegates failure/reject to errorDelegate but forwards response to responseHandler
      */
     static <X> RejectAwareActionListener<X> withResponseHandler(RejectAwareActionListener<?> errorDelegate, Consumer<X> responseHandler) {
-        return new RejectAwareActionListener<X>() {
+        return new RejectAwareActionListener<>() {
             @Override
             public void onRejection(Exception e) {
                 errorDelegate.onRejection(e);

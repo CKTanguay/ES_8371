@@ -24,8 +24,8 @@ import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.ToXContentObject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.persistent.PersistentTaskParams;
 import org.elasticsearch.tasks.Task;
-import org.elasticsearch.xpack.core.XPackPlugin;
 import org.elasticsearch.xpack.core.ml.MachineLearningField;
 import org.elasticsearch.xpack.core.ml.MlTasks;
 import org.elasticsearch.xpack.core.ml.job.config.Job;
@@ -119,12 +119,12 @@ public class OpenJobAction extends ActionType<AcknowledgedResponse> {
         }
     }
 
-    public static class JobParams implements XPackPlugin.XPackPersistentTaskParams {
+    public static class JobParams implements PersistentTaskParams {
 
         public static final ParseField TIMEOUT = new ParseField("timeout");
         public static final ParseField JOB = new ParseField("job");
 
-        public static ObjectParser<JobParams, Void> PARSER = new ObjectParser<>(MlTasks.JOB_TASK_NAME, true, JobParams::new);
+        public static final ObjectParser<JobParams, Void> PARSER = new ObjectParser<>(MlTasks.JOB_TASK_NAME, true, JobParams::new);
         static {
             PARSER.declareString(JobParams::setJobId, Job.ID);
             PARSER.declareString((params, val) ->
@@ -160,9 +160,7 @@ public class OpenJobAction extends ActionType<AcknowledgedResponse> {
         public JobParams(StreamInput in) throws IOException {
             jobId = in.readString();
             timeout = TimeValue.timeValueMillis(in.readVLong());
-            if (in.getVersion().onOrAfter(Version.V_6_6_0)) {
-                job = in.readOptionalWriteable(Job::new);
-            }
+            job = in.readOptionalWriteable(Job::new);
         }
 
         public String getJobId() {
@@ -199,9 +197,7 @@ public class OpenJobAction extends ActionType<AcknowledgedResponse> {
         public void writeTo(StreamOutput out) throws IOException {
             out.writeString(jobId);
             out.writeVLong(timeout.millis());
-            if (out.getVersion().onOrAfter(Version.V_6_6_0)) {
-                out.writeOptionalWriteable(job);
-            }
+            out.writeOptionalWriteable(job);
         }
 
         @Override

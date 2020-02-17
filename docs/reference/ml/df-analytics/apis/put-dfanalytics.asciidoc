@@ -73,14 +73,12 @@ uses the value you provided for the overridden parameter. The number of rounds
 are reduced respectively. The validation error is estimated in each round by 
 using 4-fold cross validation.
 
-
 [[ml-put-dfanalytics-path-params]]
 ==== {api-path-parms-title}
 
 `<data_frame_analytics_id>`::
-(Required, string) 
+(Required, string)
 include::{docdir}/ml/ml-shared.asciidoc[tag=job-id-data-frame-analytics-define]
-
 
 [[ml-put-dfanalytics-request-body]]
 ==== {api-request-body-title}
@@ -90,10 +88,11 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=job-id-data-frame-analytics-define]
 include::{docdir}/ml/ml-shared.asciidoc[tag=allow-lazy-start]
 
 `analysis`::
-(Required, object) 
+(Required, object)
 The analysis configuration, which contains the information necessary to perform
 one of the following types of analysis: {classification}, {oldetection}, or
 {regression}.
+//include::{docdir}/ml/ml-shared.asciidoc[tag=analysis]
 
 `analysis`.`classification`:::
 (Required^*^, object)
@@ -108,12 +107,12 @@ values unless you fully understand the function of these parameters.
 --
 
 `analysis`.`classification`.`dependent_variable`::::
-(Required, string) 
+(Required, string)
 +
 --
 include::{docdir}/ml/ml-shared.asciidoc[tag=dependent-variable]
 
-The data type of the field must be numeric (`integer`, `short`, `long`, `byte`),
+The data type of the field must be numeric (`integer`, `short`, `long`, `byte`), 
 categorical (`ip`, `keyword`, `text`), or boolean.
 --
 
@@ -145,6 +144,14 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=num-top-classes]
 (Optional, string) 
 include::{docdir}/ml/ml-shared.asciidoc[tag=prediction-field-name]
 
+`analysis`.`classification`.`randomize_seed`::::
+(Optional, long)
+include::{docdir}/ml/ml-shared.asciidoc[tag=randomize-seed]
+
+`analysis`.`classification`.`num_top_feature_importance_values`::::
+(Optional, integer)
+include::{docdir}/ml/ml-shared.asciidoc[tag=num-top-feature-importance-values]
+
 `analysis`.`classification`.`training_percent`::::
 (Optional, integer)
 include::{docdir}/ml/ml-shared.asciidoc[tag=training-percent]
@@ -157,7 +164,7 @@ The configuration information necessary to perform
 `analysis`.`outlier_detection`.`compute_feature_influence`::::
 (Optional, boolean) 
 include::{docdir}/ml/ml-shared.asciidoc[tag=compute-feature-influence]
-
+  
 `analysis`.`outlier_detection`.`feature_influence_threshold`:::: 
 (Optional, double) 
 include::{docdir}/ml/ml-shared.asciidoc[tag=feature-influence-threshold]
@@ -165,15 +172,15 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=feature-influence-threshold]
 `analysis`.`outlier_detection`.`method`::::
 (Optional, string)
 include::{docdir}/ml/ml-shared.asciidoc[tag=method]
-
+  
 `analysis`.`outlier_detection`.`n_neighbors`::::
 (Optional, integer)
 include::{docdir}/ml/ml-shared.asciidoc[tag=n-neighbors]
-
+  
 `analysis`.`outlier_detection`.`outlier_fraction`::::
 (Optional, double) 
 include::{docdir}/ml/ml-shared.asciidoc[tag=outlier-fraction]
-
+  
 `analysis`.`outlier_detection`.`standardization_enabled`::::
 (Optional, boolean) 
 include::{docdir}/ml/ml-shared.asciidoc[tag=standardization-enabled]
@@ -188,6 +195,7 @@ TIP: Advanced parameters are for fine-tuning {reganalysis}. They are set
 automatically by <<ml-hyperparam-optimization,hyperparameter optimization>> 
 to give minimum validation error. It is highly recommended to use the default 
 values unless you fully understand the function of these parameters.
+
 --
 
 `analysis`.`regression`.`dependent_variable`::::
@@ -223,9 +231,17 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=lambda]
 (Optional, string)
 include::{docdir}/ml/ml-shared.asciidoc[tag=prediction-field-name]
 
+`analysis`.`regression`.`num_top_feature_importance_values`::::
+(Optional, integer)
+include::{docdir}/ml/ml-shared.asciidoc[tag=num-top-feature-importance-values]
+
 `analysis`.`regression`.`training_percent`::::
 (Optional, integer)
 include::{docdir}/ml/ml-shared.asciidoc[tag=training-percent]
+
+`analysis`.`regression`.`randomize_seed`::::
+(Optional, long)
+include::{docdir}/ml/ml-shared.asciidoc[tag=randomize-seed]
   
 `analyzed_fields`::
 (Optional, object)
@@ -236,7 +252,7 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=analyzed-fields]
 include::{docdir}/ml/ml-shared.asciidoc[tag=analyzed-fields-excludes]
 
 `analyzed_fields`.`includes`:::
-(Optional, array) 
+(Optional, array)
 include::{docdir}/ml/ml-shared.asciidoc[tag=analyzed-fields-includes]
 
 `description`::
@@ -254,7 +270,6 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=model-memory-limit-dfa]
 `source`::
 (object)
 include::{docdir}/ml/ml-shared.asciidoc[tag=source-put-dfa]
-
 
 [[ml-put-dfanalytics-example]]
 ==== {api-examples-title}
@@ -387,12 +402,12 @@ The API returns the following result:
     },
     "model_memory_limit": "1gb",
     "create_time" : 1562265491319,
-    "version" : "7.5.2",
+    "version" : "8.0.0",
     "allow_lazy_start" : false
 }
 ----
 // TESTRESPONSE[s/1562265491319/$body.$_path/]
-// TESTRESPONSE[s/"version" : "7.5.2"/"version" : $body.version/]
+// TESTRESPONSE[s/"version" : "8.0.0"/"version" : $body.version/]
 
 
 [[ml-put-dfanalytics-example-r]]
@@ -448,12 +463,12 @@ The API returns the following result:
   },
   "model_memory_limit" : "1gb",
   "create_time" : 1567168659127,
-  "version" : "7.5.0",
+  "version" : "8.0.0",
   "allow_lazy_start" : false
 }
 ----
 // TESTRESPONSE[s/1567168659127/$body.$_path/]
-// TESTRESPONSE[s/"version": "7.5.0"/"version": $body.version/]
+// TESTRESPONSE[s/"version": "8.0.0"/"version": $body.version/]
 
 
 The following example creates a job and specifies a training percent:
@@ -472,7 +487,8 @@ PUT _ml/data_frame/analytics/student_performance_mathematics_0.3
    {
      "regression": {
        "dependent_variable": "G3",
-       "training_percent": 70  <1>
+       "training_percent": 70,  <1>
+       "randomize_seed": 19673948271  <2>
      }
    }
 }
@@ -481,6 +497,8 @@ PUT _ml/data_frame/analytics/student_performance_mathematics_0.3
 
 <1> The `training_percent` defines the percentage of the data set that will be 
 used for training the model.
+<2> The `randomize_seed` is the seed used to randomly pick which data is used 
+for training.
 
 
 [[ml-put-dfanalytics-example-c]]

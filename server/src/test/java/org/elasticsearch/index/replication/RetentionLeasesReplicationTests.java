@@ -19,7 +19,6 @@
 
 package org.elasticsearch.index.replication;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.support.PlainActionFuture;
 import org.elasticsearch.action.support.replication.ReplicationResponse;
@@ -152,8 +151,7 @@ public class RetentionLeasesReplicationTests extends ESIndexLevelReplicationTest
     public void testTurnOffTranslogRetentionAfterAllShardStarted() throws Exception {
         final Settings.Builder settings = Settings.builder().put(IndexSettings.INDEX_SOFT_DELETES_SETTING.getKey(), true);
         if (randomBoolean()) {
-            settings.put(IndexMetaData.SETTING_VERSION_CREATED,
-                VersionUtils.randomVersionBetween(random(), Version.V_6_7_0, Version.CURRENT));
+            settings.put(IndexMetaData.SETTING_VERSION_CREATED, VersionUtils.randomIndexCompatibleVersion(random()));
         }
         try (ReplicationGroup group = createGroup(between(1, 2), settings.build())) {
             group.startAll();
@@ -165,9 +163,12 @@ public class RetentionLeasesReplicationTests extends ESIndexLevelReplicationTest
             }
             group.syncGlobalCheckpoint();
             group.flush();
-            for (IndexShard shard : group) {
-                assertThat(shard.translogStats().estimatedNumberOfOperations(), equalTo(0));
-            }
+            assertBusy(() -> {
+                // we turn off the translog retention policy using the generic threadPool
+                for (IndexShard shard : group) {
+                    assertThat(shard.translogStats().estimatedNumberOfOperations(), equalTo(0));
+                }
+            });
         }
     }
 

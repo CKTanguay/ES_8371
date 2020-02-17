@@ -31,7 +31,7 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.test.ESTestCase;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.Set;
 
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
@@ -60,7 +60,7 @@ public class AddVotingConfigExclusionsRequestTests extends ESTestCase {
                 "local",
                 buildNewFakeTransportAddress(),
                 emptyMap(),
-                Collections.singleton(DiscoveryNodeRole.MASTER_ROLE),
+                Set.of(DiscoveryNodeRole.MASTER_ROLE),
                 Version.CURRENT);
         final VotingConfigExclusion localNodeExclusion = new VotingConfigExclusion(localNode);
         final DiscoveryNode otherNode1 = new DiscoveryNode(
@@ -68,7 +68,7 @@ public class AddVotingConfigExclusionsRequestTests extends ESTestCase {
                 "other1",
                 buildNewFakeTransportAddress(),
                 emptyMap(),
-                Collections.singleton(DiscoveryNodeRole.MASTER_ROLE),
+                Set.of(DiscoveryNodeRole.MASTER_ROLE),
                 Version.CURRENT);
         final VotingConfigExclusion otherNode1Exclusion = new VotingConfigExclusion(otherNode1);
         final DiscoveryNode otherNode2 = new DiscoveryNode(
@@ -76,7 +76,7 @@ public class AddVotingConfigExclusionsRequestTests extends ESTestCase {
                 "other2",
                 buildNewFakeTransportAddress(),
                 emptyMap(),
-                Collections.singleton(DiscoveryNodeRole.MASTER_ROLE),
+                Set.of(DiscoveryNodeRole.MASTER_ROLE),
                 Version.CURRENT);
         final VotingConfigExclusion otherNode2Exclusion = new VotingConfigExclusion(otherNode2);
         final DiscoveryNode otherDataNode
@@ -105,7 +105,7 @@ public class AddVotingConfigExclusionsRequestTests extends ESTestCase {
                 "local",
                 buildNewFakeTransportAddress(),
                 emptyMap(),
-                Collections.singleton(DiscoveryNodeRole.MASTER_ROLE),
+                Set.of(DiscoveryNodeRole.MASTER_ROLE),
                 Version.CURRENT);
         final VotingConfigExclusion localNodeExclusion = new VotingConfigExclusion(localNode);
         final DiscoveryNode otherNode1 = new DiscoveryNode(
@@ -113,7 +113,7 @@ public class AddVotingConfigExclusionsRequestTests extends ESTestCase {
                 "other1",
                 buildNewFakeTransportAddress(),
                 emptyMap(),
-                Collections.singleton(DiscoveryNodeRole.MASTER_ROLE),
+                Set.of(DiscoveryNodeRole.MASTER_ROLE),
                 Version.CURRENT);
         final VotingConfigExclusion otherNode1Exclusion = new VotingConfigExclusion(otherNode1);
         final DiscoveryNode otherNode2 = new DiscoveryNode(
@@ -121,7 +121,7 @@ public class AddVotingConfigExclusionsRequestTests extends ESTestCase {
                 "other2",
                 buildNewFakeTransportAddress(),
                 emptyMap(),
-                Collections.singleton(DiscoveryNodeRole.MASTER_ROLE),
+                Set.of(DiscoveryNodeRole.MASTER_ROLE),
                 Version.CURRENT);
         final VotingConfigExclusion otherNode2Exclusion = new VotingConfigExclusion(otherNode2);
 

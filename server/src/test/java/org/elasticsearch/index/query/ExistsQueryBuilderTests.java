@@ -27,7 +27,6 @@ import org.apache.lucene.search.MatchNoDocsQuery;
 import org.apache.lucene.search.NormsFieldExistsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
-import org.elasticsearch.Version;
 import org.elasticsearch.test.AbstractQueryTestCase;
 
 import java.io.IOException;
@@ -63,27 +62,8 @@ public class ExistsQueryBuilderTests extends AbstractQueryTestCase<ExistsQueryBu
         String fieldPattern = queryBuilder.fieldName();
         Collection<String> fields = context.simpleMatchToIndexNames(fieldPattern);
         Collection<String> mappedFields = fields.stream().filter((field) -> context.getObjectMapper(field) != null
-                || context.getMapperService().fullName(field) != null).collect(Collectors.toList());
-        if (context.getIndexSettings().getIndexVersionCreated().before(Version.V_6_1_0)) {
-            if (fields.size() == 1) {
-                assertThat(query, instanceOf(ConstantScoreQuery.class));
-                ConstantScoreQuery constantScoreQuery = (ConstantScoreQuery) query;
-                String field = expectedFieldName(fields.iterator().next());
-                assertThat(constantScoreQuery.getQuery(), instanceOf(TermQuery.class));
-                TermQuery termQuery = (TermQuery) constantScoreQuery.getQuery();
-                assertEquals(field, termQuery.getTerm().text());
-            } else {
-                assertThat(query, instanceOf(ConstantScoreQuery.class));
-                ConstantScoreQuery constantScoreQuery = (ConstantScoreQuery) query;
-                assertThat(constantScoreQuery.getQuery(), instanceOf(BooleanQuery.class));
-                BooleanQuery booleanQuery = (BooleanQuery) constantScoreQuery.getQuery();
-                assertThat(booleanQuery.clauses().size(), equalTo(mappedFields.size()));
-                for (int i = 0; i < mappedFields.size(); i++) {
-                    BooleanClause booleanClause = booleanQuery.clauses().get(i);
-                    assertThat(booleanClause.getOccur(), equalTo(BooleanClause.Occur.SHOULD));
-                }
-            }
-        } else if (fields.size() == 1 && mappedFields.size() == 0) {
+                || context.getMapperService().fieldType(field) != null).collect(Collectors.toList());
+        if (fields.size() == 1 && mappedFields.size() == 0) {
             assertThat(query, instanceOf(MatchNoDocsQuery.class));
             MatchNoDocsQuery matchNoDocsQuery = (MatchNoDocsQuery) query;
             assertThat(matchNoDocsQuery.toString(null),
@@ -102,11 +82,11 @@ public class ExistsQueryBuilderTests extends AbstractQueryTestCase<ExistsQueryBu
                     BooleanClause booleanClause = booleanQuery.clauses().get(i);
                     assertThat(booleanClause.getOccur(), equalTo(BooleanClause.Occur.SHOULD));
                 }
-            } else if (context.getMapperService().fullName(field).hasDocValues()) {
+            } else if (context.getMapperService().fieldType(field).hasDocValues()) {
                 assertThat(constantScoreQuery.getQuery(), instanceOf(DocValuesFieldExistsQuery.class));
                 DocValuesFieldExistsQuery dvExistsQuery = (DocValuesFieldExistsQuery) constantScoreQuery.getQuery();
                 assertEquals(field, dvExistsQuery.getField());
-            } else if (context.getMapperService().fullName(field).omitNorms() == false) {
+            } else if (context.getMapperService().fieldType(field).omitNorms() == false) {
                 assertThat(constantScoreQuery.getQuery(), instanceOf(NormsFieldExistsQuery.class));
                 NormsFieldExistsQuery normsExistsQuery = (NormsFieldExistsQuery) constantScoreQuery.getQuery();
                 assertEquals(field, normsExistsQuery.getField());

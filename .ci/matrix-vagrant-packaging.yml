@@ -6,17 +6,12 @@
 # for the purposes of verifying of Vagrant-based tooling
 
 OS:
-  - centos-6
   - centos-7
-  - debian-8
   - debian-9
   - fedora-28
   - fedora-29
-  - oel-6
   - oel-7
-  - opensuse-42
   - sles-12
-  - ubuntu-1604
   - ubuntu-1804
   - windows-2012r2
   - windows-2016

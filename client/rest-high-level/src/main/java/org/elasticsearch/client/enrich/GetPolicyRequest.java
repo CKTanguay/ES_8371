@@ -20,8 +20,6 @@ package org.elasticsearch.client.enrich;
 
 import org.elasticsearch.client.Validatable;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public final class GetPolicyRequest implements Validatable {
@@ -29,11 +27,11 @@ public final class GetPolicyRequest implements Validatable {
     private final List<String> names;
 
     public GetPolicyRequest() {
-        this(Collections.emptyList());
+        this(List.of());
     }
 
     public GetPolicyRequest(String... names) {
-        this(Arrays.asList(names));
+        this(List.of(names));
     }
 
     public GetPolicyRequest(List<String> names) {

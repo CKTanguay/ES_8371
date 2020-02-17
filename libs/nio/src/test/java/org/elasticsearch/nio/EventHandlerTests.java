@@ -68,9 +68,7 @@ public class EventHandlerTests extends ESTestCase {
         SocketChannel rawChannel = mock(SocketChannel.class);
         when(rawChannel.finishConnect()).thenReturn(true);
         NioSocketChannel channel = new NioSocketChannel(rawChannel);
-        Socket socket = mock(Socket.class);
-        when(rawChannel.socket()).thenReturn(socket);
-        when(socket.getChannel()).thenReturn(rawChannel);
+        when(rawChannel.socket()).thenReturn(mock(Socket.class));
         context = new DoNotRegisterSocketContext(channel, selector, channelExceptionHandler, readWriteHandler);
         channel.setContext(context);
         handler.handleRegistration(context);

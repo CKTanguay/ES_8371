@@ -19,22 +19,16 @@
 
 package org.elasticsearch.client.security.hlrc;
 
-import org.apache.lucene.util.LuceneTestCase;
-import org.elasticsearch.Version;
 import org.elasticsearch.client.AbstractResponseTestCase;
 import org.elasticsearch.client.security.HasPrivilegesResponse;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.MapBuilder;
-import org.elasticsearch.common.io.stream.BytesStreamOutput;
-import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.test.VersionUtils;
 import org.elasticsearch.xpack.core.security.authz.permission.ResourcePrivileges;
-import org.hamcrest.Matchers;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -54,28 +48,6 @@ import static org.hamcrest.Matchers.equalTo;
 public class HasPrivilegesResponseTests extends AbstractResponseTestCase<
     org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse,
     HasPrivilegesResponse> {
-
-    public void testSerializationV64OrV65() throws IOException {
-        final org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse original = randomResponse();
-        final Version version = VersionUtils.randomVersionBetween(LuceneTestCase.random(), Version.V_6_4_0, Version.V_6_5_1);
-        final org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse copy = serializeAndDeserialize(original, version);
-
-        Assert.assertThat(copy.isCompleteMatch(), equalTo(original.isCompleteMatch()));
-        Assert.assertThat(copy.getClusterPrivileges().entrySet(), Matchers.emptyIterable());
-        Assert.assertThat(copy.getIndexPrivileges(), equalTo(original.getIndexPrivileges()));
-        Assert.assertThat(copy.getApplicationPrivileges(), equalTo(original.getApplicationPrivileges()));
-    }
-
-    public void testSerializationV63() throws IOException {
-        final org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse original = randomResponse();
-        final org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse copy =
-            serializeAndDeserialize(original, Version.V_6_3_0);
-
-        Assert.assertThat(copy.isCompleteMatch(), equalTo(original.isCompleteMatch()));
-        Assert.assertThat(copy.getClusterPrivileges().entrySet(), Matchers.emptyIterable());
-        Assert.assertThat(copy.getIndexPrivileges(), equalTo(original.getIndexPrivileges()));
-        Assert.assertThat(copy.getApplicationPrivileges(), equalTo(Collections.emptyMap()));
-    }
 
     public void testToXContent() throws Exception {
         final org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse response =
@@ -123,21 +95,6 @@ public class HasPrivilegesResponseTests extends AbstractResponseTestCase<
         return map.entrySet().stream()
             .map(e -> ResourcePrivileges.builder(e.getKey()).addPrivileges(e.getValue()).build())
             .collect(Collectors.toList());
-    }
-
-    private org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse serializeAndDeserialize(
-        org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse original, Version version) throws IOException {
-        logger.info("Test serialize/deserialize with version {}", version);
-        final BytesStreamOutput out = new BytesStreamOutput();
-        out.setVersion(version);
-        original.writeTo(out);
-
-        final StreamInput in = out.bytes().streamInput();
-        in.setVersion(version);
-        final org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse copy =
-            new org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse(in);
-        Assert.assertThat(in.read(), equalTo(-1));
-        return copy;
     }
 
     private org.elasticsearch.xpack.core.security.action.user.HasPrivilegesResponse randomResponse() {

@@ -8,8 +8,8 @@ package org.elasticsearch.xpack.sql.querydsl.agg;
 import org.elasticsearch.search.aggregations.bucket.composite.CompositeValuesSourceBuilder;
 import org.elasticsearch.search.aggregations.bucket.composite.DateHistogramValuesSourceBuilder;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval;
+import org.elasticsearch.xpack.ql.expression.gen.script.ScriptTemplate;
 import org.elasticsearch.xpack.sql.SqlIllegalArgumentException;
-import org.elasticsearch.xpack.sql.expression.gen.script.ScriptTemplate;
 import org.elasticsearch.xpack.sql.querydsl.container.Sort.Direction;
 
 import java.time.ZoneId;
@@ -43,7 +43,7 @@ public class GroupByDateHistogram extends GroupByKey {
     private GroupByDateHistogram(String id, String fieldName, ScriptTemplate script, Direction direction, long fixedInterval,
             String calendarInterval, ZoneId zoneId) {
         super(id, fieldName, script, direction);
-        if (fixedInterval <= 0 && (calendarInterval == null || calendarInterval.trim().isEmpty())) {
+        if (fixedInterval <= 0 && (calendarInterval == null || calendarInterval.isBlank())) {
             throw new SqlIllegalArgumentException("Either fixed interval or calendar interval needs to be specified");
         }
         this.fixedInterval = fixedInterval;

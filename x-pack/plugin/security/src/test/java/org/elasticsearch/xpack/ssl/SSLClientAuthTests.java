@@ -16,20 +16,14 @@ import org.elasticsearch.client.Request;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
-import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.MockSecureSettings;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.test.SecurityIntegTestCase;
-import org.elasticsearch.transport.Transport;
-import org.elasticsearch.xpack.core.TestXPackTransportClient;
 import org.elasticsearch.xpack.core.XPackSettings;
-import org.elasticsearch.xpack.core.security.SecurityField;
 import org.elasticsearch.xpack.core.ssl.CertParsingUtils;
 import org.elasticsearch.xpack.core.ssl.PemUtils;
 import org.elasticsearch.xpack.core.ssl.SSLClientAuth;
-import org.elasticsearch.xpack.security.LocalStateSecurity;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
@@ -38,8 +32,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.SecureRandom;
@@ -110,7 +102,7 @@ public class SSLClientAuthTests extends SecurityIntegTestCase {
         return true;
     }
 
-    public void testThatHttpFailsWithoutSslClientAuth() {
+    public void testThatHttpFailsWithoutSslClientAuth() throws IOException {
         SSLIOSessionStrategy sessionStrategy = new SSLIOSessionStrategy(SSLContexts.createDefault(), NoopHostnameVerifier.INSTANCE);
         try (RestClient restClient = createRestClient(httpClientBuilder -> httpClientBuilder.setSSLStrategy(sessionStrategy), "https")) {
             restClient.performRequest(new Request("GET", "/"));
@@ -131,44 +123,11 @@ public class SSLClientAuthTests extends SecurityIntegTestCase {
         try (RestClient restClient = createRestClient(httpClientBuilder -> httpClientBuilder.setSSLStrategy(sessionStrategy), "https")) {
             Request request = new Request("GET", "/");
             RequestOptions.Builder options = request.getOptions().toBuilder();
-            options.addHeader("Authorization", basicAuthHeaderValue(transportClientUsername(), transportClientPassword()));
+            options.addHeader("Authorization", basicAuthHeaderValue(nodeClientUsername(), nodeClientPassword()));
             request.setOptions(options);
             Response response = restClient.performRequest(request);
             assertThat(response.getStatusLine().getStatusCode(), equalTo(200));
             assertThat(EntityUtils.toString(response.getEntity()), containsString("You Know, for Search"));
-        }
-    }
-
-    public void testThatTransportWorksWithoutSslClientAuth() {
-        // specify an arbitrary key and certificate - not the certs needed to connect to the transport protocol
-        Path keyPath = getDataPath("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testclient-client-profile.pem");
-        Path certPath = getDataPath("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testclient-client-profile.crt");
-        Path nodeCertPath = getDataPath("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testnode.crt");
-        Path nodeECCertPath = getDataPath("/org/elasticsearch/xpack/security/transport/ssl/certs/simple/testnode_ec.crt");
-
-        if (Files.notExists(keyPath) || Files.notExists(certPath)) {
-            throw new ElasticsearchException("key or certificate path doesn't exist");
-        }
-
-        MockSecureSettings secureSettings = new MockSecureSettings();
-        secureSettings.setString("xpack.security.transport.ssl.secure_key_passphrase", "testclient-client-profile");
-        Settings settings = Settings.builder()
-            .put("xpack.security.transport.ssl.enabled", true)
-            .put("xpack.security.transport.ssl.client_authentication", SSLClientAuth.NONE)
-            .put("xpack.security.transport.ssl.key", keyPath)
-            .put("xpack.security.transport.ssl.certificate", certPath)
-            .putList("xpack.security.transport.ssl.supported_protocols", getProtocols())
-            .putList("xpack.security.transport.ssl.certificate_authorities", nodeCertPath.toString(), nodeECCertPath.toString())
-            .setSecureSettings(secureSettings)
-            .put("cluster.name", internalCluster().getClusterName())
-            .put(SecurityField.USER_SETTING.getKey(), transportClientUsername() + ":" + new String(transportClientPassword().getChars()))
-            .build();
-        try (TransportClient client = new TestXPackTransportClient(settings, LocalStateSecurity.class)) {
-            Transport transport = internalCluster().getDataNodeInstance(Transport.class);
-            TransportAddress transportAddress = transport.boundAddress().publishAddress();
-            client.addTransportAddress(transportAddress);
-
-            assertGreenClusterState(client);
         }
     }
 
@@ -182,13 +141,7 @@ public class SSLClientAuthTests extends SecurityIntegTestCase {
                 (certPath), getDataPath(nodeCertPath), getDataPath(nodeEcCertPath))));
             KeyManager km = CertParsingUtils.keyManager(CertParsingUtils.readCertificates(Collections.singletonList(getDataPath
                 (certPath))), PemUtils.readPrivateKey(getDataPath(keyPath), "testclient"::toCharArray), "testclient".toCharArray());
-
-            final SSLContext context;
-            if (XPackSettings.DEFAULT_SUPPORTED_PROTOCOLS.contains("TLSv1.3")) {
-                context = SSLContext.getInstance(randomBoolean() ? "TLSv1.3" : "TLSv1.2");
-            } else {
-                context = SSLContext.getInstance("TLSv1.2");
-            }
+            SSLContext context = SSLContext.getInstance(inFipsJvm() ? "TLSv1.2" : randomFrom("TLSv1.3", "TLSv1.2"));
             context.init(new KeyManager[] { km }, new TrustManager[] { tm }, new SecureRandom());
             return context;
         } catch (Exception e) {
@@ -213,14 +166,11 @@ public class SSLClientAuthTests extends SecurityIntegTestCase {
      * However if client authentication is turned off and TLSv1.3 is used on the affected JVMs then we will hit this issue.
      */
     private static List<String> getProtocols() {
-        if (JavaVersion.current().compareTo(JavaVersion.parse("11")) < 0) {
-            return XPackSettings.DEFAULT_SUPPORTED_PROTOCOLS;
-        }
         JavaVersion full =
             AccessController.doPrivileged(
                 (PrivilegedAction<JavaVersion>) () -> JavaVersion.parse(System.getProperty("java.version")));
         if (full.compareTo(JavaVersion.parse("11.0.3")) < 0) {
-            return Collections.singletonList("TLSv1.2");
+            return List.of("TLSv1.2");
         }
         return XPackSettings.DEFAULT_SUPPORTED_PROTOCOLS;
     }

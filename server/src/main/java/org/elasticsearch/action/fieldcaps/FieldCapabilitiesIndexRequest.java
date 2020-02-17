@@ -19,7 +19,6 @@
 
 package org.elasticsearch.action.fieldcaps;
 
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.OriginalIndices;
 import org.elasticsearch.action.support.IndicesOptions;
@@ -38,11 +37,7 @@ public class FieldCapabilitiesIndexRequest extends SingleShardRequest<FieldCapab
     FieldCapabilitiesIndexRequest(StreamInput in) throws IOException {
         super(in);
         fields = in.readStringArray();
-        if (in.getVersion().onOrAfter(Version.V_6_2_0)) {
-            originalIndices = OriginalIndices.readOriginalIndices(in);
-        } else {
-            originalIndices = OriginalIndices.NONE;
-        }
+        originalIndices = OriginalIndices.readOriginalIndices(in);
     }
 
     FieldCapabilitiesIndexRequest(String[] fields, String index, OriginalIndices originalIndices) {
@@ -74,9 +69,7 @@ public class FieldCapabilitiesIndexRequest extends SingleShardRequest<FieldCapab
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeStringArray(fields);
-        if (out.getVersion().onOrAfter(Version.V_6_2_0)) {
-            OriginalIndices.writeOriginalIndices(originalIndices, out);
-        }
+        OriginalIndices.writeOriginalIndices(originalIndices, out);
     }
 
     @Override

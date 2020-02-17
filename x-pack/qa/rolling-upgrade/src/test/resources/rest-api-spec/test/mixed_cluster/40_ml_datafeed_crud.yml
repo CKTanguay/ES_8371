@@ -44,7 +44,6 @@ setup:
 
 ---
 "Put job and datafeed without aggs in mixed cluster":
-
   - do:
       ml.put_job:
         job_id: mixed-cluster-datafeed-job-without-aggs
@@ -63,7 +62,6 @@ setup:
                 "time_field":"time"
             }
           }
-
   - do:
       ml.put_datafeed:
         datafeed_id: mixed-cluster-datafeed-without-aggs
@@ -115,6 +113,7 @@ setup:
 
   - do:
       warnings:
+        - '[interval] on [date_histogram] is deprecated, use [fixed_interval] or [calendar_interval] in the future.'
         - '[interval] on [date_histogram] is deprecated, use [fixed_interval] or [calendar_interval] in the future.'
       ml.put_datafeed:
         datafeed_id: mixed-cluster-datafeed-with-aggs

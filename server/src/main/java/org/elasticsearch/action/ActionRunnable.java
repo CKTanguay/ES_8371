@@ -39,7 +39,7 @@ public abstract class ActionRunnable<Response> extends AbstractRunnable {
      * @return Wrapped {@code Runnable}
      */
     public static <T> ActionRunnable<T> run(ActionListener<T> listener, CheckedRunnable<Exception> runnable) {
-        return new ActionRunnable<T>(listener) {
+        return new ActionRunnable<>(listener) {
             @Override
             protected void doRun() throws Exception {
                 runnable.run();
@@ -67,7 +67,7 @@ public abstract class ActionRunnable<Response> extends AbstractRunnable {
      * @return Wrapped {@code Runnable}
      */
     public static <T> ActionRunnable<T> wrap(ActionListener<T> listener, CheckedConsumer<ActionListener<T>, Exception> consumer) {
-        return new ActionRunnable<T>(listener) {
+        return new ActionRunnable<>(listener) {
             @Override
             protected void doRun() throws Exception {
                 consumer.accept(listener);

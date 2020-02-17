@@ -36,6 +36,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xpack.core.XPackField;
 import org.elasticsearch.xpack.core.XPackSettings;
+import org.elasticsearch.xpack.core.ml.MlConfigIndex;
 import org.elasticsearch.xpack.core.ml.MlMetadata;
 import org.elasticsearch.xpack.core.ml.action.PutDatafeedAction;
 import org.elasticsearch.xpack.core.ml.datafeed.DatafeedConfig;
@@ -100,7 +101,7 @@ public class TransportPutDatafeedAction extends TransportMasterNodeAction<PutDat
     }
 
     @Override
-    protected void masterOperation(PutDatafeedAction.Request request, ClusterState state,
+    protected void masterOperation(Task task, PutDatafeedAction.Request request, ClusterState state,
                                    ActionListener<PutDatafeedAction.Response> listener) {
         // If security is enabled only create the datafeed if the user requesting creation has
         // permission to read the indices the datafeed is going to read from
@@ -210,7 +211,7 @@ public class TransportPutDatafeedAction extends TransportMasterNodeAction<PutDat
             }
             ElasticsearchMappings.addDocMappingIfMissing(
                 AnomalyDetectorsIndex.configIndexName(),
-                ElasticsearchMappings::configMapping,
+                MlConfigIndex::mapping,
                 client,
                 clusterState,
                 ActionListener.wrap(mappingsUpdated, listener::onFailure));

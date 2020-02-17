@@ -250,7 +250,6 @@ The search request returns the following response:
     "hits" : [
       {
         "_index" : "drivers",
-        "_type" : "_doc",
         "_id" : "1",
         "_score" : 3.7349272,
         "_source" : {

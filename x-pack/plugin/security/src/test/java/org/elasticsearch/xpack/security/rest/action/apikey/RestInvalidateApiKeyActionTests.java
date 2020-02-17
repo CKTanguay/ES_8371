@@ -22,7 +22,6 @@ import org.elasticsearch.env.Environment;
 import org.elasticsearch.license.XPackLicenseState;
 import org.elasticsearch.rest.AbstractRestChannel;
 import org.elasticsearch.rest.RestChannel;
-import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.test.ESTestCase;
@@ -31,8 +30,8 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.xpack.core.security.action.InvalidateApiKeyRequest;
 import org.elasticsearch.xpack.core.security.action.InvalidateApiKeyResponse;
 
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
@@ -42,7 +41,6 @@ import static org.mockito.Mockito.when;
 
 public class RestInvalidateApiKeyActionTests extends ESTestCase {
     private final XPackLicenseState mockLicenseState = mock(XPackLicenseState.class);
-    private final RestController mockRestController = mock(RestController.class);
     private Settings settings = null;
     private ThreadPool threadPool = null;
 
@@ -106,8 +104,7 @@ public class RestInvalidateApiKeyActionTests extends ESTestCase {
                 }
             }
         }) {
-            final RestInvalidateApiKeyAction restInvalidateApiKeyAction = new RestInvalidateApiKeyAction(Settings.EMPTY, mockRestController,
-                    mockLicenseState);
+            final RestInvalidateApiKeyAction restInvalidateApiKeyAction = new RestInvalidateApiKeyAction(Settings.EMPTY, mockLicenseState);
 
             restInvalidateApiKeyAction.handleRequest(restRequest, restChannel, client);
 
@@ -145,9 +142,9 @@ public class RestInvalidateApiKeyActionTests extends ESTestCase {
         };
 
         final InvalidateApiKeyResponse invalidateApiKeyResponseExpectedWhenOwnerFlagIsTrue = new InvalidateApiKeyResponse(
-            Collections.singletonList("api-key-id-1"), Collections.emptyList(), null);
+            List.of("api-key-id-1"), Collections.emptyList(), null);
         final InvalidateApiKeyResponse invalidateApiKeyResponseExpectedWhenOwnerFlagIsFalse = new InvalidateApiKeyResponse(
-            Arrays.asList("api-key-id-1", "api-key-id-2"), Collections.emptyList(), null);
+            List.of("api-key-id-1", "api-key-id-2"), Collections.emptyList(), null);
 
         try (NodeClient client = new NodeClient(Settings.EMPTY, threadPool) {
             @SuppressWarnings("unchecked")
@@ -168,8 +165,7 @@ public class RestInvalidateApiKeyActionTests extends ESTestCase {
                 }
             }
         }) {
-            final RestInvalidateApiKeyAction restInvalidateApiKeyAction = new RestInvalidateApiKeyAction(Settings.EMPTY, mockRestController,
-                mockLicenseState);
+            final RestInvalidateApiKeyAction restInvalidateApiKeyAction = new RestInvalidateApiKeyAction(Settings.EMPTY, mockLicenseState);
 
             restInvalidateApiKeyAction.handleRequest(restRequest, restChannel, client);
 

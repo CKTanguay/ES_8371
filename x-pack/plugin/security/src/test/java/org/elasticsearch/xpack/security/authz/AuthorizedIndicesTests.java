@@ -24,7 +24,6 @@ import org.elasticsearch.xpack.core.security.authz.store.ReservedRolesStore;
 import org.elasticsearch.xpack.core.security.index.RestrictedIndicesNames;
 import org.elasticsearch.xpack.security.authz.store.CompositeRolesStore;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -88,8 +87,7 @@ public class AuthorizedIndicesTests extends ESTestCase {
     }
 
     public void testSecurityIndicesAreRemovedFromRegularUser() {
-        Role role = Role.builder("user_role").add(IndexPrivilege.ALL, "*").cluster(Collections.singleton("all"), Collections.emptySet())
-            .build();
+        Role role = Role.builder("user_role").add(IndexPrivilege.ALL, "*").cluster(Set.of("all"), Set.of()).build();
         List<String> authorizedIndices =
             RBACEngine.resolveAuthorizedIndicesFromRole(role, SearchAction.NAME, MetaData.EMPTY_META_DATA.getAliasAndIndexLookup());
         assertTrue(authorizedIndices.isEmpty());
@@ -98,7 +96,7 @@ public class AuthorizedIndicesTests extends ESTestCase {
     public void testSecurityIndicesAreRestrictedForDefaultRole() {
         Role role = Role.builder(randomFrom("user_role", ReservedRolesStore.SUPERUSER_ROLE_DESCRIPTOR.getName()))
                 .add(IndexPrivilege.ALL, "*")
-                .cluster(Collections.singleton("all"), Collections.emptySet())
+                .cluster(Set.of("all"), Set.of())
                 .build();
         Settings indexSettings = Settings.builder().put("index.version.created", Version.CURRENT).build();
         final String internalSecurityIndex = randomFrom(RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_6,
@@ -125,7 +123,7 @@ public class AuthorizedIndicesTests extends ESTestCase {
     public void testSecurityIndicesAreNotRemovedFromUnrestrictedRole() {
         Role role = Role.builder(randomAlphaOfLength(8))
                 .add(FieldPermissions.DEFAULT, null, IndexPrivilege.ALL, true, "*")
-                .cluster(Collections.singleton("all"), Collections.emptySet())
+                .cluster(Set.of("all"), Set.of())
                 .build();
         Settings indexSettings = Settings.builder().put("index.version.created", Version.CURRENT).build();
         final String internalSecurityIndex = randomFrom(RestrictedIndicesNames.INTERNAL_SECURITY_MAIN_INDEX_6,

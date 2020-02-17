@@ -1,7 +1,7 @@
 [role="xpack"]
 [testenv="basic"]
 [[set-up-lifecycle-policy]]
-== Set up {ilm} policy
+== Create lifecycle policy
 
 In order for an index to use an {ilm} policy to manage its lifecycle we must
 first define a lifecycle policy for it to use. The following request creates a
@@ -68,6 +68,16 @@ PUT _template/my_template
 with `test-`
 <2> The template will set the policy to be used to `my_policy`
 
+//////////////////////////
+
+[source,console]
+--------------------------------------------------
+DELETE /_template/my_template
+--------------------------------------------------
+// TEST[continued]
+
+//////////////////////////
+
 Now that a policy exists and is used in an index template we can create an
 initial index which will be managed by our policy:
 
@@ -107,7 +117,8 @@ PUT test-index
 -----------------------
 
 
-IMPORTANT: Its recommended not to use the create index API with a policy that
+IMPORTANT: Do not to use the create index API with a policy that
 defines a rollover action. If you do so, the new index as the result of the
-rollover will not carry forward the policy. Always use index templates to
-define policies with rollover actions.
+rollover will not carry forward the policy. Always use
+<<applying-policy-to-template, index templates>> to define policies with rollover
+actions.

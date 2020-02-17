@@ -14,9 +14,8 @@ IP filtering, and auditing.
 * <<saml-guide>>
 * <<oidc-guide>>
 * <<authorization>>
-* <<auditing>>
+* <<enable-audit-logging>>
 * <<encrypting-communications>>
-* <<ip-filtering>>
 * <<ccs-clients-integrations>>
 * <<security-getting-started>>
 * <<encrypting-internode-communications>>
@@ -26,15 +25,25 @@ IP filtering, and auditing.
 --
 
 include::overview.asciidoc[]
-include::configuring-es.asciidoc[]
-include::authentication/index.asciidoc[]
-include::authorization/index.asciidoc[]
-include::auditing/index.asciidoc[]
-include::securing-communications/index.asciidoc[]
-include::using-ip-filtering.asciidoc[]
-include::ccs-clients-integrations/index.asciidoc[]
-include::get-started-security.asciidoc[]
-include::securing-communications/tutorial-tls-intro.asciidoc[]
-include::troubleshooting.asciidoc[]
-include::limitations.asciidoc[]
 
+include::configuring-es.asciidoc[]
+
+include::authentication/index.asciidoc[]
+
+include::authorization/index.asciidoc[]
+
+include::auditing/index.asciidoc[]
+
+include::securing-communications/index.asciidoc[]
+
+include::using-ip-filtering.asciidoc[]
+
+include::ccs-clients-integrations/index.asciidoc[]
+
+include::get-started-security.asciidoc[]
+
+include::securing-communications/tutorial-tls-intro.asciidoc[]
+
+include::troubleshooting.asciidoc[]
+
+include::limitations.asciidoc[]

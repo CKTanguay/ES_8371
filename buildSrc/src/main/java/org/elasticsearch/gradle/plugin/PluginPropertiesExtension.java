@@ -49,8 +49,6 @@ public class PluginPropertiesExtension {
     /** A license file that should be included in the built plugin zip. */
     private File licenseFile;
 
-    private boolean hasClientJar = false;
-
     /**
      * A notice file that should be included in the built plugin zip. This will be
      * extended with notices from the {@code licenses/} directory.
@@ -139,13 +137,5 @@ public class PluginPropertiesExtension {
 
     public void setExtendedPlugins(List<String> extendedPlugins) {
         this.extendedPlugins = extendedPlugins;
-    }
-
-    public boolean isHasClientJar() {
-        return hasClientJar;
-    }
-
-    public void setHasClientJar(boolean hasClientJar) {
-        this.hasClientJar = hasClientJar;
     }
 }

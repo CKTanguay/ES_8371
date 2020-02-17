@@ -22,9 +22,6 @@ package org.elasticsearch.cluster.node;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.node.Node;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -140,8 +137,7 @@ public abstract class DiscoveryNodeRole {
     /**
      * The built-in node roles.
      */
-    public static Set<DiscoveryNodeRole> BUILT_IN_ROLES =
-            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(DATA_ROLE, INGEST_ROLE, MASTER_ROLE)));
+    public static Set<DiscoveryNodeRole> BUILT_IN_ROLES = Set.of(DATA_ROLE, INGEST_ROLE, MASTER_ROLE);
 
     /**
      * Represents an unknown role. This can occur if a newer version adds a role that an older version does not know about, or a newer

@@ -209,12 +209,6 @@ public class DatafeedConfig extends AbstractDiffable<DatafeedConfig> implements 
         } else {
             this.indices = null;
         }
-        // This consumes the list of types if there was one.
-        if (in.getVersion().before(Version.V_7_0_0)) {
-            if (in.readBoolean()) {
-                in.readStringList();
-            }
-        }
         // each of these writables are version aware
         this.queryProvider = QueryProvider.fromStream(in);
         // This reads a boolean from the stream, if true, it sends the stream to the `fromStream` method
@@ -227,16 +221,8 @@ public class DatafeedConfig extends AbstractDiffable<DatafeedConfig> implements 
         }
         this.scrollSize = in.readOptionalVInt();
         this.chunkingConfig = in.readOptionalWriteable(ChunkingConfig::new);
-        if (in.getVersion().onOrAfter(Version.V_6_2_0)) {
-            this.headers = Collections.unmodifiableMap(in.readMap(StreamInput::readString, StreamInput::readString));
-        } else {
-            this.headers = Collections.emptyMap();
-        }
-        if (in.getVersion().onOrAfter(Version.V_6_6_0)) {
-            delayedDataCheckConfig = in.readOptionalWriteable(DelayedDataCheckConfig::new);
-        } else {
-            delayedDataCheckConfig = DelayedDataCheckConfig.defaultDelayedDataCheckConfig();
-        }
+        this.headers = Collections.unmodifiableMap(in.readMap(StreamInput::readString, StreamInput::readString));
+        delayedDataCheckConfig = in.readOptionalWriteable(DelayedDataCheckConfig::new);
         if (in.getVersion().onOrAfter(Version.V_7_5_0)) {
             maxEmptySearches = in.readOptionalVInt();
         } else {
@@ -426,12 +412,6 @@ public class DatafeedConfig extends AbstractDiffable<DatafeedConfig> implements 
         } else {
             out.writeBoolean(false);
         }
-        // Write the now removed types to prior versions.
-        // An empty list is expected
-        if (out.getVersion().before(Version.V_7_0_0)) {
-            out.writeBoolean(true);
-            out.writeStringCollection(Collections.emptyList());
-        }
 
         // Each of these writables are version aware
         queryProvider.writeTo(out); // never null
@@ -446,12 +426,8 @@ public class DatafeedConfig extends AbstractDiffable<DatafeedConfig> implements 
         }
         out.writeOptionalVInt(scrollSize);
         out.writeOptionalWriteable(chunkingConfig);
-        if (out.getVersion().onOrAfter(Version.V_6_2_0)) {
-            out.writeMap(headers, StreamOutput::writeString, StreamOutput::writeString);
-        }
-        if (out.getVersion().onOrAfter(Version.V_6_6_0)) {
-            out.writeOptionalWriteable(delayedDataCheckConfig);
-        }
+        out.writeMap(headers, StreamOutput::writeString, StreamOutput::writeString);
+        out.writeOptionalWriteable(delayedDataCheckConfig);
         if (out.getVersion().onOrAfter(Version.V_7_5_0)) {
             out.writeOptionalVInt(maxEmptySearches);
         }
@@ -462,7 +438,7 @@ public class DatafeedConfig extends AbstractDiffable<DatafeedConfig> implements 
         builder.startObject();
         builder.field(ID.getPreferredName(), id);
         builder.field(Job.ID.getPreferredName(), jobId);
-        if (params.paramAsBoolean(ToXContentParams.INCLUDE_TYPE, false) == true) {
+        if (params.paramAsBoolean(ToXContentParams.FOR_INTERNAL_STORAGE, false)) {
             builder.field(CONFIG_TYPE.getPreferredName(), TYPE);
         }
         builder.field(QUERY_DELAY.getPreferredName(), queryDelay.getStringRep());
@@ -485,7 +461,7 @@ public class DatafeedConfig extends AbstractDiffable<DatafeedConfig> implements 
         if (chunkingConfig != null) {
             builder.field(CHUNKING_CONFIG.getPreferredName(), chunkingConfig);
         }
-        if (headers.isEmpty() == false && params.paramAsBoolean(ToXContentParams.FOR_INTERNAL_STORAGE, false) == true) {
+        if (headers.isEmpty() == false && params.paramAsBoolean(ToXContentParams.FOR_INTERNAL_STORAGE, false)) {
             builder.field(HEADERS.getPreferredName(), headers);
         }
         if (delayedDataCheckConfig != null) {

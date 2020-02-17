@@ -43,6 +43,7 @@ import java.util.stream.Stream;
 public class Shell {
 
     public static final int TAIL_WHEN_TOO_MUCH_OUTPUT = 1000;
+    public static final Result NO_OP = new Shell.Result(0, "","");
     protected final Logger logger =  LogManager.getLogger(getClass());
 
     final Map<String, String> env = new HashMap<>();
@@ -50,6 +51,14 @@ public class Shell {
 
     public Shell() {
         this.workingDirectory = null;
+    }
+
+    /**
+     * Reset the shell to its newly created state.
+     */
+    public void reset() {
+        env.clear();
+        workingDirectory = null;
     }
 
     public Map<String, String> getEnv() {
@@ -93,11 +102,17 @@ public class Shell {
         ));
     }
 
-    public Result run( String command, Object... args) {
+    public void extractZip(Path zipPath, Path destinationDir) throws Exception {
+        Platforms.onLinux(() -> run("unzip \"" + zipPath + "\" -d \"" + destinationDir + "\""));
+        Platforms.onWindows(() -> run("Expand-Archive -Path \"" + zipPath + "\" -DestinationPath \"" + destinationDir + "\""));
+    }
+
+    public Result run(String command, Object... args) {
         String formattedCommand = String.format(Locale.ROOT, command, args);
         return run(formattedCommand);
     }
-    private String[] getScriptCommand(String script) {
+
+    protected String[] getScriptCommand(String script) {
         if (Platforms.WINDOWS) {
             return powershellCommand(script);
         } else {
@@ -106,14 +121,15 @@ public class Shell {
     }
 
     private static String[] bashCommand(String script) {
-        return Stream.concat(Stream.of("bash", "-c"), Stream.of(script)).toArray(String[]::new);
+        return new String[] { "bash", "-c", script };
     }
 
     private static String[] powershellCommand(String script) {
-        return Stream.concat(Stream.of("powershell.exe", "-Command"), Stream.of(script)).toArray(String[]::new);
+        return new String[] { "powershell.exe", "-Command", script };
     }
 
     private Result runScript(String[] command) {
+        logger.warn("Running command with env: " + env);
         Result result = runScriptIgnoreExitCode(command);
         if (result.isSuccess() == false) {
             throw new RuntimeException("Command was not successful: [" + String.join(" ", command) + "]\n   result: " + result.toString());
@@ -155,7 +171,7 @@ public class Shell {
                     readFileIfExists(stdErr)
                 );
                 throw new IllegalStateException(
-                    "Timed out running shell command: " + command + "\n" +
+                    "Timed out running shell command: " + Arrays.toString(command) + "\n" +
                     "Result:\n" + result
                 );
             }

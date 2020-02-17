@@ -182,7 +182,7 @@ public class RetentionLeases implements ToXContentFragment, Writeable {
     private static final ParseField LEASES_FIELD = new ParseField("leases");
 
     @SuppressWarnings("unchecked")
-    private static ConstructingObjectParser<RetentionLeases, Void> PARSER = new ConstructingObjectParser<>(
+    private static final ConstructingObjectParser<RetentionLeases, Void> PARSER = new ConstructingObjectParser<>(
             "retention_leases",
             (a) -> new RetentionLeases((Long) a[0], (Long) a[1], (Collection<RetentionLease>) a[2]));
 
@@ -217,7 +217,7 @@ public class RetentionLeases implements ToXContentFragment, Writeable {
         return PARSER.apply(parser, null);
     }
 
-    static final MetaDataStateFormat<RetentionLeases> FORMAT = new MetaDataStateFormat<RetentionLeases>("retention-leases-") {
+    static final MetaDataStateFormat<RetentionLeases> FORMAT = new MetaDataStateFormat<>("retention-leases-") {
 
         @Override
         public void toXContent(final XContentBuilder builder, final RetentionLeases retentionLeases) throws IOException {

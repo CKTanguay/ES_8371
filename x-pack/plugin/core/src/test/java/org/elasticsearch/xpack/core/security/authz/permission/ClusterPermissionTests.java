@@ -19,7 +19,6 @@ import org.elasticsearch.xpack.core.security.authz.privilege.ConfigurableCluster
 import org.junit.Before;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -91,7 +90,7 @@ public class ClusterPermissionTests extends ESTestCase {
 
     public void testClusterPermissionCheckWithEmptyActionPatterns() {
         final ClusterPermission.Builder builder = ClusterPermission.builder();
-        builder.add(cpThatDoesNothing, Collections.emptySet(), Collections.emptySet());
+        builder.add(cpThatDoesNothing, Set.of(), Set.of());
         final ClusterPermission clusterPermission = builder.build();
 
         assertThat(clusterPermission.check("cluster:admin/ilm/start", mockTransportRequest, mockAuthentication), is(false));
@@ -101,7 +100,7 @@ public class ClusterPermissionTests extends ESTestCase {
 
     public void testClusterPermissionCheckWithExcludeOnlyActionPatterns() {
         final ClusterPermission.Builder builder = ClusterPermission.builder();
-        builder.add(cpThatDoesNothing, Collections.emptySet(), Collections.singleton("cluster:some/thing/to/exclude"));
+        builder.add(cpThatDoesNothing, Set.of(), Set.of("cluster:some/thing/to/exclude"));
         final ClusterPermission clusterPermission = builder.build();
 
         assertThat(clusterPermission.check("cluster:admin/ilm/start", mockTransportRequest, mockAuthentication), is(false));
@@ -111,7 +110,7 @@ public class ClusterPermissionTests extends ESTestCase {
 
     public void testClusterPermissionCheckWithActionPatterns() {
         final ClusterPermission.Builder builder = ClusterPermission.builder();
-        builder.add(cpThatDoesNothing, Collections.singleton("cluster:admin/*"), Collections.singleton("cluster:admin/ilm/*"));
+        builder.add(cpThatDoesNothing, Set.of("cluster:admin/*"), Set.of("cluster:admin/ilm/*"));
         final ClusterPermission clusterPermission = builder.build();
 
         assertThat(clusterPermission.check("cluster:admin/ilm/start", mockTransportRequest, mockAuthentication), is(false));
@@ -121,7 +120,7 @@ public class ClusterPermissionTests extends ESTestCase {
 
     public void testClusterPermissionCheckWithActionPatternsAndNoExludePatterns() {
         final ClusterPermission.Builder builder = ClusterPermission.builder();
-        builder.add(cpThatDoesNothing, Collections.singleton("cluster:admin/*"), Collections.emptySet());
+        builder.add(cpThatDoesNothing, Set.of("cluster:admin/*"), Set.of());
         final ClusterPermission clusterPermission = builder.build();
 
         assertThat(clusterPermission.check("cluster:admin/ilm/start", mockTransportRequest, mockAuthentication), is(true));
@@ -283,7 +282,7 @@ public class ClusterPermissionTests extends ESTestCase {
 
         @Override
         public ClusterPermission.Builder buildPermission(ClusterPermission.Builder builder) {
-            return builder.add(this, Collections.singleton("cluster:admin/xpack/security/privilege/*"), requestPredicate);
+            return builder.add(this, Set.of("cluster:admin/xpack/security/privilege/*"), requestPredicate);
         }
     }
 }

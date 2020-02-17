@@ -61,8 +61,7 @@ public class GeoHashGridIT extends ESIntegTestCase {
         return false;
     }
 
-    private Version version = VersionUtils.randomVersionBetween(random(), Version.V_6_0_0,
-            Version.CURRENT);
+    private Version version = VersionUtils.randomIndexCompatibleVersion(random());
 
     static ObjectIntMap<String> expectedDocCountsForGeoHash = null;
     static ObjectIntMap<String> multiValuedExpectedDocCountsForGeoHash = null;
@@ -76,7 +75,7 @@ public class GeoHashGridIT extends ESIntegTestCase {
             source = source.field("location", latLon);
         }
         source = source.endObject();
-        return client().prepareIndex(index, "type").setSource(source);
+        return client().prepareIndex(index).setSource(source);
     }
 
     private static IndexRequestBuilder indexCity(String index, String name, String latLon) throws Exception {
@@ -90,7 +89,7 @@ public class GeoHashGridIT extends ESIntegTestCase {
         Settings settings = Settings.builder().put(IndexMetaData.SETTING_VERSION_CREATED, version).build();
 
         assertAcked(prepareCreate("idx").setSettings(settings)
-                .addMapping("type", "location", "type=geo_point", "city", "type=keyword"));
+                .setMapping("location", "type=geo_point", "city", "type=keyword"));
 
         List<IndexRequestBuilder> cities = new ArrayList<>();
         Random random = random();
@@ -115,7 +114,7 @@ public class GeoHashGridIT extends ESIntegTestCase {
         indexRandom(true, cities);
 
         assertAcked(prepareCreate("multi_valued_idx").setSettings(settings)
-                .addMapping("type", "location", "type=geo_point", "city", "type=keyword"));
+                .setMapping("location", "type=geo_point", "city", "type=keyword"));
 
         cities = new ArrayList<>();
         multiValuedExpectedDocCountsForGeoHash = new ObjectIntHashMap<>(numDocs * 2);

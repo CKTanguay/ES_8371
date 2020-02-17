@@ -109,4 +109,4 @@ the job. For example:
 }
 ----
 
-For more information about these properties, see <ml-get-job-stats-results>>.
+For more information about these properties, see <<ml-get-job-stats-results>>.

@@ -103,9 +103,9 @@ public class LoggedExec extends Exec {
 
     private static final Pattern NEWLINE = Pattern.compile(System.lineSeparator());
 
-    private static <T extends BaseExecSpec>  ExecResult genericExec(
+    private static <T extends BaseExecSpec> ExecResult genericExec(
         Project project,
-        Function<Action<T>,ExecResult> function,
+        Function<Action<T>, ExecResult> function,
         Action<T> action
     ) {
         if (project.getLogger().isInfoEnabled()) {
@@ -125,7 +125,10 @@ public class LoggedExec extends Exec {
             });
         } catch (Exception e) {
             try {
-                NEWLINE.splitAsStream(output.toString("UTF-8")).forEach(s -> project.getLogger().error("| " + s));
+                if (output.size() != 0) {
+                    project.getLogger().error("Exec output and error:");
+                    NEWLINE.splitAsStream(output.toString("UTF-8")).forEach(s -> project.getLogger().error("| " + s));
+                }
             } catch (UnsupportedEncodingException ue) {
                 throw new GradleException("Failed to read exec output", ue);
             }

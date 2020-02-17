@@ -64,7 +64,7 @@ public class PivotTests extends ESTestCase {
     @Before
     public void registerAggregationNamedObjects() throws Exception {
         // register aggregations as NamedWriteable
-        SearchModule searchModule = new SearchModule(Settings.EMPTY, false, emptyList());
+        SearchModule searchModule = new SearchModule(Settings.EMPTY, emptyList());
         namedXContentRegistry = new NamedXContentRegistry(searchModule.getNamedXContents());
     }
 
@@ -84,16 +84,6 @@ public class PivotTests extends ESTestCase {
     @Override
     protected NamedXContentRegistry xContentRegistry() {
         return namedXContentRegistry;
-    }
-
-
-    /*
-      Had to disable warnings because tests get random date histo configs, and changing to
-      new interval format was non-trivial.  Best for ML team to fix
-     */
-    @Override
-    protected boolean enableWarningsCheck() {
-        return false;
     }
 
     public void testValidateExistingIndex() throws Exception {
@@ -266,7 +256,7 @@ public class PivotTests extends ESTestCase {
         }));
 
         assertTrue(latch.await(100, TimeUnit.MILLISECONDS));
-        if (expectValid == true && exceptionHolder.get() != null) {
+        if (expectValid && exceptionHolder.get() != null) {
             throw exceptionHolder.get();
         } else if (expectValid == false && exceptionHolder.get() == null) {
             fail("Expected config to be invalid");

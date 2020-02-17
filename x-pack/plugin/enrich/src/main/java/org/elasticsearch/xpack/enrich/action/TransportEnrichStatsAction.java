@@ -17,6 +17,7 @@ import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xpack.core.enrich.action.EnrichStatsAction;
@@ -66,6 +67,7 @@ public class TransportEnrichStatsAction extends TransportMasterNodeAction<Enrich
 
     @Override
     protected void masterOperation(
+        Task task,
         EnrichStatsAction.Request request,
         ClusterState state,
         ActionListener<EnrichStatsAction.Response> listener

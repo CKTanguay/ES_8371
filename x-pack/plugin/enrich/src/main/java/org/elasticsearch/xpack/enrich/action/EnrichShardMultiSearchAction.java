@@ -39,7 +39,6 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.text.Text;
 import org.elasticsearch.common.xcontent.DeprecationHandler;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -68,8 +67,8 @@ import org.elasticsearch.xpack.core.enrich.EnrichPolicy;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -158,8 +157,7 @@ public class EnrichShardMultiSearchAction extends ActionType<MultiSearchResponse
         }
 
         private SearchSourceBuilder copy(SearchSourceBuilder source) {
-            SearchModule searchModule = new SearchModule(Settings.EMPTY, false, Collections.emptyList());
-            NamedWriteableRegistry registry = new NamedWriteableRegistry(searchModule.getNamedWriteables());
+            NamedWriteableRegistry registry = new NamedWriteableRegistry(new SearchModule(Settings.EMPTY, List.of()).getNamedWriteables());
             try (BytesStreamOutput output = new BytesStreamOutput()) {
                 source.writeTo(output);
                 try (StreamInput in = new NamedWriteableAwareStreamInput(output.bytes().streamInput(), registry)) {
@@ -239,7 +237,6 @@ public class EnrichShardMultiSearchAction extends ActionType<MultiSearchResponse
                     null
                 );
                 final MapperService mapperService = context.getMapperService();
-                final Text typeText = mapperService.documentMapper().typeText();
 
                 final MultiSearchResponse.Item[] items = new MultiSearchResponse.Item[request.multiSearchRequest.requests().size()];
                 for (int i = 0; i < request.multiSearchRequest.requests().size(); i++) {
@@ -261,7 +258,7 @@ public class EnrichShardMultiSearchAction extends ActionType<MultiSearchResponse
                         visitor.reset();
                         searcher.doc(scoreDoc.doc, visitor);
                         visitor.postProcess(mapperService);
-                        final SearchHit hit = new SearchHit(scoreDoc.doc, visitor.uid().id(), typeText, Collections.emptyMap());
+                        final SearchHit hit = new SearchHit(scoreDoc.doc, visitor.id(), Map.of());
                         hit.sourceRef(filterSource(fetchSourceContext, visitor.source()));
                         hits[j] = hit;
                     }
@@ -278,8 +275,8 @@ public class EnrichShardMultiSearchAction extends ActionType<MultiSearchResponse
             return source;
         }
 
-        Set<String> includes = new HashSet<>(Arrays.asList(fetchSourceContext.includes()));
-        Set<String> excludes = new HashSet<>(Arrays.asList(fetchSourceContext.excludes()));
+        Set<String> includes = Set.of(fetchSourceContext.includes());
+        Set<String> excludes = Set.of(fetchSourceContext.excludes());
 
         XContentBuilder builder = new XContentBuilder(
             XContentType.SMILE.xContent(),

@@ -29,6 +29,7 @@ import org.elasticsearch.action.admin.indices.open.OpenIndexRequest;
 import org.elasticsearch.action.admin.indices.settings.put.UpdateSettingsRequest;
 import org.elasticsearch.action.support.ActiveShardCount;
 import org.elasticsearch.action.support.replication.ClusterStateCreationUtils;
+import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.cluster.ClusterChangedEvent;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.action.shard.ShardStateAction;
@@ -500,6 +501,7 @@ public class IndicesClusterStateServiceRandomUpdatesTests extends AbstractIndice
             transportService, null, clusterService);
         final ShardStateAction shardStateAction = mock(ShardStateAction.class);
         final PrimaryReplicaSyncer primaryReplicaSyncer = mock(PrimaryReplicaSyncer.class);
+        final NodeClient client = mock(NodeClient.class);
         return new IndicesClusterStateService(
                 settings,
                 indicesService,
@@ -512,10 +514,12 @@ public class IndicesClusterStateServiceRandomUpdatesTests extends AbstractIndice
                 null,
                 null,
                 null,
-                null,
                 primaryReplicaSyncer,
-                s -> {},
-                RetentionLeaseSyncer.EMPTY);
+                RetentionLeaseSyncer.EMPTY,
+                client) {
+            @Override
+            protected void updateGlobalCheckpointForShard(final ShardId shardId) {}
+        };
     }
 
     private class RecordingIndicesService extends MockIndicesService {

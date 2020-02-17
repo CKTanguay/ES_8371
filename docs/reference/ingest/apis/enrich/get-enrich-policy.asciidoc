@@ -54,8 +54,6 @@ GET /_enrich/policy/my-policy
 
 `GET /_enrich/policy`
 
-`GET /_enrich/policy1,policy2`
-
 
 [[get-enrich-policy-api-prereqs]]
 ==== {api-prereq-title}
@@ -129,7 +127,7 @@ GET /_enrich/policy/my-policy,other-policy
 
 The API returns the following response:
 
-[source,js]
+[source,console-result]
 --------------------------------------------------
 {
     "policies": [
@@ -168,7 +166,6 @@ The API returns the following response:
     ]
 }
 --------------------------------------------------
-// TESTRESPONSE
 
 
 [[get-enrich-policy-api-all-ex]]

@@ -5,7 +5,6 @@
  */
 package org.elasticsearch.xpack.ccr.action;
 
-import com.carrotsearch.hppc.cursors.ObjectCursor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
@@ -144,14 +143,12 @@ public class ShardFollowTasksExecutor extends PersistentTasksExecutor<ShardFollo
 
                 CcrRequests.getIndexMetadata(remoteClient, leaderIndex, minRequiredMappingVersion, 0L, timeout, ActionListener.wrap(
                     indexMetaData -> {
-                        if (indexMetaData.getMappings().isEmpty()) {
+                        if (indexMetaData.mapping() == null) {
                             assert indexMetaData.getMappingVersion() == 1;
                             handler.accept(indexMetaData.getMappingVersion());
                             return;
                         }
-                        assert indexMetaData.getMappings().size() == 1 : "expected exactly one mapping, but got [" +
-                            indexMetaData.getMappings().size() + "]";
-                        MappingMetaData mappingMetaData = indexMetaData.getMappings().iterator().next().value;
+                        MappingMetaData mappingMetaData = indexMetaData.mapping();
                         PutMappingRequest putMappingRequest = CcrRequests.putMappingRequest(followerIndex.getName(), mappingMetaData);
                         followerClient.admin().indices().putMapping(putMappingRequest, ActionListener.wrap(
                             putMappingResponse -> handler.accept(indexMetaData.getMappingVersion()),
@@ -238,21 +235,21 @@ public class ShardFollowTasksExecutor extends PersistentTasksExecutor<ShardFollo
                  *
                  * For aliases that are on the follower but not the leader, we remove those aliases from the follower.
                  */
-                final Index leaderIndex = params.getLeaderShardId().getIndex();
-                final Index followerIndex = params.getFollowShardId().getIndex();
+                final var leaderIndex = params.getLeaderShardId().getIndex();
+                final var followerIndex = params.getFollowShardId().getIndex();
 
-                final ClusterStateRequest clusterStateRequest = CcrRequests.metaDataRequest(leaderIndex.getName());
+                final var clusterStateRequest = CcrRequests.metaDataRequest(leaderIndex.getName());
 
                 final CheckedConsumer<ClusterStateResponse, Exception> onResponse = clusterStateResponse -> {
-                    final IndexMetaData leaderIndexMetaData = clusterStateResponse.getState().metaData().getIndexSafe(leaderIndex);
-                    final IndexMetaData followerIndexMetaData = clusterService.state().metaData().getIndexSafe(followerIndex);
+                    final var leaderIndexMetaData = clusterStateResponse.getState().metaData().getIndexSafe(leaderIndex);
+                    final var followerIndexMetaData = clusterService.state().metaData().getIndexSafe(followerIndex);
 
                     // partition the aliases into the three sets
-                    final HashSet<String> aliasesOnLeaderNotOnFollower = new HashSet<>();
-                    final HashSet<String> aliasesInCommon = new HashSet<>();
-                    final HashSet<String> aliasesOnFollowerNotOnLeader = new HashSet<>();
+                    final var aliasesOnLeaderNotOnFollower = new HashSet<String>();
+                    final var aliasesInCommon = new HashSet<String>();
+                    final var aliasesOnFollowerNotOnLeader = new HashSet<String>();
 
-                    for (final ObjectCursor<String> aliasName : leaderIndexMetaData.getAliases().keys()) {
+                    for (final var aliasName : leaderIndexMetaData.getAliases().keys()) {
                         if (followerIndexMetaData.getAliases().containsKey(aliasName.value)) {
                             aliasesInCommon.add(aliasName.value);
                         } else {
@@ -260,7 +257,7 @@ public class ShardFollowTasksExecutor extends PersistentTasksExecutor<ShardFollo
                         }
                     }
 
-                    for (final ObjectCursor<String> aliasName : followerIndexMetaData.getAliases().keys()) {
+                    for (final var aliasName : followerIndexMetaData.getAliases().keys()) {
                         if (leaderIndexMetaData.getAliases().containsKey(aliasName.value)) {
                             assert aliasesInCommon.contains(aliasName.value) : aliasName.value;
                         } else {
@@ -268,11 +265,11 @@ public class ShardFollowTasksExecutor extends PersistentTasksExecutor<ShardFollo
                         }
                     }
 
-                    final List<IndicesAliasesRequest.AliasActions> aliasActions = new ArrayList<>();
+                    final var aliasActions = new ArrayList<IndicesAliasesRequest.AliasActions>();
 
                     // add the aliases the follower does not have
-                    for (final String aliasName : aliasesOnLeaderNotOnFollower) {
-                        final AliasMetaData alias = leaderIndexMetaData.getAliases().get(aliasName);
+                    for (final var aliasName : aliasesOnLeaderNotOnFollower) {
+                        final var alias = leaderIndexMetaData.getAliases().get(aliasName);
                         // we intentionally override that the alias is not a write alias as follower indices do not receive direct writes
                         aliasActions.add(IndicesAliasesRequest.AliasActions.add()
                                 .index(followerIndex.getName())
@@ -284,16 +281,16 @@ public class ShardFollowTasksExecutor extends PersistentTasksExecutor<ShardFollo
                     }
 
                     // update the aliases that are different (ignoring write aliases)
-                    for (final String aliasName : aliasesInCommon) {
-                        final AliasMetaData leaderAliasMetaData = leaderIndexMetaData.getAliases().get(aliasName);
+                    for (final var aliasName : aliasesInCommon) {
+                        final var leaderAliasMetaData = leaderIndexMetaData.getAliases().get(aliasName);
                         // we intentionally override that the alias is not a write alias as follower indices do not receive direct writes
-                        final AliasMetaData leaderAliasMetaDataWithoutWriteIndex = new AliasMetaData.Builder(aliasName)
+                        final var leaderAliasMetaDataWithoutWriteIndex = new AliasMetaData.Builder(aliasName)
                                 .filter(leaderAliasMetaData.filter())
                                 .indexRouting(leaderAliasMetaData.indexRouting())
                                 .searchRouting(leaderAliasMetaData.searchRouting())
                                 .writeIndex(false)
                                 .build();
-                        final AliasMetaData followerAliasMetaData = followerIndexMetaData.getAliases().get(aliasName);
+                        final var followerAliasMetaData = followerIndexMetaData.getAliases().get(aliasName);
                         if (leaderAliasMetaDataWithoutWriteIndex.equals(followerAliasMetaData)) {
                             // skip this alias, the leader and follower have the same modulo the write index
                             continue;
@@ -309,14 +306,14 @@ public class ShardFollowTasksExecutor extends PersistentTasksExecutor<ShardFollo
                     }
 
                     // remove aliases that the leader no longer has
-                    for (final String aliasName : aliasesOnFollowerNotOnLeader) {
+                    for (final var aliasName : aliasesOnFollowerNotOnLeader) {
                         aliasActions.add(IndicesAliasesRequest.AliasActions.remove().index(followerIndex.getName()).alias(aliasName));
                     }
 
                     if (aliasActions.isEmpty()) {
                         handler.accept(leaderIndexMetaData.getAliasesVersion());
                     } else {
-                        final IndicesAliasesRequest request = new IndicesAliasesRequest();
+                        final var request = new IndicesAliasesRequest();
                         request.origin("ccr");
                         aliasActions.forEach(request::addAliasAction);
                         followerClient.admin().indices().aliases(

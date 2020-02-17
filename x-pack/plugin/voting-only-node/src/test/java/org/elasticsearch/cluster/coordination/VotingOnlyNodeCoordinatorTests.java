@@ -17,6 +17,7 @@ import org.elasticsearch.transport.TransportInterceptor;
 import org.junit.BeforeClass;
 
 import java.util.Collections;
+import java.util.Set;
 
 import static java.util.Collections.emptySet;
 
@@ -65,7 +66,7 @@ public class VotingOnlyNodeCoordinatorTests extends AbstractCoordinatorTestCase 
             UUIDs.randomBase64UUID(random()), // generated deterministically for repeatable tests
             address.address().getHostString(), address.getAddress(), address, Collections.emptyMap(),
             masterEligible ? DiscoveryNodeRole.BUILT_IN_ROLES :
-                randomBoolean() ? emptySet() : Sets.newHashSet(DiscoveryNodeRole.DATA_ROLE, DiscoveryNodeRole.INGEST_ROLE,
+                randomBoolean() ? emptySet() : Set.of(DiscoveryNodeRole.DATA_ROLE, DiscoveryNodeRole.INGEST_ROLE,
                     DiscoveryNodeRole.MASTER_ROLE, VotingOnlyNodePlugin.VOTING_ONLY_NODE_ROLE), Version.CURRENT);
     }
 

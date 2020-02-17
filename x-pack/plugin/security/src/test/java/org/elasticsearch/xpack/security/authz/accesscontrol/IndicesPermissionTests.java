@@ -43,7 +43,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.hamcrest.Matchers.is;
 
 public class IndicesPermissionTests extends ESTestCase {
 
@@ -214,7 +213,7 @@ public class IndicesPermissionTests extends ESTestCase {
         assertEquals(readIndicesPrivileges, indicesPrivileges.build());
 
         out = new BytesStreamOutput();
-        out.setVersion(Version.V_6_0_0);
+        out.setVersion(Version.CURRENT);
         indicesPrivileges = RoleDescriptor.IndicesPrivileges.builder();
         indicesPrivileges.grantedFields(allowed);
         indicesPrivileges.deniedFields(denied);
@@ -224,7 +223,7 @@ public class IndicesPermissionTests extends ESTestCase {
         indicesPrivileges.build().writeTo(out);
         out.close();
         in = out.bytes().streamInput();
-        in.setVersion(Version.V_6_0_0);
+        in.setVersion(Version.CURRENT);
         RoleDescriptor.IndicesPrivileges readIndicesPrivileges2 = new RoleDescriptor.IndicesPrivileges(in);
         assertEquals(readIndicesPrivileges, readIndicesPrivileges2);
     }
@@ -321,6 +320,32 @@ public class IndicesPermissionTests extends ESTestCase {
                 fieldPermissionsCache);
         assertThat(authzMap.get(internalSecurityIndex).isGranted(), is(true));
         assertThat(authzMap.get(RestrictedIndicesNames.SECURITY_MAIN_ALIAS).isGranted(), is(true));
+    }
+
+    public void testAsyncSearchIndicesPermissions() {
+        final Settings indexSettings = Settings.builder().put("index.version.created", Version.CURRENT).build();
+        final String asyncSearchIndex = RestrictedIndicesNames.ASYNC_SEARCH_PREFIX + randomAlphaOfLengthBetween(0, 2);
+        final MetaData metaData = new MetaData.Builder()
+                .put(new IndexMetaData.Builder(asyncSearchIndex)
+                        .settings(indexSettings)
+                        .numberOfShards(1)
+                        .numberOfReplicas(0)
+                        .build(), true)
+                .build();
+        FieldPermissionsCache fieldPermissionsCache = new FieldPermissionsCache(Settings.EMPTY);
+        SortedMap<String, AliasOrIndex> lookup = metaData.getAliasAndIndexLookup();
+
+        // allow_restricted_indices: false
+        IndicesPermission.Group group = new IndicesPermission.Group(IndexPrivilege.ALL, new FieldPermissions(), null, false, "*");
+        Map<String, IndicesAccessControl.IndexAccessControl> authzMap = new IndicesPermission(group).authorize(SearchAction.NAME,
+                Sets.newHashSet(asyncSearchIndex), lookup, fieldPermissionsCache);
+        assertThat(authzMap.get(asyncSearchIndex).isGranted(), is(false));
+
+        // allow_restricted_indices: true
+        group = new IndicesPermission.Group(IndexPrivilege.ALL, new FieldPermissions(), null, true, "*");
+        authzMap = new IndicesPermission(group).authorize(SearchAction.NAME,
+                Sets.newHashSet(asyncSearchIndex), lookup, fieldPermissionsCache);
+        assertThat(authzMap.get(asyncSearchIndex).isGranted(), is(true));
     }
 
     private static FieldPermissionsDefinition fieldPermissionDef(String[] granted, String[] denied) {

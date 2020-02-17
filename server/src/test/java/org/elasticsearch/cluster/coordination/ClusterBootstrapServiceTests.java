@@ -33,6 +33,7 @@ import org.junit.Before;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -44,7 +45,6 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
 import static org.elasticsearch.cluster.coordination.ClusterBootstrapService.BOOTSTRAP_PLACEHOLDER_PREFIX;
 import static org.elasticsearch.cluster.coordination.ClusterBootstrapService.INITIAL_MASTER_NODES_SETTING;
 import static org.elasticsearch.cluster.coordination.ClusterBootstrapService.UNCONFIGURED_BOOTSTRAP_TIMEOUT_SETTING;
@@ -93,7 +93,7 @@ public class ClusterBootstrapServiceTests extends ESTestCase {
                 randomAlphaOfLength(10),
                 buildNewFakeTransportAddress(),
                 emptyMap(),
-                Collections.singleton(DiscoveryNodeRole.MASTER_ROLE),
+                Set.of(DiscoveryNodeRole.MASTER_ROLE),
                 Version.CURRENT);
     }
 
@@ -158,19 +158,6 @@ public class ClusterBootstrapServiceTests extends ESTestCase {
         clusterBootstrapService.scheduleUnconfiguredBootstrap();
         deterministicTaskQueue.runAllTasks();
     }
-
-    public void testDoesNothingByDefaultIfZen1NodesDiscovered() {
-        final DiscoveryNode zen1Node = new DiscoveryNode("zen1", buildNewFakeTransportAddress(), singletonMap("zen1", "true"),
-            Collections.singleton(DiscoveryNodeRole.MASTER_ROLE), Version.CURRENT);
-        ClusterBootstrapService clusterBootstrapService = new ClusterBootstrapService(Settings.EMPTY, transportService, () ->
-            Stream.of(localNode, zen1Node).collect(Collectors.toSet()), () -> false, vc -> {
-            throw new AssertionError("should not be called");
-        });
-        transportService.start();
-        clusterBootstrapService.scheduleUnconfiguredBootstrap();
-        deterministicTaskQueue.runAllTasks();
-    }
-
 
     public void testThrowsExceptionOnDuplicates() {
         final IllegalArgumentException illegalArgumentException = expectThrows(IllegalArgumentException.class, () -> {
@@ -358,23 +345,7 @@ public class ClusterBootstrapServiceTests extends ESTestCase {
         deterministicTaskQueue.runAllTasks();
     }
 
-    public void testDoesNotBootstrapsIfZen1NodesDiscovered() {
-        final DiscoveryNode zen1Node = new DiscoveryNode("zen1", buildNewFakeTransportAddress(), singletonMap("zen1", "true"),
-            Collections.singleton(DiscoveryNodeRole.MASTER_ROLE), Version.CURRENT);
-
-        ClusterBootstrapService clusterBootstrapService = new ClusterBootstrapService(Settings.builder().putList(
-            INITIAL_MASTER_NODES_SETTING.getKey(), localNode.getName(), otherNode1.getName(), otherNode2.getName()).build(),
-            transportService, () -> Stream.of(otherNode1, otherNode2, zen1Node).collect(Collectors.toList()), () -> false, vc -> {
-            throw new AssertionError("should not be called");
-        });
-
-        transportService.start();
-        clusterBootstrapService.onFoundPeersUpdated();
-        deterministicTaskQueue.runAllTasks();
-    }
-
     public void testRetriesBootstrappingOnException() {
-
         final AtomicLong bootstrappingAttempts = new AtomicLong();
         ClusterBootstrapService clusterBootstrapService = new ClusterBootstrapService(Settings.builder().putList(
             INITIAL_MASTER_NODES_SETTING.getKey(), localNode.getName(), otherNode1.getName(), otherNode2.getName()).build(),
@@ -430,14 +401,14 @@ public class ClusterBootstrapServiceTests extends ESTestCase {
                         randomAlphaOfLength(10),
                         buildNewFakeTransportAddress(),
                         emptyMap(),
-                        Collections.singleton(DiscoveryNodeRole.MASTER_ROLE),
+                        Set.of(DiscoveryNodeRole.MASTER_ROLE),
                         Version.CURRENT),
                 new DiscoveryNode(
                         "yet-another-node",
                         randomAlphaOfLength(10),
                         otherNode1.getAddress(),
                         emptyMap(),
-                        Collections.singleton(DiscoveryNodeRole.MASTER_ROLE),
+                        Set.of(DiscoveryNodeRole.MASTER_ROLE),
                         Version.CURRENT))
                 .collect(Collectors.toList()));
 

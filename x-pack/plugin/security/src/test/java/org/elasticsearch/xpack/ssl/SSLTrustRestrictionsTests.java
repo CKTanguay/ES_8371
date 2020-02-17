@@ -66,7 +66,6 @@ public class SSLTrustRestrictionsTests extends SecurityIntegTestCase {
     protected int maxNumberOfNodes() {
         // We are trying to test the SSL configuration for which clients/nodes may join a cluster
         // We prefer the cluster to only have 1 node, so that the SSL checking doesn't happen until the test methods run
-        // (That's not _quite_ true, because the base setup code checks the cluster using transport client, but it's the best we can do)
         return 1;
     }
 
@@ -148,15 +147,6 @@ public class SSLTrustRestrictionsTests extends SecurityIntegTestCase {
     }
 
     @Override
-    protected Settings transportClientSettings() {
-        Settings parentSettings = super.transportClientSettings();
-        Settings.Builder builder = Settings.builder()
-                .put(parentSettings.filter((s) -> s.startsWith("xpack.security.transport.ssl.") == false))
-                .put(nodeSSL);
-        return builder.build();
-    }
-
-    @Override
     protected boolean transportSSLEnabled() {
         return true;
     }
@@ -223,6 +213,7 @@ public class SSLTrustRestrictionsTests extends SecurityIntegTestCase {
     private void tryConnect(CertificateInfo certificate, boolean shouldFail) throws Exception {
         Settings settings = Settings.builder()
                 .put("path.home", createTempDir())
+                .put("xpack.security.transport.ssl.enabled", true)
                 .put("xpack.security.transport.ssl.key", certificate.getKeyPath())
                 .put("xpack.security.transport.ssl.certificate", certificate.getCertPath())
                 .putList("xpack.security.transport.ssl.certificate_authorities", ca.getCertPath().toString())
@@ -230,7 +221,7 @@ public class SSLTrustRestrictionsTests extends SecurityIntegTestCase {
                 .build();
 
         String node = randomFrom(internalCluster().getNodeNames());
-        SSLService sslService = new SSLService(settings, TestEnvironment.newEnvironment(settings));
+        SSLService sslService = new SSLService(TestEnvironment.newEnvironment(settings));
         SSLConfiguration sslConfiguration = sslService.getSSLConfiguration("xpack.security.transport.ssl");
         SSLSocketFactory sslSocketFactory = sslService.sslSocketFactory(sslConfiguration);
         TransportAddress address = internalCluster().getInstance(Transport.class, node).boundAddress().publishAddress();

@@ -35,9 +35,9 @@ public class RequestValidators<T extends ActionRequest> {
 
         public Optional<Exception> validateRequest(final T request, final ClusterState state, final Index[] indices) {
             Exception exception = null;
-            for (final RequestValidator<T> validator : validators) {
+            for (final var validator : validators) {
                 final Optional<Exception> maybeException = validator.validateRequest(request, state, indices);
-                if (maybeException.isPresent() == false) continue;
+                if (maybeException.isEmpty()) continue;
                 if (exception == null) {
                     exception = maybeException.get();
                 } else {

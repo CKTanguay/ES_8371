@@ -33,7 +33,7 @@ import org.elasticsearch.snapshots.SnapshotState;
 import org.elasticsearch.snapshots.mockstore.MockRepository;
 import org.elasticsearch.test.ESIntegTestCase;
 import org.elasticsearch.xpack.core.LocalStateCompositeXPackPlugin;
-import org.elasticsearch.xpack.core.XPackSettings;
+import org.elasticsearch.xpack.core.ilm.LifecycleSettings;
 import org.elasticsearch.xpack.core.slm.SnapshotInvocationRecord;
 import org.elasticsearch.xpack.core.slm.SnapshotLifecyclePolicy;
 import org.elasticsearch.xpack.core.slm.SnapshotLifecyclePolicyItem;
@@ -43,7 +43,6 @@ import org.elasticsearch.xpack.core.slm.action.ExecuteSnapshotRetentionAction;
 import org.elasticsearch.xpack.core.slm.action.GetSnapshotLifecycleAction;
 import org.elasticsearch.xpack.core.slm.action.PutSnapshotLifecycleAction;
 import org.elasticsearch.xpack.ilm.IndexLifecycle;
-import org.junit.After;
 import org.junit.Before;
 
 import java.util.Arrays;
@@ -55,7 +54,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.elasticsearch.index.mapper.MapperService.SINGLE_MAPPING_NAME;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.empty;
@@ -72,6 +70,13 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
     static final String REPO = "my-repo";
     List<String> dataNodeNames = null;
 
+    @Override
+    protected Settings nodeSettings(int nodeOrdinal) {
+        return Settings.builder().put(super.nodeSettings(nodeOrdinal))
+            .put(LifecycleSettings.LIFECYCLE_HISTORY_INDEX_ENABLED, false)
+            .build();
+    }
+
     @Before
     public void ensureClusterNodes() {
         logger.info("--> starting enough nodes to ensure we have enough to safely stop for tests");
@@ -80,66 +85,17 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
         ensureGreen();
     }
 
-    @After
-    public void resetSLMSettings() throws Exception {
-        // Cancel/delete all snapshots
-        assertBusy(() -> {
-            logger.info("--> wiping all snapshots after test");
-            client().admin().cluster().prepareGetSnapshots(REPO).get().getSnapshots()
-                .forEach(snapshotInfo -> {
-                    try {
-                        client().admin().cluster().prepareDeleteSnapshot(REPO, snapshotInfo.snapshotId().getName()).get();
-                    } catch (Exception e) {
-                        logger.warn("exception cleaning up snapshot " + snapshotInfo.snapshotId().getName(), e);
-                        fail("exception cleanup up snapshot");
-                    }
-                });
-        });
-    }
-
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
         return Arrays.asList(MockRepository.Plugin.class, LocalStateCompositeXPackPlugin.class, IndexLifecycle.class);
     }
 
-    @Override
-    protected Settings nodeSettings(int nodeOrdinal) {
-        Settings.Builder settings = Settings.builder().put(super.nodeSettings(nodeOrdinal));
-        settings.put(XPackSettings.INDEX_LIFECYCLE_ENABLED.getKey(), true);
-        settings.put(XPackSettings.MACHINE_LEARNING_ENABLED.getKey(), false);
-        settings.put(XPackSettings.SECURITY_ENABLED.getKey(), false);
-        settings.put(XPackSettings.WATCHER_ENABLED.getKey(), false);
-        settings.put(XPackSettings.MONITORING_ENABLED.getKey(), false);
-        settings.put(XPackSettings.GRAPH_ENABLED.getKey(), false);
-        settings.put(XPackSettings.LOGSTASH_ENABLED.getKey(), false);
-        return settings.build();
-    }
-
-    @Override
-    protected Collection<Class<? extends Plugin>> transportClientPlugins() {
-        return Arrays.asList(LocalStateCompositeXPackPlugin.class, IndexLifecycle.class);
-    }
-
-    @Override
-    protected Settings transportClientSettings() {
-        Settings.Builder settings = Settings.builder().put(super.transportClientSettings());
-        settings.put(XPackSettings.INDEX_LIFECYCLE_ENABLED.getKey(), true);
-        settings.put(XPackSettings.MACHINE_LEARNING_ENABLED.getKey(), false);
-        settings.put(XPackSettings.SECURITY_ENABLED.getKey(), false);
-        settings.put(XPackSettings.WATCHER_ENABLED.getKey(), false);
-        settings.put(XPackSettings.MONITORING_ENABLED.getKey(), false);
-        settings.put(XPackSettings.GRAPH_ENABLED.getKey(), false);
-        settings.put(XPackSettings.LOGSTASH_ENABLED.getKey(), false);
-        return settings.build();
-    }
-
-    @AwaitsFix(bugUrl = "https://github.com/elastic/elasticsearch/issues/47689")
     public void testSnapshotInProgress() throws Exception {
         final String indexName = "test";
         final String policyName = "test-policy";
         int docCount = 20;
         for (int i = 0; i < docCount; i++) {
-            index(indexName, "_doc", i + "", Collections.singletonMap("foo", "bar"));
+            index(indexName, i + "", Collections.singletonMap("foo", "bar"));
         }
 
         // Create a snapshot repo
@@ -149,7 +105,6 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
         createSnapshotPolicy(policyName, "snap", NEVER_EXECUTE_CRON_SCHEDULE, REPO, indexName, true);
 
         logger.info("--> blocking master from completing snapshot");
-        blockAllDataNodes(REPO);
         blockMasterFromFinalizingSnapshotOnIndexFile(REPO);
 
         logger.info("--> executing snapshot lifecycle");
@@ -167,12 +122,12 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
             SnapshotLifecyclePolicyItem.SnapshotInProgress inProgress = item.getSnapshotInProgress();
             assertThat(inProgress.getSnapshotId().getName(), equalTo(snapshotName));
             assertThat(inProgress.getStartTime(), greaterThan(0L));
-            assertThat(inProgress.getState(), anyOf(equalTo(SnapshotsInProgress.State.INIT), equalTo(SnapshotsInProgress.State.STARTED)));
+            assertThat(inProgress.getState(), anyOf(equalTo(SnapshotsInProgress.State.INIT), equalTo(SnapshotsInProgress.State.STARTED),
+                equalTo(SnapshotsInProgress.State.SUCCESS)));
             assertNull(inProgress.getFailure());
         });
 
         logger.info("--> unblocking snapshots");
-        unblockAllDataNodes(REPO);
         unblockRepo(REPO);
 
         // Cancel/delete the snapshot
@@ -188,7 +143,7 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
         final String policyId = "slm-policy";
         int docCount = 20;
         for (int i = 0; i < docCount; i++) {
-            index(indexName, "_doc", null, Collections.singletonMap("foo", "bar"));
+            index(indexName, null, Collections.singletonMap("foo", "bar"));
         }
 
         initializeRepo(REPO);
@@ -222,7 +177,7 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
 
         logger.info("--> indexing more docs to force new segment files");
         for (int i = 0; i < docCount; i++) {
-            index(indexName, "_doc", null, Collections.singletonMap("foo", "bar"));
+            index(indexName, null, Collections.singletonMap("foo", "bar"));
         }
         refresh(indexName);
 
@@ -303,10 +258,8 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
         }
     }
 
-    @AwaitsFix(bugUrl = "https://github.com/elastic/elasticsearch/issues/47937")
     public void testBasicFailureRetention() throws Exception {
         testUnsuccessfulSnapshotRetention(false);
-
     }
 
     public void testBasicPartialRetention() throws Exception {
@@ -356,7 +309,7 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
                 try {
                     GetSnapshotsResponse snapshotsStatusResponse = client().admin().cluster()
                         .prepareGetSnapshots(REPO).setSnapshots(failedSnapshotName.get()).get();
-                    SnapshotInfo snapshotInfo = snapshotsStatusResponse.getSnapshots().get(0);
+                    SnapshotInfo snapshotInfo = snapshotsStatusResponse.getSnapshots(REPO).get(0);
                     assertEquals(expectedUnsuccessfulState, snapshotInfo.state());
                 } catch (SnapshotMissingException ex) {
                     logger.info("failed to find snapshot {}, retrying", failedSnapshotName);
@@ -394,7 +347,7 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
             assertBusy(() -> {
                 GetSnapshotsResponse snapshotsStatusResponse = client().admin().cluster()
                     .prepareGetSnapshots(REPO).setSnapshots(successfulSnapshotName.get()).get();
-                SnapshotInfo snapshotInfo = snapshotsStatusResponse.getSnapshots().get(0);
+                SnapshotInfo snapshotInfo = snapshotsStatusResponse.getSnapshots(REPO).get(0);
                 assertEquals(SnapshotState.SUCCESS, snapshotInfo.state());
             });
         }
@@ -404,7 +357,7 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
             logger.info("-->  verify that snapshot [{}] still exists", failedSnapshotName.get());
             GetSnapshotsResponse snapshotsStatusResponse = client().admin().cluster()
                 .prepareGetSnapshots(REPO).setSnapshots(failedSnapshotName.get()).get();
-            SnapshotInfo snapshotInfo = snapshotsStatusResponse.getSnapshots().get(0);
+            SnapshotInfo snapshotInfo = snapshotsStatusResponse.getSnapshots(REPO).get(0);
             assertEquals(expectedUnsuccessfulState, snapshotInfo.state());
         }
 
@@ -418,7 +371,7 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
                     try {
                         GetSnapshotsResponse snapshotsStatusResponse = client().admin().cluster()
                             .prepareGetSnapshots(REPO).setSnapshots(failedSnapshotName.get()).get();
-                        assertThat(snapshotsStatusResponse.getSnapshots(), empty());
+                        assertThat(snapshotsStatusResponse.getSnapshots(REPO), empty());
                     } catch (SnapshotMissingException e) {
                         // This is what we want to happen
                     }
@@ -426,7 +379,7 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
                         expectedUnsuccessfulState, failedSnapshotName.get(), successfulSnapshotName.get());
                     GetSnapshotsResponse snapshotsStatusResponse = client().admin().cluster()
                         .prepareGetSnapshots(REPO).setSnapshots(successfulSnapshotName.get()).get();
-                    SnapshotInfo snapshotInfo = snapshotsStatusResponse.getSnapshots().get(0);
+                    SnapshotInfo snapshotInfo = snapshotsStatusResponse.getSnapshots(REPO).get(0);
                     assertEquals(SnapshotState.SUCCESS, snapshotInfo.state());
                 } catch (RepositoryException re) {
                     // Concurrent status calls and write operations may lead to failures in determining the current repository generation
@@ -442,7 +395,7 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
         final String policyName = "test-policy";
         int docCount = 20;
         for (int i = 0; i < docCount; i++) {
-            index(indexName, "_doc", i + "", Collections.singletonMap("foo", "bar"));
+            index(indexName, i + "", Collections.singletonMap("foo", "bar"));
         }
 
         // Create a snapshot repo
@@ -485,7 +438,7 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
                 try {
                     GetSnapshotsResponse snapshotsStatusResponse = client().admin().cluster()
                         .prepareGetSnapshots(REPO).setSnapshots(snapshotName).get();
-                    assertThat(snapshotsStatusResponse.getSnapshots(), empty());
+                    assertThat(snapshotsStatusResponse.getSnapshots(REPO), empty());
                 } catch (SnapshotMissingException e) {
                     // This is what we want to happen
                 }
@@ -526,7 +479,7 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
         final int numdocs = randomIntBetween(50, 100);
         IndexRequestBuilder[] builders = new IndexRequestBuilder[numdocs];
         for (int i = 0; i < builders.length; i++) {
-            builders[i] = client().prepareIndex(indexName, SINGLE_MAPPING_NAME, Integer.toString(i)).setSource("field1", "bar " + i);
+            builders[i] = client().prepareIndex(indexName).setId(Integer.toString(i)).setSource("field1", "bar " + i);
         }
         indexRandom(true, builders);
         flushAndRefresh();
@@ -542,13 +495,13 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
             .get();
     }
 
-    private void createSnapshotPolicy(String policyName, String snapshotNamePattern, String schedule, String REPO,
+    private void createSnapshotPolicy(String policyName, String snapshotNamePattern, String schedule, String repoId,
                                       String indexPattern, boolean ignoreUnavailable) {
-        createSnapshotPolicy(policyName, snapshotNamePattern, schedule, REPO, indexPattern,
+        createSnapshotPolicy(policyName, snapshotNamePattern, schedule, repoId, indexPattern,
             ignoreUnavailable, false, SnapshotRetentionConfiguration.EMPTY);
     }
 
-    private void createSnapshotPolicy(String policyName, String snapshotNamePattern, String schedule, String REPO,
+    private void createSnapshotPolicy(String policyName, String snapshotNamePattern, String schedule, String repoId,
                                       String indexPattern, boolean ignoreUnavailable,
                                       boolean partialSnapsAllowed, SnapshotRetentionConfiguration retention) {
         Map<String, Object> snapConfig = new HashMap<>();
@@ -564,7 +517,7 @@ public class SLMSnapshotBlockingIntegTests extends ESIntegTestCase {
             }
         }
         SnapshotLifecyclePolicy policy = new SnapshotLifecyclePolicy(policyName, snapshotNamePattern, schedule,
-            REPO, snapConfig, retention);
+            repoId, snapConfig, retention);
 
         PutSnapshotLifecycleAction.Request putLifecycle = new PutSnapshotLifecycleAction.Request(policyName, policy);
         try {

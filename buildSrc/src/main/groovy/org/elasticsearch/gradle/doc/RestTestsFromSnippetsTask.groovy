@@ -242,7 +242,14 @@ class RestTestsFromSnippetsTask extends SnippetsTask {
                 }
             } else {
                 current.println('---')
-                current.println("\"line_$test.start\":")
+                if (test.name != null && test.name.isBlank() == false) {
+                    if(names.add(test.name) == false) {
+                        throw new InvalidUserDataException("Duplicated snippet name '$test.name': $test")
+                    }
+                    current.println("\"$test.name\":")
+                } else {
+                    current.println("\"line_$test.start\":")
+                }
                 /* The Elasticsearch test runner doesn't support quite a few
                  * constructs unless we output this skip. We don't know if
                  * we're going to use these constructs, but we might so we
@@ -410,6 +417,7 @@ class RestTestsFromSnippetsTask extends SnippetsTask {
             if (lastDocsPath == test.path) {
                 return
             }
+            names.clear()
             finishLastTest()
             lastDocsPath = test.path
 

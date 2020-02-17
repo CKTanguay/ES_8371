@@ -33,7 +33,6 @@ import org.elasticsearch.index.shard.SearchOperationListener;
 import org.elasticsearch.search.internal.SearchContext;
 import org.elasticsearch.tasks.Task;
 
-import java.util.Arrays;
 import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.HashMap;
@@ -53,8 +52,6 @@ public final class SearchSlowLog implements SearchOperationListener {
     private long fetchInfoThreshold;
     private long fetchDebugThreshold;
     private long fetchTraceThreshold;
-
-    private SlowLogLevel level;
 
     private final Logger queryLogger;
     private final Logger fetchLogger;
@@ -92,8 +89,8 @@ public final class SearchSlowLog implements SearchOperationListener {
 
     public SearchSlowLog(IndexSettings indexSettings) {
 
-        this.queryLogger = LogManager.getLogger(INDEX_SEARCH_SLOWLOG_PREFIX + ".query");
-        this.fetchLogger = LogManager.getLogger(INDEX_SEARCH_SLOWLOG_PREFIX + ".fetch");
+        this.queryLogger = LogManager.getLogger(INDEX_SEARCH_SLOWLOG_PREFIX + ".query." + indexSettings.getUUID());
+        this.fetchLogger = LogManager.getLogger(INDEX_SEARCH_SLOWLOG_PREFIX + ".fetch." + indexSettings.getUUID());
 
         indexSettings.getScopedSettings().addSettingsUpdateConsumer(INDEX_SEARCH_SLOWLOG_THRESHOLD_QUERY_WARN_SETTING,
             this::setQueryWarnThreshold);
@@ -126,7 +123,6 @@ public final class SearchSlowLog implements SearchOperationListener {
     }
 
     private void setLevel(SlowLogLevel level) {
-        this.level = level;
         Loggers.setLevel(queryLogger, level.name());
         Loggers.setLevel(fetchLogger, level.name());
     }
@@ -134,33 +130,37 @@ public final class SearchSlowLog implements SearchOperationListener {
     @Override
     public void onQueryPhase(SearchContext context, long tookInNanos) {
         if (queryWarnThreshold >= 0 && tookInNanos > queryWarnThreshold) {
-            queryLogger.warn(new SearchSlowLogMessage(context, tookInNanos));
+            queryLogger.warn(SearchSlowLogMessage.of(context, tookInNanos));
         } else if (queryInfoThreshold >= 0 && tookInNanos > queryInfoThreshold) {
-            queryLogger.info(new SearchSlowLogMessage(context, tookInNanos));
+            queryLogger.info(SearchSlowLogMessage.of(context, tookInNanos));
         } else if (queryDebugThreshold >= 0 && tookInNanos > queryDebugThreshold) {
-            queryLogger.debug(new SearchSlowLogMessage(context, tookInNanos));
+            queryLogger.debug(SearchSlowLogMessage.of(context, tookInNanos));
         } else if (queryTraceThreshold >= 0 && tookInNanos > queryTraceThreshold) {
-            queryLogger.trace(new SearchSlowLogMessage(context, tookInNanos));
+            queryLogger.trace(SearchSlowLogMessage.of(context, tookInNanos));
         }
     }
 
     @Override
     public void onFetchPhase(SearchContext context, long tookInNanos) {
         if (fetchWarnThreshold >= 0 && tookInNanos > fetchWarnThreshold) {
-            fetchLogger.warn(new SearchSlowLogMessage(context, tookInNanos));
+            fetchLogger.warn(SearchSlowLogMessage.of(context, tookInNanos));
         } else if (fetchInfoThreshold >= 0 && tookInNanos > fetchInfoThreshold) {
-            fetchLogger.info(new SearchSlowLogMessage(context, tookInNanos));
+            fetchLogger.info(SearchSlowLogMessage.of(context, tookInNanos));
         } else if (fetchDebugThreshold >= 0 && tookInNanos > fetchDebugThreshold) {
-            fetchLogger.debug(new SearchSlowLogMessage(context, tookInNanos));
+            fetchLogger.debug(SearchSlowLogMessage.of(context, tookInNanos));
         } else if (fetchTraceThreshold >= 0 && tookInNanos > fetchTraceThreshold) {
-            fetchLogger.trace(new SearchSlowLogMessage(context, tookInNanos));
+            fetchLogger.trace(SearchSlowLogMessage.of(context, tookInNanos));
         }
     }
 
-    static final class SearchSlowLogMessage extends ESLogMessage {
+    static final class SearchSlowLogMessage  {
 
-        SearchSlowLogMessage(SearchContext context, long tookInNanos) {
-            super(prepareMap(context, tookInNanos), message(context, tookInNanos));
+        public static ESLogMessage of(SearchContext context, long tookInNanos) {
+            Map<String, Object> jsonFields = prepareMap(context, tookInNanos);
+            // message for json logs is overridden from json Fields
+            String plaintextMessage = message(context, tookInNanos);
+            return new ESLogMessage(plaintextMessage)
+                               .withFields(jsonFields);
         }
 
         private static Map<String, Object> prepareMap(SearchContext context, long tookInNanos) {
@@ -173,9 +173,7 @@ public final class SearchSlowLog implements SearchOperationListener {
             } else {
                 messageFields.put("total_hits", "-1");
             }
-            String[] types = context.getQueryShardContext().getTypes();
-            messageFields.put("types", escapeJson(asJsonArray(types != null ? Arrays.stream(types) : Stream.empty())));
-            messageFields.put("stats", escapeJson(asJsonArray(
+            messageFields.put("stats", escapeJson(ESLogMessage.asJsonArray(
                 context.groupStats() != null ? context.groupStats().stream() : Stream.empty())));
             messageFields.put("search_type", context.searchType());
             messageFields.put("total_shards", context.numberOfShards());
@@ -206,13 +204,6 @@ public final class SearchSlowLog implements SearchOperationListener {
                 sb.append("-1");
             }
             sb.append("], ");
-            if (context.getQueryShardContext().getTypes() == null) {
-                sb.append("types[], ");
-            } else {
-                sb.append("types[");
-                Strings.arrayToDelimitedString(context.getQueryShardContext().getTypes(), ",", sb);
-                sb.append("], ");
-            }
             if (context.groupStats() == null) {
                 sb.append("stats[], ");
             } else {
@@ -306,6 +297,7 @@ public final class SearchSlowLog implements SearchOperationListener {
     }
 
     SlowLogLevel getLevel() {
-        return level;
+        assert queryLogger.getLevel().equals(fetchLogger.getLevel());
+        return SlowLogLevel.parse(queryLogger.getLevel().name());
     }
 }

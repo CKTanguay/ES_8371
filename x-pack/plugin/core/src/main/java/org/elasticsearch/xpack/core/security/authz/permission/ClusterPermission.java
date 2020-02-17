@@ -13,7 +13,6 @@ import org.elasticsearch.xpack.core.security.authz.privilege.ClusterPrivilege;
 import org.elasticsearch.xpack.core.security.support.Automatons;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -23,15 +22,15 @@ import java.util.function.Predicate;
  * A permission that is based on privileges for cluster wide actions, with the optional ability to inspect the request object
  */
 public class ClusterPermission {
-    public static final ClusterPermission NONE = new ClusterPermission(Collections.emptySet(), Collections.emptyList());
+    public static final ClusterPermission NONE = new ClusterPermission(Set.of(), List.of());
 
     private final Set<ClusterPrivilege> clusterPrivileges;
     private final List<PermissionCheck> checks;
 
     private ClusterPermission(final Set<ClusterPrivilege> clusterPrivileges,
                               final List<PermissionCheck> checks) {
-        this.clusterPrivileges = Collections.unmodifiableSet(clusterPrivileges);
-        this.checks = Collections.unmodifiableList(checks);
+        this.clusterPrivileges = Set.copyOf(clusterPrivileges);
+        this.checks = List.copyOf(checks);
     }
 
     /**
@@ -90,7 +89,7 @@ public class ClusterPermission {
 
         public Builder add(final ClusterPrivilege clusterPrivilege, final Set<String> allowedActionPatterns,
                            final Predicate<TransportRequest> requestPredicate) {
-            final Automaton actionAutomaton = createAutomaton(allowedActionPatterns, Collections.emptySet());
+            final Automaton actionAutomaton = createAutomaton(allowedActionPatterns, Set.of());
             return add(clusterPrivilege, new ActionRequestBasedPermissionCheck(clusterPrivilege, actionAutomaton, requestPredicate));
         }
 
@@ -115,8 +114,8 @@ public class ClusterPermission {
         }
 
         private static Automaton createAutomaton(Set<String> allowedActionPatterns, Set<String> excludeActionPatterns) {
-            allowedActionPatterns = (allowedActionPatterns == null) ? Collections.emptySet() : allowedActionPatterns;
-            excludeActionPatterns = (excludeActionPatterns == null) ? Collections.emptySet() : excludeActionPatterns;
+            allowedActionPatterns = (allowedActionPatterns == null) ? Set.of() : allowedActionPatterns;
+            excludeActionPatterns = (excludeActionPatterns == null) ? Set.of() : excludeActionPatterns;
 
             if (allowedActionPatterns.isEmpty()) {
                 return Automatons.EMPTY;

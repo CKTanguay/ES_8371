@@ -28,6 +28,7 @@ import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
@@ -108,10 +109,8 @@ public final class HttpTransportSettings {
 
     // Tcp socket settings
 
-    public static final Setting<Boolean> OLD_SETTING_HTTP_TCP_NO_DELAY =
-        boolSetting("http.tcp_no_delay", NetworkService.TCP_NO_DELAY, Setting.Property.NodeScope, Setting.Property.Deprecated);
     public static final Setting<Boolean> SETTING_HTTP_TCP_NO_DELAY =
-        boolSetting("http.tcp.no_delay", OLD_SETTING_HTTP_TCP_NO_DELAY, Setting.Property.NodeScope);
+        boolSetting("http.tcp.no_delay", NetworkService.TCP_NO_DELAY, Setting.Property.NodeScope);
     public static final Setting<Boolean> SETTING_HTTP_TCP_KEEP_ALIVE =
         boolSetting("http.tcp.keep_alive", NetworkService.TCP_KEEP_ALIVE, Setting.Property.NodeScope);
     public static final Setting<Integer> SETTING_HTTP_TCP_KEEP_IDLE =
@@ -126,6 +125,13 @@ public final class HttpTransportSettings {
         Setting.byteSizeSetting("http.tcp.send_buffer_size", NetworkService.TCP_SEND_BUFFER_SIZE, Setting.Property.NodeScope);
     public static final Setting<ByteSizeValue> SETTING_HTTP_TCP_RECEIVE_BUFFER_SIZE =
         Setting.byteSizeSetting("http.tcp.receive_buffer_size", NetworkService.TCP_RECEIVE_BUFFER_SIZE, Setting.Property.NodeScope);
+
+    public static final Setting<List<String>> SETTING_HTTP_TRACE_LOG_INCLUDE =
+        Setting.listSetting("http.tracer.include", Collections.emptyList(),
+            Function.identity(), Setting.Property.Dynamic, Setting.Property.NodeScope);
+    public static final Setting<List<String>> SETTING_HTTP_TRACE_LOG_EXCLUDE =
+        Setting.listSetting("http.tracer.exclude",
+            Collections.emptyList(), Function.identity(), Setting.Property.Dynamic, Setting.Property.NodeScope);
 
     private HttpTransportSettings() {
     }

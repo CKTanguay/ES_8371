@@ -36,6 +36,6 @@ public class SqlStreamOutput extends OutputStreamStreamOutput {
      */
     public String streamAsString() {
         // Base64 uses this encoding instead of UTF-8
-        return new String(bytes.toByteArray(), StandardCharsets.ISO_8859_1);
+        return bytes.toString(StandardCharsets.ISO_8859_1);
     }
 }

@@ -39,17 +39,17 @@ include::{docdir}/ml/ml-shared.asciidoc[tag=filter-id]
 ==== {api-query-parms-title}
 
 `from`::
-(Optional, integer) Skips the specified number of filters.
+    (Optional, integer) Skips the specified number of filters.
 
 `size`::
-(Optional, integer) Specifies the maximum number of filters to obtain.
+    (Optional, integer) Specifies the maximum number of filters to obtain.
 
 [[ml-get-filter-results]]
 ==== {api-response-body-title}
 
 The API returns an array of filter resources, which have the following
 properties:
-
+  
 `description`::
 (string) A description of the filter.
 

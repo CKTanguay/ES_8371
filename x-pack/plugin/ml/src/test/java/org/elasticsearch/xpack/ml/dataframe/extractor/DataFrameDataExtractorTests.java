@@ -125,7 +125,7 @@ public class DataFrameDataExtractorTests extends ESTestCase {
 
         // Third batch should return empty
         rows = dataExtractor.next();
-        assertThat(rows.isPresent(), is(false));
+        assertThat(rows.isEmpty(), is(true));
         assertThat(dataExtractor.hasNext(), is(false));
 
         // Now let's assert we're sending the expected search request
@@ -175,7 +175,7 @@ public class DataFrameDataExtractorTests extends ESTestCase {
 
         // Next batch should return empty
         rows = dataExtractor.next();
-        assertThat(rows.isPresent(), is(false));
+        assertThat(rows.isEmpty(), is(true));
         assertThat(dataExtractor.hasNext(), is(false));
 
         // Check we cleared the scroll with the latest scroll id
@@ -233,7 +233,7 @@ public class DataFrameDataExtractorTests extends ESTestCase {
 
         // Next batch should return empty
         rows = dataExtractor.next();
-        assertThat(rows.isPresent(), is(false));
+        assertThat(rows.isEmpty(), is(true));
         assertThat(dataExtractor.hasNext(), is(false));
 
         // Notice we've done two searches and two continues here
@@ -286,7 +286,7 @@ public class DataFrameDataExtractorTests extends ESTestCase {
         assertThat(rows.get().get(0).getValues(), equalTo(new String[] {"11", "21"}));
         assertThat(dataExtractor.hasNext(), is(true));
 
-        assertThat(dataExtractor.next().isPresent(), is(false));
+        assertThat(dataExtractor.next().isEmpty(), is(true));
         assertThat(dataExtractor.hasNext(), is(false));
 
         assertThat(dataExtractor.capturedSearchRequests.size(), equalTo(1));
@@ -315,7 +315,7 @@ public class DataFrameDataExtractorTests extends ESTestCase {
         assertThat(rows.get().get(0).getValues(), equalTo(new String[] {"11", "21"}));
         assertThat(dataExtractor.hasNext(), is(true));
 
-        assertThat(dataExtractor.next().isPresent(), is(false));
+        assertThat(dataExtractor.next().isEmpty(), is(true));
         assertThat(dataExtractor.hasNext(), is(false));
 
         assertThat(dataExtractor.capturedSearchRequests.size(), equalTo(1));
@@ -354,7 +354,7 @@ public class DataFrameDataExtractorTests extends ESTestCase {
 
         // Third batch should return empty
         rows = dataExtractor.next();
-        assertThat(rows.isPresent(), is(false));
+        assertThat(rows.isEmpty(), is(true));
         assertThat(dataExtractor.hasNext(), is(false));
     }
 
@@ -388,7 +388,7 @@ public class DataFrameDataExtractorTests extends ESTestCase {
 
         // Third batch should return empty
         rows = dataExtractor.next();
-        assertThat(rows.isPresent(), is(false));
+        assertThat(rows.isEmpty(), is(true));
         assertThat(dataExtractor.hasNext(), is(false));
     }
 

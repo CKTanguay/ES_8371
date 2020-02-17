@@ -35,6 +35,7 @@ import java.util.List;
 
 import static org.elasticsearch.test.AbstractXContentTestCase.xContentTester;
 
+
 public class GetTransformResponseTests extends ESTestCase {
 
     public void testXContentParser() throws IOException {
@@ -77,7 +78,7 @@ public class GetTransformResponseTests extends ESTestCase {
 
     @Override
     protected NamedXContentRegistry xContentRegistry() {
-        SearchModule searchModule = new SearchModule(Settings.EMPTY, false, Collections.emptyList());
+        SearchModule searchModule = new SearchModule(Settings.EMPTY, Collections.emptyList());
         List<NamedXContentRegistry.Entry> namedXContents = searchModule.getNamedXContents();
         namedXContents.addAll(new TransformNamedXContentProvider().getNamedXContentParsers());
 

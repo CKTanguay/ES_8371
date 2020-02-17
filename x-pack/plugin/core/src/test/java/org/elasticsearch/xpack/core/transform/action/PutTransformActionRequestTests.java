@@ -38,17 +38,18 @@ public class PutTransformActionRequestTests extends AbstractWireSerializingTestC
 
     @Override
     protected Request createTestInstance() {
-        TransformConfig config = TransformConfigTests.randomDataFrameTransformConfigWithoutHeaders(transformId);
+        TransformConfig config = TransformConfigTests.randomTransformConfigWithoutHeaders(transformId);
         return new Request(config, randomBoolean());
     }
 
     @Override
     protected NamedWriteableRegistry getNamedWriteableRegistry() {
-        SearchModule searchModule = new SearchModule(Settings.EMPTY, false, emptyList());
+        SearchModule searchModule = new SearchModule(Settings.EMPTY, emptyList());
 
         List<NamedWriteableRegistry.Entry> namedWriteables = searchModule.getNamedWriteables();
-        namedWriteables.add(new NamedWriteableRegistry.Entry(SyncConfig.class, TransformField.TIME_BASED_SYNC.getPreferredName(),
-            TimeSyncConfig::new));
+        namedWriteables.add(
+            new NamedWriteableRegistry.Entry(SyncConfig.class, TransformField.TIME_BASED_SYNC.getPreferredName(), TimeSyncConfig::new)
+        );
         return new NamedWriteableRegistry(namedWriteables);
     }
 }

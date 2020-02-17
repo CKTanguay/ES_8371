@@ -9,13 +9,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.util.automaton.Automaton;
 import org.elasticsearch.action.admin.cluster.shards.ClusterSearchShardsAction;
-import org.elasticsearch.action.admin.indices.alias.exists.AliasesExistAction;
 import org.elasticsearch.action.admin.indices.alias.get.GetAliasesAction;
 import org.elasticsearch.action.admin.indices.close.CloseIndexAction;
 import org.elasticsearch.action.admin.indices.create.CreateIndexAction;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexAction;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsAction;
-import org.elasticsearch.action.admin.indices.exists.types.TypesExistsAction;
 import org.elasticsearch.action.admin.indices.get.GetIndexAction;
 import org.elasticsearch.action.admin.indices.mapping.get.GetFieldMappingsAction;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsAction;
@@ -23,7 +20,6 @@ import org.elasticsearch.action.admin.indices.mapping.put.PutMappingAction;
 import org.elasticsearch.action.admin.indices.settings.get.GetSettingsAction;
 import org.elasticsearch.action.admin.indices.validate.query.ValidateQueryAction;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.collect.MapBuilder;
 import org.elasticsearch.xpack.core.ccr.action.ForgetFollowerAction;
 import org.elasticsearch.xpack.core.ccr.action.PutFollowAction;
 import org.elasticsearch.xpack.core.ccr.action.UnfollowAction;
@@ -39,6 +35,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
+import static java.util.Map.entry;
 import static org.elasticsearch.xpack.core.security.support.Automatons.patterns;
 import static org.elasticsearch.xpack.core.security.support.Automatons.unionAndMinimize;
 
@@ -62,14 +59,15 @@ public final class IndexPrivilege extends Privilege {
             unionAndMinimize(Arrays.asList(MONITOR_AUTOMATON, patterns("indices:admin/*")));
     private static final Automaton CREATE_INDEX_AUTOMATON = patterns(CreateIndexAction.NAME);
     private static final Automaton DELETE_INDEX_AUTOMATON = patterns(DeleteIndexAction.NAME);
-    private static final Automaton VIEW_METADATA_AUTOMATON = patterns(GetAliasesAction.NAME, AliasesExistAction.NAME,
-            GetIndexAction.NAME, IndicesExistsAction.NAME, GetFieldMappingsAction.NAME + "*", GetMappingsAction.NAME,
-            ClusterSearchShardsAction.NAME, TypesExistsAction.NAME, ValidateQueryAction.NAME + "*", GetSettingsAction.NAME,
-            ExplainLifecycleAction.NAME);
+    private static final Automaton VIEW_METADATA_AUTOMATON = patterns(GetAliasesAction.NAME,
+            GetIndexAction.NAME, GetFieldMappingsAction.NAME + "*", GetMappingsAction.NAME,
+            ClusterSearchShardsAction.NAME, ValidateQueryAction.NAME + "*", GetSettingsAction.NAME, ExplainLifecycleAction.NAME);
     private static final Automaton MANAGE_FOLLOW_INDEX_AUTOMATON = patterns(PutFollowAction.NAME, UnfollowAction.NAME,
         CloseIndexAction.NAME + "*");
     private static final Automaton MANAGE_LEADER_INDEX_AUTOMATON = patterns(ForgetFollowerAction.NAME + "*");
     private static final Automaton MANAGE_ILM_AUTOMATON = patterns("indices:admin/ilm/*");
+    private static final Automaton MAINTENANCE_AUTOMATON = patterns("indices:admin/refresh*", "indices:admin/flush*",
+        "indices:admin/synced_flush", "indices:admin/forcemerge*");
 
     public static final IndexPrivilege NONE =                new IndexPrivilege("none",                Automatons.EMPTY);
     public static final IndexPrivilege ALL =                 new IndexPrivilege("all",                 ALL_AUTOMATON);
@@ -87,27 +85,28 @@ public final class IndexPrivilege extends Privilege {
     public static final IndexPrivilege VIEW_METADATA =       new IndexPrivilege("view_index_metadata", VIEW_METADATA_AUTOMATON);
     public static final IndexPrivilege MANAGE_FOLLOW_INDEX = new IndexPrivilege("manage_follow_index", MANAGE_FOLLOW_INDEX_AUTOMATON);
     public static final IndexPrivilege MANAGE_LEADER_INDEX = new IndexPrivilege("manage_leader_index", MANAGE_LEADER_INDEX_AUTOMATON);
-    public static final IndexPrivilege MANAGE_ILM =          new IndexPrivilege("manage_ilm",          MANAGE_ILM_AUTOMATON);
+    public static final IndexPrivilege MANAGE_ILM = new IndexPrivilege("manage_ilm", MANAGE_ILM_AUTOMATON);
+    public static final IndexPrivilege MAINTENANCE = new IndexPrivilege("maintenance", MAINTENANCE_AUTOMATON);
 
-    private static final Map<String, IndexPrivilege> VALUES = MapBuilder.<String, IndexPrivilege>newMapBuilder()
-            .put("none", NONE)
-            .put("all", ALL)
-            .put("manage", MANAGE)
-            .put("create_index", CREATE_INDEX)
-            .put("monitor", MONITOR)
-            .put("read", READ)
-            .put("index", INDEX)
-            .put("delete", DELETE)
-            .put("write", WRITE)
-            .put("create", CREATE)
-            .put("create_doc", CREATE_DOC)
-            .put("delete_index", DELETE_INDEX)
-            .put("view_index_metadata", VIEW_METADATA)
-            .put("read_cross_cluster", READ_CROSS_CLUSTER)
-            .put("manage_follow_index", MANAGE_FOLLOW_INDEX)
-            .put("manage_leader_index", MANAGE_LEADER_INDEX)
-            .put("manage_ilm", MANAGE_ILM)
-            .immutableMap();
+    private static final Map<String, IndexPrivilege> VALUES = Map.ofEntries(
+            entry("none", NONE),
+            entry("all", ALL),
+            entry("manage", MANAGE),
+            entry("create_index", CREATE_INDEX),
+            entry("monitor", MONITOR),
+            entry("read", READ),
+            entry("index", INDEX),
+            entry("delete", DELETE),
+            entry("write", WRITE),
+            entry("create", CREATE),
+            entry("create_doc", CREATE_DOC),
+            entry("delete_index", DELETE_INDEX),
+            entry("view_index_metadata", VIEW_METADATA),
+            entry("read_cross_cluster", READ_CROSS_CLUSTER),
+            entry("manage_follow_index", MANAGE_FOLLOW_INDEX),
+            entry("manage_leader_index", MANAGE_LEADER_INDEX),
+            entry("manage_ilm", MANAGE_ILM),
+            entry("maintenance", MAINTENANCE));
 
     public static final Predicate<String> ACTION_MATCHER = ALL.predicate();
     public static final Predicate<String> CREATE_INDEX_MATCHER = CREATE_INDEX.predicate();

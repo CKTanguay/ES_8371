@@ -26,13 +26,13 @@ import org.elasticsearch.xpack.core.watcher.watch.ClockMock;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class SnapshotRetentionServiceTests extends ESTestCase {
 
@@ -43,13 +43,13 @@ public class SnapshotRetentionServiceTests extends ESTestCase {
         clusterSettings = new ClusterSettings(Settings.EMPTY, internalSettings);
     }
 
-    public void testJobsAreScheduled() {
+    public void testJobsAreScheduled() throws InterruptedException {
         final DiscoveryNode discoveryNode = new DiscoveryNode("node", ESTestCase.buildNewFakeTransportAddress(),
             Collections.emptyMap(), DiscoveryNodeRole.BUILT_IN_ROLES, Version.CURRENT);
         ClockMock clock = new ClockMock();
 
-        try (ThreadPool threadPool = new TestThreadPool("test");
-             ClusterService clusterService = ClusterServiceUtils.createClusterService(threadPool, discoveryNode, clusterSettings);
+        ThreadPool threadPool = new TestThreadPool("test");
+        try (ClusterService clusterService = ClusterServiceUtils.createClusterService(threadPool, discoveryNode, clusterSettings);
              SnapshotRetentionService service = new SnapshotRetentionService(Settings.EMPTY,
                  FakeRetentionTask::new, clusterService, clock)) {
             assertThat(service.getScheduler().jobCount(), equalTo(0));
@@ -76,33 +76,34 @@ public class SnapshotRetentionServiceTests extends ESTestCase {
         }
     }
 
-    public void testManualTriggering() {
+    public void testManualTriggering() throws InterruptedException {
         final DiscoveryNode discoveryNode = new DiscoveryNode("node", ESTestCase.buildNewFakeTransportAddress(),
             Collections.emptyMap(), DiscoveryNodeRole.BUILT_IN_ROLES, Version.CURRENT);
         ClockMock clock = new ClockMock();
         AtomicInteger invoked = new AtomicInteger(0);
-
-        try (ThreadPool threadPool = new TestThreadPool("test");
-             ClusterService clusterService = ClusterServiceUtils.createClusterService(threadPool, discoveryNode, clusterSettings);
+    
+        ThreadPool threadPool = new TestThreadPool("test");
+        try (ClusterService clusterService = ClusterServiceUtils.createClusterService(threadPool, discoveryNode, clusterSettings);
              SnapshotRetentionService service = new SnapshotRetentionService(Settings.EMPTY,
                  () -> new FakeRetentionTask(event -> {
                      assertThat(event.getJobName(), equalTo(SnapshotRetentionService.SLM_RETENTION_MANUAL_JOB_ID));
                      invoked.incrementAndGet();
                  }), clusterService, clock)) {
-
+    
             service.onMaster();
             service.triggerRetention();
             assertThat(invoked.get(), equalTo(1));
-
+    
             service.offMaster();
             service.triggerRetention();
             assertThat(invoked.get(), equalTo(1));
-
+    
             service.onMaster();
             service.triggerRetention();
             assertThat(invoked.get(), equalTo(2));
-
+        } finally {
             threadPool.shutdownNow();
+            threadPool.awaitTermination(10, TimeUnit.SECONDS);
         }
     }
 
@@ -114,7 +115,7 @@ public class SnapshotRetentionServiceTests extends ESTestCase {
         }
 
         FakeRetentionTask(Consumer<SchedulerEngine.Event> onTrigger) {
-            super(fakeClient(), null, System::nanoTime, mock(SnapshotHistoryStore.class), mock(ThreadPool.class));
+            super(mock(Client.class), null, System::nanoTime, mock(SnapshotHistoryStore.class), mock(ThreadPool.class));
             this.onTrigger = onTrigger;
         }
 
@@ -122,11 +123,5 @@ public class SnapshotRetentionServiceTests extends ESTestCase {
         public void triggered(SchedulerEngine.Event event) {
             onTrigger.accept(event);
         }
-    }
-
-    private static Client fakeClient() {
-        Client c = mock(Client.class);
-        when(c.settings()).thenReturn(Settings.EMPTY);
-        return c;
     }
 }

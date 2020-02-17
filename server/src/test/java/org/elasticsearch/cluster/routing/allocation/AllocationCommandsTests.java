@@ -60,7 +60,6 @@ import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.index.shard.ShardNotFoundException;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -621,8 +620,7 @@ public class AllocationCommandsTests extends ESAllocationTestCase {
         DiscoveryNode node1 = new DiscoveryNode("node1", "node1", "node1", "test1", "test1", buildNewFakeTransportAddress(), emptyMap(),
             MASTER_DATA_ROLES, Version.CURRENT);
         DiscoveryNode node2 = new DiscoveryNode("node2", "node2", "node2", "test2", "test2", buildNewFakeTransportAddress(), emptyMap(),
-            new HashSet<>(randomSubsetOf(new HashSet<>(Arrays.asList(DiscoveryNodeRole.MASTER_ROLE, DiscoveryNodeRole.INGEST_ROLE)))),
-                Version.CURRENT);
+            new HashSet<>(randomSubsetOf(Set.of(DiscoveryNodeRole.MASTER_ROLE, DiscoveryNodeRole.INGEST_ROLE))), Version.CURRENT);
 
         clusterState = ClusterState.builder(clusterState).nodes(
             DiscoveryNodes.builder()
@@ -661,8 +659,7 @@ public class AllocationCommandsTests extends ESAllocationTestCase {
         DiscoveryNode node1 = new DiscoveryNode("node1", "node1", "node1", "test1", "test1", buildNewFakeTransportAddress(), emptyMap(),
             MASTER_DATA_ROLES, Version.CURRENT);
         DiscoveryNode node2 = new DiscoveryNode("node2", "node2", "node2", "test2", "test2", buildNewFakeTransportAddress(), emptyMap(),
-            new HashSet<>(randomSubsetOf(new HashSet<>(Arrays.asList(DiscoveryNodeRole.MASTER_ROLE, DiscoveryNodeRole.INGEST_ROLE)))),
-                Version.CURRENT);
+            new HashSet<>(randomSubsetOf(Set.of(DiscoveryNodeRole.MASTER_ROLE, DiscoveryNodeRole.INGEST_ROLE))), Version.CURRENT);
 
         clusterState = ClusterState.builder(clusterState).nodes(
             DiscoveryNodes.builder()

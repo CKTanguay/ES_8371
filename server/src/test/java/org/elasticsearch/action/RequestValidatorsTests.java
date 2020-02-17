@@ -26,8 +26,6 @@ import org.elasticsearch.test.hamcrest.OptionalMatchers;
 import org.hamcrest.Matchers;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,13 +46,12 @@ public class RequestValidatorsTests extends ESTestCase {
     }
 
     public void testFailure() {
-        final RequestValidators<PutMappingRequest> validators = new RequestValidators<>(Collections.singletonList(FAIL));
+        final RequestValidators<PutMappingRequest> validators = new RequestValidators<>(List.of(FAIL));
         assertThat(validators.validateRequest(null, null, null), OptionalMatchers.isPresent());
     }
 
     public void testValidatesAfterFailure() {
-        final RequestValidators<PutMappingRequest> validators =
-                new RequestValidators<>(Collections.unmodifiableList(Arrays.asList(FAIL, EMPTY)));
+        final RequestValidators<PutMappingRequest> validators = new RequestValidators<>(List.of(FAIL, EMPTY));
         assertThat(validators.validateRequest(null, null, null), OptionalMatchers.isPresent());
     }
 

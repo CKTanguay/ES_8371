@@ -5,18 +5,15 @@
  */
 package org.elasticsearch.xpack.enrich;
 
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.reindex.ReindexPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.test.ESIntegTestCase;
-import org.elasticsearch.xpack.core.XPackSettings;
 import org.elasticsearch.xpack.core.enrich.EnrichPolicy;
 import org.elasticsearch.xpack.core.enrich.action.GetEnrichPolicyAction;
 import org.elasticsearch.xpack.core.enrich.action.PutEnrichPolicyAction;
 
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.elasticsearch.xpack.enrich.AbstractEnrichTestCase.createSourceIndices;
@@ -32,17 +29,7 @@ public class EnrichRestartIT extends ESIntegTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        return Arrays.asList(LocalStateEnrich.class, ReindexPlugin.class);
-    }
-
-    @Override
-    protected Collection<Class<? extends Plugin>> transportClientPlugins() {
-        return nodePlugins();
-    }
-
-    @Override
-    protected Settings transportClientSettings() {
-        return Settings.builder().put(super.transportClientSettings()).put(XPackSettings.SECURITY_ENABLED.getKey(), false).build();
+        return List.of(LocalStateEnrich.class, ReindexPlugin.class);
     }
 
     public void testRestart() throws Exception {
@@ -52,9 +39,9 @@ public class EnrichRestartIT extends ESIntegTestCase {
         EnrichPolicy enrichPolicy = new EnrichPolicy(
             EnrichPolicy.MATCH_TYPE,
             null,
-            Collections.singletonList(SOURCE_INDEX_NAME),
+            List.of(SOURCE_INDEX_NAME),
             MATCH_FIELD,
-            Arrays.asList(DECORATE_FIELDS)
+            List.of(DECORATE_FIELDS)
         );
         createSourceIndices(client(), enrichPolicy);
         for (int i = 0; i < numPolicies; i++) {

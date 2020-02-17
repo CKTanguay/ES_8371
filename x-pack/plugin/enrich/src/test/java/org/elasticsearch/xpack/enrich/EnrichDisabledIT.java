@@ -15,8 +15,8 @@ import org.elasticsearch.xpack.core.XPackSettings;
 import org.elasticsearch.xpack.core.action.XPackInfoAction;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 
 import static org.hamcrest.Matchers.is;
 
@@ -39,6 +39,6 @@ public class EnrichDisabledIT extends ESSingleNodeTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> getPlugins() {
-        return Collections.singleton(LocalStateEnrich.class);
+        return List.of(LocalStateEnrich.class);
     }
 }

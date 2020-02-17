@@ -53,8 +53,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.ssl.DefaultHostnameVerifier;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.entity.ContentType;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
@@ -79,6 +77,7 @@ import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.util.concurrent.ListenableFuture;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.watcher.FileChangesListener;
 import org.elasticsearch.watcher.FileWatcher;
 import org.elasticsearch.watcher.ResourceWatcherService;
@@ -315,7 +314,7 @@ public class OpenIdConnectAuthenticator {
     private JWKSet readJwkSetFromFile(String jwkSetPath) throws IOException, ParseException {
         final Path path = realmConfig.env().configFile().resolve(jwkSetPath);
         // avoid using JWKSet.loadFile() as it does not close FileInputStream internally
-        String jwkSet = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+        String jwkSet = Files.readString(path, StandardCharsets.UTF_8);
         return JWKSet.parse(jwkSet);
     }
 
@@ -467,8 +466,8 @@ public class OpenIdConnectAuthenticator {
             httpPost.setEntity(new UrlEncodedFormEntity(params));
             httpPost.setHeader("Content-type", "application/x-www-form-urlencoded");
             UsernamePasswordCredentials creds =
-                new UsernamePasswordCredentials(URLEncoder.encode(rpConfig.getClientId().getValue(), StandardCharsets.UTF_8.name()),
-                    URLEncoder.encode(rpConfig.getClientSecret().toString(), StandardCharsets.UTF_8.name()));
+                new UsernamePasswordCredentials(URLEncoder.encode(rpConfig.getClientId().getValue(), StandardCharsets.UTF_8),
+                    URLEncoder.encode(rpConfig.getClientSecret().toString(), StandardCharsets.UTF_8));
             httpPost.addHeader(new BasicScheme().authenticate(creds, httpPost, null));
             SpecialPermission.check();
             AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -513,29 +512,31 @@ public class OpenIdConnectAuthenticator {
                 return;
             }
             final Charset encoding = encodingHeader == null ? StandardCharsets.UTF_8 : Charsets.toCharset(encodingHeader.getValue());
-            final String json = EntityUtils.toString(entity, encoding);
-            if (LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Received Token Response from OP with status [{}] and content [{}] ",
-                    httpResponse.getStatusLine().getStatusCode(), json);
-            }
-            final OIDCTokenResponse oidcTokenResponse = OIDCTokenResponse.parse(JSONObjectUtils.parse(json));
-            if (oidcTokenResponse.indicatesSuccess() == false) {
-                TokenErrorResponse errorResponse = oidcTokenResponse.toErrorResponse();
-                tokensListener.onFailure(
-                    new ElasticsearchSecurityException("Failed to exchange code for Id Token. Code=[{}], Description=[{}]",
-                        errorResponse.getErrorObject().getCode(), errorResponse.getErrorObject().getDescription()));
+            final RestStatus responseStatus = RestStatus.fromCode(httpResponse.getStatusLine().getStatusCode());
+            if (RestStatus.OK != responseStatus) {
+                final String json = EntityUtils.toString(entity, encoding);
+                LOGGER.warn("Received Token Response from OP with status [{}] and content [{}]", responseStatus, json);
+                if (RestStatus.BAD_REQUEST == responseStatus) {
+                    final TokenErrorResponse tokenErrorResponse = TokenErrorResponse.parse(JSONObjectUtils.parse(json));
+                    tokensListener.onFailure(
+                        new ElasticsearchSecurityException("Failed to exchange code for Id Token. Code=[{}], Description=[{}]",
+                            tokenErrorResponse.getErrorObject().getCode(), tokenErrorResponse.getErrorObject().getDescription()));
+                } else {
+                    tokensListener.onFailure(new ElasticsearchSecurityException("Failed to exchange code for Id Token"));
+                }
             } else {
-                OIDCTokenResponse successResponse = oidcTokenResponse.toSuccessResponse();
-                final OIDCTokens oidcTokens = successResponse.getOIDCTokens();
+                final OIDCTokenResponse oidcTokenResponse = OIDCTokenResponse.parse(
+                    JSONObjectUtils.parse(EntityUtils.toString(entity, encoding)));
+                final OIDCTokens oidcTokens = oidcTokenResponse.getOIDCTokens();
                 final AccessToken accessToken = oidcTokens.getAccessToken();
                 final JWT idToken = oidcTokens.getIDToken();
                 if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Successfully exchanged code for ID Token: [{}] and Access Token [{}]",
-                        idToken, accessToken);
+                    LOGGER.trace("Successfully exchanged code for ID Token [{}] and Access Token [{}]", idToken,
+                        truncateToken(accessToken.toString()));
                 }
                 if (idToken == null) {
-                    tokensListener.onFailure(new ElasticsearchSecurityException("Token Response did not contain an ID Token or parsing of" +
-                        " the JWT failed."));
+                    tokensListener.onFailure(
+                        new ElasticsearchSecurityException("Token Response did not contain an ID Token or parsing of the JWT failed."));
                     return;
                 }
                 tokensListener.onResponse(new Tuple<>(accessToken, idToken));
@@ -545,6 +546,13 @@ public class OpenIdConnectAuthenticator {
                 new ElasticsearchSecurityException("Failed to exchange code for Id Token using the Token Endpoint. " +
                     "Unable to parse Token Response", e));
         }
+    }
+
+    private static String truncateToken(String input) {
+        if (Strings.hasText(input) == false || input.length() <= 4) {
+            return input;
+        }
+        return input.substring(0, 2) + "***" + input.substring(input.length() - 2);
     }
 
     /**
@@ -559,9 +567,7 @@ public class OpenIdConnectAuthenticator {
                     final String sslKey = RealmSettings.realmSslPrefix(realmConfig.identifier());
                     final SSLConfiguration sslConfiguration = sslService.getSSLConfiguration(sslKey);
                     final SSLContext clientContext = sslService.sslContext(sslConfiguration);
-                    boolean isHostnameVerificationEnabled = sslConfiguration.verificationMode().isHostnameVerificationEnabled();
-                    final HostnameVerifier verifier = isHostnameVerificationEnabled ?
-                        new DefaultHostnameVerifier() : NoopHostnameVerifier.INSTANCE;
+                    final HostnameVerifier verifier = SSLService.getHostnameVerifier(sslConfiguration);
                     Registry<SchemeIOSessionStrategy> registry = RegistryBuilder.<SchemeIOSessionStrategy>create()
                         .register("http", NoopIOSessionStrategy.INSTANCE)
                         .register("https", new SSLIOSessionStrategy(clientContext, verifier))

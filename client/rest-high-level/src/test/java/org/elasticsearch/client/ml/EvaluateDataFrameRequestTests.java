@@ -36,6 +36,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 
+import static java.util.function.Predicate.not;
+
 public class EvaluateDataFrameRequestTests extends AbstractXContentTestCase<EvaluateDataFrameRequest> {
 
     public static EvaluateDataFrameRequest createRandom() {
@@ -69,13 +71,13 @@ public class EvaluateDataFrameRequestTests extends AbstractXContentTestCase<Eval
     @Override
     protected Predicate<String> getRandomFieldsExcludeFilter() {
         // allow unknown fields in root only
-        return field -> !field.isEmpty();
+        return not(String::isEmpty);
     }
 
     @Override
     protected NamedXContentRegistry xContentRegistry() {
         List<NamedXContentRegistry.Entry> namedXContent = new ArrayList<>();
-        namedXContent.addAll(new SearchModule(Settings.EMPTY, false, Collections.emptyList()).getNamedXContents());
+        namedXContent.addAll(new SearchModule(Settings.EMPTY, Collections.emptyList()).getNamedXContents());
         namedXContent.addAll(new MlEvaluationNamedXContentProvider().getNamedXContentParsers());
         return new NamedXContentRegistry(namedXContent);
     }

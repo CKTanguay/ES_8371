@@ -25,7 +25,6 @@ import org.elasticsearch.xpack.core.ml.datafeed.DatafeedConfig;
 import org.elasticsearch.xpack.core.ml.datafeed.DatafeedConfigTests;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -69,7 +68,7 @@ public class DeprecationInfoActionResponseTests extends AbstractWireSerializingT
         mapping.endObject().endObject();
 
         MetaData metadata = MetaData.builder().put(IndexMetaData.builder("test")
-            .putMapping("testUnderscoreAll", Strings.toString(mapping))
+            .putMapping(Strings.toString(mapping))
             .settings(settings(Version.CURRENT))
             .numberOfShards(1)
             .numberOfReplicas(0))
@@ -87,18 +86,10 @@ public class DeprecationInfoActionResponseTests extends AbstractWireSerializingT
         boolean indexIssueFound = randomBoolean();
         boolean mlIssueFound = randomBoolean();
         DeprecationIssue foundIssue = DeprecationIssueTests.createTestInstance();
-        List<Function<ClusterState, DeprecationIssue>> clusterSettingsChecks =
-            Collections.unmodifiableList(Arrays.asList(
-                (s) -> clusterIssueFound ? foundIssue : null
-            ));
-        List<Function<IndexMetaData, DeprecationIssue>> indexSettingsChecks =
-            Collections.unmodifiableList(Arrays.asList(
-                (idx) -> indexIssueFound ? foundIssue : null
-            ));
+        List<Function<ClusterState, DeprecationIssue>> clusterSettingsChecks = List.of((s) -> clusterIssueFound ? foundIssue : null);
+        List<Function<IndexMetaData, DeprecationIssue>> indexSettingsChecks = List.of((idx) -> indexIssueFound ? foundIssue : null);
         List<BiFunction<DatafeedConfig, NamedXContentRegistry, DeprecationIssue>> mlSettingsChecks =
-                Collections.unmodifiableList(Arrays.asList(
-                        (idx, unused) -> mlIssueFound ? foundIssue : null
-                ));
+                List.of((idx, unused) -> mlIssueFound ? foundIssue : null);
 
         NodesDeprecationCheckResponse nodeDeprecationIssues = new NodesDeprecationCheckResponse(
             new ClusterName(randomAlphaOfLength(5)),

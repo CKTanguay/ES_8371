@@ -39,6 +39,7 @@ import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.node.NodeClosedException;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -48,13 +49,6 @@ import java.util.function.Predicate;
 public class TransportClusterStateAction extends TransportMasterNodeReadAction<ClusterStateRequest, ClusterStateResponse> {
 
     private final Logger logger = LogManager.getLogger(getClass());
-
-    static {
-        final String property = System.getProperty("es.cluster_state.size");
-        if (property != null) {
-                throw new IllegalArgumentException("es.cluster_state.size is no longer respected but was [" + property + "]");
-        }
-    }
 
     @Inject
     public TransportClusterStateAction(TransportService transportService, ClusterService clusterService,
@@ -85,7 +79,7 @@ public class TransportClusterStateAction extends TransportMasterNodeReadAction<C
     }
 
     @Override
-    protected void masterOperation(final ClusterStateRequest request, final ClusterState state,
+    protected void masterOperation(Task task, final ClusterStateRequest request, final ClusterState state,
                                    final ActionListener<ClusterStateResponse> listener) throws IOException {
 
         final Predicate<ClusterState> acceptableClusterStatePredicate
@@ -136,7 +130,6 @@ public class TransportClusterStateAction extends TransportMasterNodeReadAction<C
         ClusterState.Builder builder = ClusterState.builder(currentState.getClusterName());
         builder.version(currentState.version());
         builder.stateUUID(currentState.stateUUID());
-        builder.minimumMasterNodesOnPublishingMaster(currentState.getMinimumMasterNodesOnPublishingMaster());
 
         if (request.nodes()) {
             builder.nodes(currentState.nodes());

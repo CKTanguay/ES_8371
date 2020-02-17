@@ -25,6 +25,8 @@ import org.elasticsearch.cluster.coordination.CoordinationMetaData.VotingConfigu
 import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,8 +34,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-
-import static org.elasticsearch.cluster.coordination.Coordinator.ZEN1_BWC_TERM;
 
 /**
  * The core class of the cluster state coordination algorithm, directly implementing the
@@ -88,10 +88,6 @@ public class CoordinationState {
 
     public long getLastAcceptedVersion() {
         return getLastAcceptedState().version();
-    }
-
-    private long getLastAcceptedVersionOrMetaDataVersion() {
-        return getLastAcceptedState().getVersionOrMetaDataVersion();
     }
 
     public VotingConfiguration getLastCommittedConfiguration() {
@@ -203,7 +199,7 @@ public class CoordinationState {
         publishVotes = new VoteCollection();
 
         return new Join(localNode, startJoinRequest.getSourceNode(), getCurrentTerm(), getLastAcceptedTerm(),
-            getLastAcceptedVersionOrMetaDataVersion());
+            getLastAcceptedVersion());
     }
 
     /**
@@ -236,12 +232,12 @@ public class CoordinationState {
                 " of join higher than current last accepted term " + lastAcceptedTerm);
         }
 
-        if (join.getLastAcceptedTerm() == lastAcceptedTerm && join.getLastAcceptedVersion() > getLastAcceptedVersionOrMetaDataVersion()) {
+        if (join.getLastAcceptedTerm() == lastAcceptedTerm && join.getLastAcceptedVersion() > getLastAcceptedVersion()) {
             logger.debug(
                 "handleJoin: ignored join as joiner has a better last accepted version (expected: <=[{}], actual: [{}]) in term {}",
-                getLastAcceptedVersionOrMetaDataVersion(), join.getLastAcceptedVersion(), lastAcceptedTerm);
+                getLastAcceptedVersion(), join.getLastAcceptedVersion(), lastAcceptedTerm);
             throw new CoordinationStateRejectedException("incoming last accepted version " + join.getLastAcceptedVersion() +
-                " of join higher than current last accepted version " + getLastAcceptedVersionOrMetaDataVersion()
+                " of join higher than current last accepted version " + getLastAcceptedVersion()
                 + " in term " + lastAcceptedTerm);
         }
 
@@ -338,16 +334,10 @@ public class CoordinationState {
                 getCurrentTerm());
         }
         if (clusterState.term() == getLastAcceptedTerm() && clusterState.version() <= getLastAcceptedVersion()) {
-            if (clusterState.term() == ZEN1_BWC_TERM
-                && clusterState.nodes().getMasterNode().equals(getLastAcceptedState().nodes().getMasterNode()) == false) {
-                logger.debug("handling publish request in compatibility mode despite version mismatch (expected: >[{}], actual: [{}])",
-                    getLastAcceptedVersion(), clusterState.version());
-            } else {
-                logger.debug("handlePublishRequest: ignored publish request due to version mismatch (expected: >[{}], actual: [{}])",
-                    getLastAcceptedVersion(), clusterState.version());
-                throw new CoordinationStateRejectedException("incoming version " + clusterState.version() +
-                    " lower or equal to current version " + getLastAcceptedVersion());
-            }
+            logger.debug("handlePublishRequest: ignored publish request due to version mismatch (expected: >[{}], actual: [{}])",
+                getLastAcceptedVersion(), clusterState.version());
+            throw new CoordinationStateRejectedException("incoming version " + clusterState.version() +
+                " lower or equal to current version " + getLastAcceptedVersion());
         }
 
         logger.trace("handlePublishRequest: accepting publish request for version [{}] and term [{}]",
@@ -444,15 +434,14 @@ public class CoordinationState {
         assert publishVotes.isEmpty() || electionWon();
     }
 
-    public void close() {
+    public void close() throws IOException {
         persistedState.close();
     }
 
     /**
      * Pluggable persistence layer for {@link CoordinationState}.
-     *
      */
-    public interface PersistedState {
+    public interface PersistedState extends Closeable {
 
         /**
          * Returns the current term
@@ -494,10 +483,8 @@ public class CoordinationState {
                 metaDataBuilder = MetaData.builder(lastAcceptedState.metaData());
                 metaDataBuilder.coordinationMetaData(coordinationMetaData);
             }
-            // if we receive a commit from a Zen1 master that has not recovered its state yet, the cluster uuid might not been known yet.
-            assert lastAcceptedState.metaData().clusterUUID().equals(MetaData.UNKNOWN_CLUSTER_UUID) == false ||
-                lastAcceptedState.term() == ZEN1_BWC_TERM :
-                "received cluster state with empty cluster uuid but not Zen1 BWC term: " + lastAcceptedState;
+            assert lastAcceptedState.metaData().clusterUUID().equals(MetaData.UNKNOWN_CLUSTER_UUID) == false :
+                "received cluster state with empty cluster uuid: " + lastAcceptedState;
             if (lastAcceptedState.metaData().clusterUUID().equals(MetaData.UNKNOWN_CLUSTER_UUID) == false &&
                 lastAcceptedState.metaData().clusterUUIDCommitted() == false) {
                 if (metaDataBuilder == null) {
@@ -511,7 +498,8 @@ public class CoordinationState {
             }
         }
 
-        default void close() {}
+        default void close() throws IOException {
+        }
     }
 
     /**

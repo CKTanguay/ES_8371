@@ -85,7 +85,6 @@ public class SocketChannelContextTests extends ESTestCase {
         });
         rawSocket = mock(Socket.class);
         when(rawChannel.socket()).thenReturn(rawSocket);
-        when(rawSocket.getChannel()).thenReturn(rawChannel);
     }
 
     public void testIOExceptionSetIfEncountered() throws IOException {

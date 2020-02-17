@@ -26,10 +26,10 @@ import org.elasticsearch.xpack.core.ml.utils.ExponentialAverageCalculationContex
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
@@ -76,7 +76,7 @@ public class GetDatafeedStatsActionResponseTests extends AbstractWireSerializing
         TransportAddress transportAddress = new TransportAddress(TransportAddress.META_ADDRESS, 9000);
 
         DiscoveryNode node = new DiscoveryNode("df-node-name", "df-node-id", transportAddress, attributes,
-                Collections.emptySet(),
+                Set.of(),
                 Version.CURRENT);
 
         DatafeedTimingStats timingStats =

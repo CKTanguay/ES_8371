@@ -35,7 +35,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.contains;
@@ -73,7 +72,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
         ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), index);
 
         // Add an alias to it
-        ClusterState after = service.innerExecute(before, singletonList(new AliasAction.Add(index, "test", null, null, null, null)));
+        ClusterState after = service.applyAliasActions(before, singletonList(new AliasAction.Add(index, "test", null, null, null, null)));
         AliasOrIndex alias = after.metaData().getAliasAndIndexLookup().get("test");
         assertNotNull(alias);
         assertTrue(alias.isAlias());
@@ -82,7 +81,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
 
         // Remove the alias from it while adding another one
         before = after;
-        after = service.innerExecute(before, Arrays.asList(
+        after = service.applyAliasActions(before, Arrays.asList(
                 new AliasAction.Remove(index, "test"),
                 new AliasAction.Add(index, "test_2", null, null, null, null)));
         assertNull(after.metaData().getAliasAndIndexLookup().get("test"));
@@ -94,35 +93,35 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
 
         // Now just remove on its own
         before = after;
-        after = service.innerExecute(before, singletonList(new AliasAction.Remove(index, "test_2")));
+        after = service.applyAliasActions(before, singletonList(new AliasAction.Remove(index, "test_2")));
         assertNull(after.metaData().getAliasAndIndexLookup().get("test"));
         assertNull(after.metaData().getAliasAndIndexLookup().get("test_2"));
         assertAliasesVersionIncreased(index, before, after);
     }
 
     public void testMultipleIndices() {
-        final int length = randomIntBetween(2, 8);
-        final Set<String> indices = new HashSet<>(length);
+        final var length = randomIntBetween(2, 8);
+        final var indices = new HashSet<String>(length);
         ClusterState before = ClusterState.builder(ClusterName.DEFAULT).build();
-        final List<AliasAction> addActions = new ArrayList<>(length);
+        final var addActions = new ArrayList<AliasAction>(length);
         for (int i = 0; i < length; i++) {
             final String index = randomValueOtherThanMany(v -> indices.add(v) == false, () -> randomAlphaOfLength(8));
             before = createIndex(before, index);
             addActions.add(new AliasAction.Add(index, "alias-" + index, null, null, null, null));
         }
-        final ClusterState afterAddingAliasesToAll = service.innerExecute(before, addActions);
+        final ClusterState afterAddingAliasesToAll = service.applyAliasActions(before, addActions);
         assertAliasesVersionIncreased(indices.toArray(new String[0]), before, afterAddingAliasesToAll);
 
         // now add some aliases randomly
-        final Set<String> randomIndices = new HashSet<>(length);
-        final List<AliasAction> randomAddActions = new ArrayList<>(length);
-        for (String index : indices) {
+        final var randomIndices = new HashSet<String>(length);
+        final var randomAddActions = new ArrayList<AliasAction>(length);
+        for (var index : indices) {
             if (randomBoolean()) {
                 randomAddActions.add(new AliasAction.Add(index, "random-alias-" + index, null, null, null, null));
                 randomIndices.add(index);
             }
         }
-        final ClusterState afterAddingRandomAliases = service.innerExecute(afterAddingAliasesToAll, randomAddActions);
+        final ClusterState afterAddingRandomAliases = service.applyAliasActions(afterAddingAliasesToAll, randomAddActions);
         assertAliasesVersionIncreased(randomIndices.toArray(new String[0]), afterAddingAliasesToAll, afterAddingRandomAliases);
         assertAliasesVersionUnchanged(
                 Sets.difference(indices, randomIndices).toArray(new String[0]),
@@ -135,15 +134,15 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
         final ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), index);
 
         final ClusterState afterAddWriteAlias =
-                service.innerExecute(before, singletonList(new AliasAction.Add(index, "test", null, null, null, true)));
+                service.applyAliasActions(before, singletonList(new AliasAction.Add(index, "test", null, null, null, true)));
         assertAliasesVersionIncreased(index, before, afterAddWriteAlias);
 
         final ClusterState afterChangeWriteAliasToNonWriteAlias =
-                service.innerExecute(afterAddWriteAlias, singletonList(new AliasAction.Add(index, "test", null, null, null, false)));
+                service.applyAliasActions(afterAddWriteAlias, singletonList(new AliasAction.Add(index, "test", null, null, null, false)));
         assertAliasesVersionIncreased(index, afterAddWriteAlias, afterChangeWriteAliasToNonWriteAlias);
 
         final ClusterState afterChangeNonWriteAliasToWriteAlias =
-                service.innerExecute(
+                service.applyAliasActions(
                         afterChangeWriteAliasToNonWriteAlias,
                         singletonList(new AliasAction.Add(index, "test", null, null, null, true)));
         assertAliasesVersionIncreased(index, afterChangeWriteAliasToNonWriteAlias, afterChangeNonWriteAliasToWriteAlias);
@@ -155,11 +154,11 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
 
         // add an alias to the index multiple times
         final int length = randomIntBetween(2, 8);
-        final List<AliasAction> addActions = new ArrayList<>(length);
+        final var addActions = new ArrayList<AliasAction>(length);
         for (int i = 0; i < length; i++) {
             addActions.add(new AliasAction.Add(index, "test", null, null, null, null));
         }
-        final ClusterState afterAddingAliases = service.innerExecute(before, addActions);
+        final ClusterState afterAddingAliases = service.applyAliasActions(before, addActions);
 
         assertAliasesVersionIncreased(index, before, afterAddingAliases);
     }
@@ -170,21 +169,21 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
 
         // add some aliases to the index
         final int length = randomIntBetween(1, 8);
-        final Set<String> aliasNames = new HashSet<>();
-        final List<AliasAction> addActions = new ArrayList<>(length);
+        final var aliasNames = new HashSet<String>();
+        final var addActions = new ArrayList<AliasAction>(length);
         for (int i = 0; i < length; i++) {
             final String aliasName = randomValueOtherThanMany(v -> aliasNames.add(v) == false, () -> randomAlphaOfLength(8));
             addActions.add(new AliasAction.Add(index, aliasName, null, null, null, null));
         }
-        final ClusterState afterAddingAlias = service.innerExecute(before, addActions);
+        final ClusterState afterAddingAlias = service.applyAliasActions(before, addActions);
 
         // now perform a remove and add for each alias which is idempotent, the resulting aliases are unchanged
-        final List<AliasAction> removeAndAddActions = new ArrayList<>(2 * length);
-        for (final String aliasName : aliasNames) {
+        final var removeAndAddActions = new ArrayList<AliasAction>(2 * length);
+        for (final var aliasName : aliasNames) {
             removeAndAddActions.add(new AliasAction.Remove(index, aliasName));
             removeAndAddActions.add(new AliasAction.Add(index, aliasName, null, null, null, null));
         }
-        final ClusterState afterRemoveAndAddAlias = service.innerExecute(afterAddingAlias, removeAndAddActions);
+        final ClusterState afterRemoveAndAddAlias = service.applyAliasActions(afterAddingAlias, removeAndAddActions);
         assertAliasesVersionUnchanged(index, afterAddingAlias, afterRemoveAndAddAlias);
     }
 
@@ -194,7 +193,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
         before = createIndex(before, "test_2");
 
         // Now remove "test" and add an alias to "test" to "test_2" in one go
-        ClusterState after = service.innerExecute(before, Arrays.asList(
+        ClusterState after = service.applyAliasActions(before, Arrays.asList(
                 new AliasAction.Add("test_2", "test", null, null, null, null),
                 new AliasAction.RemoveIndex("test")));
         AliasOrIndex alias = after.metaData().getAliasAndIndexLookup().get("test");
@@ -209,7 +208,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
         ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), "test");
 
         // Attempt to add an alias to "test" at the same time as we remove it
-        IndexNotFoundException e = expectThrows(IndexNotFoundException.class, () -> service.innerExecute(before, Arrays.asList(
+        IndexNotFoundException e = expectThrows(IndexNotFoundException.class, () -> service.applyAliasActions(before, Arrays.asList(
                 new AliasAction.Add("test", "alias", null, null, null, null),
                 new AliasAction.RemoveIndex("test"))));
         assertEquals("test", e.getIndex().getName());
@@ -220,7 +219,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
         ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), "test");
 
         // Try to remove an index twice. This should just remove the index once....
-        ClusterState after = service.innerExecute(before, Arrays.asList(
+        ClusterState after = service.applyAliasActions(before, Arrays.asList(
                 new AliasAction.RemoveIndex("test"),
                 new AliasAction.RemoveIndex("test")));
         assertNull(after.metaData().getAliasAndIndexLookup().get("test"));
@@ -229,20 +228,20 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
     public void testAddWriteOnlyWithNoExistingAliases() {
         ClusterState before = createIndex(ClusterState.builder(ClusterName.DEFAULT).build(), "test");
 
-        ClusterState after = service.innerExecute(before, Arrays.asList(
+        ClusterState after = service.applyAliasActions(before, Arrays.asList(
             new AliasAction.Add("test", "alias", null, null, null, false)));
         assertFalse(after.metaData().index("test").getAliases().get("alias").writeIndex());
         assertNull(((AliasOrIndex.Alias) after.metaData().getAliasAndIndexLookup().get("alias")).getWriteIndex());
         assertAliasesVersionIncreased("test", before, after);
 
-        after = service.innerExecute(before, Arrays.asList(
+        after = service.applyAliasActions(before, Arrays.asList(
             new AliasAction.Add("test", "alias", null, null, null, null)));
         assertNull(after.metaData().index("test").getAliases().get("alias").writeIndex());
         assertThat(((AliasOrIndex.Alias) after.metaData().getAliasAndIndexLookup().get("alias")).getWriteIndex(),
             equalTo(after.metaData().index("test")));
         assertAliasesVersionIncreased("test", before, after);
 
-        after = service.innerExecute(before, Arrays.asList(
+        after = service.applyAliasActions(before, Arrays.asList(
             new AliasAction.Add("test", "alias", null, null, null, true)));
         assertTrue(after.metaData().index("test").getAliases().get("alias").writeIndex());
         assertThat(((AliasOrIndex.Alias) after.metaData().getAliasAndIndexLookup().get("alias")).getWriteIndex(),
@@ -259,7 +258,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
         ClusterState before = ClusterState.builder(ClusterName.DEFAULT)
             .metaData(MetaData.builder().put(indexMetaData).put(indexMetaData2)).build();
 
-        ClusterState after = service.innerExecute(before, Arrays.asList(
+        ClusterState after = service.applyAliasActions(before, Arrays.asList(
             new AliasAction.Add("test", "alias", null, null, null, null)));
         assertNull(after.metaData().index("test").getAliases().get("alias").writeIndex());
         assertThat(((AliasOrIndex.Alias) after.metaData().getAliasAndIndexLookup().get("alias")).getWriteIndex(),
@@ -267,7 +266,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
         assertAliasesVersionIncreased("test", before, after);
         assertAliasesVersionUnchanged("test2", before, after);
 
-        Exception exception = expectThrows(IllegalStateException.class, () -> service.innerExecute(before, Arrays.asList(
+        Exception exception = expectThrows(IllegalStateException.class, () -> service.applyAliasActions(before, Arrays.asList(
             new AliasAction.Add("test", "alias", null, null, null, true))));
         assertThat(exception.getMessage(), startsWith("alias [alias] has more than one write index ["));
     }
@@ -287,7 +286,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
             new AliasAction.Add("test2", "alias", null, null, null, true)
         );
         Collections.shuffle(swapActions, random());
-        ClusterState after = service.innerExecute(before, swapActions);
+        ClusterState after = service.applyAliasActions(before, swapActions);
         assertThat(after.metaData().index("test").getAliases().get("alias").writeIndex(), equalTo(unsetValue));
         assertTrue(after.metaData().index("test2").getAliases().get("alias").writeIndex());
         assertThat(((AliasOrIndex.Alias) after.metaData().getAliasAndIndexLookup().get("alias")).getWriteIndex(),
@@ -310,7 +309,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
 
         assertNull(((AliasOrIndex.Alias) before.metaData().getAliasAndIndexLookup().get("alias")).getWriteIndex());
 
-        ClusterState after = service.innerExecute(before, Arrays.asList(
+        ClusterState after = service.applyAliasActions(before, Arrays.asList(
             new AliasAction.Add("test3", "alias", null, null, null, true)));
         assertTrue(after.metaData().index("test3").getAliases().get("alias").writeIndex());
         assertThat(((AliasOrIndex.Alias) after.metaData().getAliasAndIndexLookup().get("alias")).getWriteIndex(),
@@ -334,7 +333,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
         assertNull(before.metaData().index("test2").getAliases().get("alias").writeIndex());
         assertNull(((AliasOrIndex.Alias) before.metaData().getAliasAndIndexLookup().get("alias")).getWriteIndex());
 
-        ClusterState after = service.innerExecute(before, Collections.singletonList(new AliasAction.RemoveIndex("test")));
+        ClusterState after = service.applyAliasActions(before, Collections.singletonList(new AliasAction.RemoveIndex("test")));
         assertNull(after.metaData().index("test2").getAliases().get("alias").writeIndex());
         assertThat(((AliasOrIndex.Alias) after.metaData().getAliasAndIndexLookup().get("alias")).getWriteIndex(),
             equalTo(after.metaData().index("test2")));
@@ -349,7 +348,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
         ClusterState before = ClusterState.builder(ClusterName.DEFAULT)
             .metaData(MetaData.builder().put(indexMetaData).put(indexMetaData2)).build();
 
-        Exception exception = expectThrows(IllegalStateException.class, () -> service.innerExecute(before, Arrays.asList(
+        Exception exception = expectThrows(IllegalStateException.class, () -> service.applyAliasActions(before, Arrays.asList(
             new AliasAction.Add("test", "alias", null, null, null, true),
             new AliasAction.Add("test2", "alias", null, null, null, true)
         )));
@@ -372,7 +371,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
     }
 
     private void assertAliasesVersionUnchanged(final String[] indices, final ClusterState before, final ClusterState after) {
-        for (final String index : indices) {
+        for (final var index : indices) {
             final long expected = before.metaData().index(index).getAliasesVersion();
             final long actual = after.metaData().index(index).getAliasesVersion();
             assertThat("index metadata aliases version mismatch", actual, equalTo(expected));
@@ -384,7 +383,7 @@ public class MetaDataIndexAliasesServiceTests extends ESTestCase {
     }
 
     private void assertAliasesVersionIncreased(final String[] indices, final ClusterState before, final ClusterState after) {
-        for (final String index : indices) {
+        for (final var index : indices) {
             final long expected = 1 + before.metaData().index(index).getAliasesVersion();
             final long actual = after.metaData().index(index).getAliasesVersion();
             assertThat("index metadata aliases version mismatch", actual, equalTo(expected));

@@ -20,7 +20,6 @@ package org.elasticsearch.cluster.coordination;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.Version;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.coordination.CoordinationMetaData.VotingConfiguration;
 import org.elasticsearch.cluster.coordination.CoordinationState.VoteCollection;
@@ -141,7 +140,7 @@ public class ClusterFormationFailureHelper {
             final String discoveryWillContinueDescription = String.format(Locale.ROOT,
                 "discovery will continue using %s from hosts providers and %s from last-known cluster state; " +
                     "node term %d, last-accepted version %d in term %d",
-                resolvedAddresses, clusterStateNodes, currentTerm, clusterState.getVersionOrMetaDataVersion(), clusterState.term());
+                resolvedAddresses, clusterStateNodes, currentTerm, clusterState.version(), clusterState.term());
 
             final String discoveryStateIgnoringQuorum = String.format(Locale.ROOT, "have discovered %s; %s",
                 foundPeers, discoveryWillContinueDescription);
@@ -151,8 +150,6 @@ public class ClusterFormationFailureHelper {
             }
 
             if (clusterState.getLastAcceptedConfiguration().isEmpty()) {
-
-                // TODO handle the case that there is a 6.x node around here, when rolling upgrades are supported
 
                 final String bootstrappingDescription;
 
@@ -166,8 +163,8 @@ public class ClusterFormationFailureHelper {
                 }
 
                 return String.format(Locale.ROOT,
-                    "master not discovered yet, this node has not previously joined a bootstrapped (v%d+) cluster, and %s: %s",
-                    Version.V_6_6_0.major + 1, bootstrappingDescription, discoveryStateIgnoringQuorum);
+                    "master not discovered yet, this node has not previously joined a bootstrapped cluster, and %s: %s",
+                    bootstrappingDescription, discoveryStateIgnoringQuorum);
             }
 
             assert clusterState.getLastCommittedConfiguration().isEmpty() == false;
@@ -191,8 +188,7 @@ public class ClusterFormationFailureHelper {
             foundPeers.forEach(voteCollection::addVote);
             final String isQuorumOrNot
                 = electionStrategy.isElectionQuorum(clusterState.nodes().getLocalNode(), currentTerm, clusterState.term(),
-                    clusterState.getVersionOrMetaDataVersion(), clusterState.getLastCommittedConfiguration(),
-                    clusterState.getLastAcceptedConfiguration(),
+                    clusterState.version(), clusterState.getLastCommittedConfiguration(), clusterState.getLastAcceptedConfiguration(),
                     voteCollection) ? "is a quorum" : "is not a quorum";
 
             return String.format(Locale.ROOT,

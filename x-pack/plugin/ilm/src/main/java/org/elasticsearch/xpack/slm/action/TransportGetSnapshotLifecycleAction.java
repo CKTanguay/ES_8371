@@ -20,6 +20,7 @@ import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
+import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 import org.elasticsearch.xpack.core.slm.SnapshotLifecycleMetadata;
@@ -41,7 +42,7 @@ import java.util.stream.Collectors;
 public class TransportGetSnapshotLifecycleAction extends
     TransportMasterNodeAction<GetSnapshotLifecycleAction.Request, GetSnapshotLifecycleAction.Response> {
 
-    private static final Logger logger = LogManager.getLogger(TransportPutSnapshotLifecycleAction.class);
+    private static final Logger logger = LogManager.getLogger(TransportGetSnapshotLifecycleAction.class);
 
     @Inject
     public TransportGetSnapshotLifecycleAction(TransportService transportService, ClusterService clusterService, ThreadPool threadPool,
@@ -60,7 +61,7 @@ public class TransportGetSnapshotLifecycleAction extends
     }
 
     @Override
-    protected void masterOperation(final GetSnapshotLifecycleAction.Request request,
+    protected void masterOperation(final Task task, final GetSnapshotLifecycleAction.Request request,
                                    final ClusterState state,
                                    final ActionListener<GetSnapshotLifecycleAction.Response> listener) {
         SnapshotLifecycleMetadata snapMeta = state.metaData().custom(SnapshotLifecycleMetadata.TYPE);

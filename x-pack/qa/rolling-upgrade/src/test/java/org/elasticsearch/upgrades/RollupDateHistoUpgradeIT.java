@@ -7,7 +7,6 @@ package org.elasticsearch.upgrades;
 
 import org.elasticsearch.Version;
 import org.elasticsearch.client.Request;
-import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.common.Booleans;
 import org.elasticsearch.common.xcontent.ObjectPath;
@@ -35,6 +34,7 @@ public class RollupDateHistoUpgradeIT extends AbstractUpgradeTestCase {
         Version.fromString(System.getProperty("tests.upgrade_from_version"));
 
     public void testDateHistoIntervalUpgrade() throws Exception {
+        assumeTrue("DateHisto interval changed in 7.2", UPGRADE_FROM_VERSION.before(Version.V_7_2_0));
         switch (CLUSTER_TYPE) {
             case OLD:
                 break;
@@ -60,21 +60,18 @@ public class RollupDateHistoUpgradeIT extends AbstractUpgradeTestCase {
         OffsetDateTime timestamp = Instant.parse("2018-01-01T00:00:01.000Z").atOffset(ZoneOffset.UTC);
 
         if (CLUSTER_TYPE == ClusterType.OLD) {
-            String rollupEndpoint = UPGRADE_FROM_VERSION.before(Version.V_7_0_0) ? "_xpack/rollup" : "_rollup";
-
-            String settings = "{\"settings\": {\"index.unassigned.node_left.delayed_timeout\": \"100ms\", \"number_of_shards\": 1}}";
+            String recoverQuickly = "{\"settings\": {\"index.unassigned.node_left.delayed_timeout\": \"100ms\"}}";
 
             Request createTargetIndex = new Request("PUT", "/target");
-            createTargetIndex.setJsonEntity(settings);
+            createTargetIndex.setJsonEntity(recoverQuickly);
             client().performRequest(createTargetIndex);
 
             final Request indexRequest = new Request("POST", "/target/_doc/1");
             indexRequest.setJsonEntity("{\"timestamp\":\"" + timestamp.toString() + "\",\"value\":123}");
             client().performRequest(indexRequest);
-            client().performRequest(new Request("POST", "target/_refresh"));
 
             // create the rollup job with an old interval style
-            final Request createRollupJobRequest = new Request("PUT", rollupEndpoint + "/job/rollup-id-test");
+            final Request createRollupJobRequest = new Request("PUT", "_rollup/job/rollup-id-test");
             createRollupJobRequest.setJsonEntity("{"
                 + "\"index_pattern\":\"target\","
                 + "\"rollup_index\":\"rollup\","
@@ -97,28 +94,20 @@ public class RollupDateHistoUpgradeIT extends AbstractUpgradeTestCase {
                 + "    {\"field\":\"value\",\"metrics\":[\"min\",\"max\",\"sum\"]}"
                 + "]"
                 + "}");
-            RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
-            options.setWarningsHandler(warnings -> {
-                warnings.remove("the default number of shards will change from [5] to [1] in 7.0.0; if you wish to continue using " +
-                    "the default of [5] shards, you must manage this on the create index request or with an index template");
-                return warnings.size() > 0;
-            });
-            createRollupJobRequest.setOptions(options);
 
             Map<String, Object> createRollupJobResponse = entityAsMap(client().performRequest(createRollupJobRequest));
             assertThat(createRollupJobResponse.get("acknowledged"), equalTo(Boolean.TRUE));
 
-            String recoverQuickly = "{\"settings\": {\"index.unassigned.node_left.delayed_timeout\": \"100ms\"}}";
             Request updateSettings = new Request("PUT", "/rollup/_settings");
             updateSettings.setJsonEntity(recoverQuickly);
             client().performRequest(updateSettings);
 
             // start the rollup job
-            final Request startRollupJobRequest = new Request("POST", rollupEndpoint + "/job/rollup-id-test/_start");
+            final Request startRollupJobRequest = new Request("POST", "_rollup/job/rollup-id-test/_start");
             Map<String, Object> startRollupJobResponse = entityAsMap(client().performRequest(startRollupJobRequest));
             assertThat(startRollupJobResponse.get("started"), equalTo(Boolean.TRUE));
 
-            assertRollUpJob("rollup-id-test", rollupEndpoint);
+            assertRollUpJob("rollup-id-test");
             List<String> ids = getSearchResults(1);
             assertThat(ids.toString(), ids, containsInAnyOrder("rollup-id-test$AuaduUZW8tgWmFP87DgzSA"));
         }
@@ -127,9 +116,9 @@ public class RollupDateHistoUpgradeIT extends AbstractUpgradeTestCase {
             final Request indexRequest = new Request("POST", "/target/_doc/2");
             indexRequest.setJsonEntity("{\"timestamp\":\"" + timestamp.plusDays(1).toString() + "\",\"value\":345}");
             client().performRequest(indexRequest);
-            client().performRequest(new Request("POST", "target/_refresh"));
 
-            assertRollUpJob("rollup-id-test", "_xpack/rollup");
+            assertRollUpJob("rollup-id-test");
+            client().performRequest(new Request("POST", "rollup/_refresh"));
 
             List<String> ids = getSearchResults(2);
             assertThat(ids.toString(), ids, containsInAnyOrder("rollup-id-test$AuaduUZW8tgWmFP87DgzSA",
@@ -141,9 +130,7 @@ public class RollupDateHistoUpgradeIT extends AbstractUpgradeTestCase {
             indexRequest.setJsonEntity("{\"timestamp\":\"" + timestamp.plusDays(2).toString() + "\",\"value\":456}");
             client().performRequest(indexRequest);
 
-            client().performRequest(new Request("POST", "target/_refresh"));
-
-            assertRollUpJob("rollup-id-test", "_xpack/rollup");
+            assertRollUpJob("rollup-id-test");
             client().performRequest(new Request("POST", "rollup/_refresh"));
 
             List<String> ids = getSearchResults(3);
@@ -156,9 +143,9 @@ public class RollupDateHistoUpgradeIT extends AbstractUpgradeTestCase {
             final Request indexRequest = new Request("POST", "/target/_doc/4");
             indexRequest.setJsonEntity("{\"timestamp\":\"" + timestamp.plusDays(3).toString() + "\",\"value\":567}");
             client().performRequest(indexRequest);
-            client().performRequest(new Request("POST", "target/_refresh"));
 
-            assertRollUpJob("rollup-id-test", "_rollup");
+            assertRollUpJob("rollup-id-test");
+            client().performRequest(new Request("POST", "rollup/_refresh"));
 
             List<String> ids = getSearchResults(4);
             assertThat(ids.toString(), ids, containsInAnyOrder("rollup-id-test$AuaduUZW8tgWmFP87DgzSA",
@@ -169,22 +156,14 @@ public class RollupDateHistoUpgradeIT extends AbstractUpgradeTestCase {
 
     private List<String> getSearchResults(int expectedCount) throws Exception {
         final List<String> collectedIDs = new ArrayList<>();
-
         assertBusy(() -> {
             collectedIDs.clear();
             client().performRequest(new Request("POST", "rollup/_refresh"));
             final Request searchRequest = new Request("GET", "rollup/_search");
             try {
                 Map<String, Object> searchResponse = entityAsMap(client().performRequest(searchRequest));
-                logger.error(searchResponse);
-
-                Object hits = ObjectPath.eval("hits.total", searchResponse);
-                assertNotNull(hits);
-                if (hits instanceof Number) {
-                    assertThat(ObjectPath.eval("hits.total", searchResponse), equalTo(expectedCount));
-                } else {
-                    assertThat(ObjectPath.eval("hits.total.value", searchResponse), equalTo(expectedCount));
-                }
+                assertNotNull(ObjectPath.eval("hits.total.value", searchResponse));
+                assertThat(ObjectPath.eval("hits.total.value", searchResponse), equalTo(expectedCount));
 
                 for (int i = 0; i < expectedCount; i++) {
                     String id = ObjectPath.eval("hits.hits." + i + "._id", searchResponse);
@@ -200,23 +179,12 @@ public class RollupDateHistoUpgradeIT extends AbstractUpgradeTestCase {
     }
 
     @SuppressWarnings("unchecked")
-    private void assertRollUpJob(final String rollupJob, String endpoint) throws Exception {
+    private void assertRollUpJob(final String rollupJob) throws Exception {
         final Matcher<?> expectedStates = anyOf(equalTo("indexing"), equalTo("started"));
-        waitForRollUpJob(rollupJob, expectedStates, endpoint);
+        waitForRollUpJob(rollupJob, expectedStates);
 
         // check that the rollup job is started using the RollUp API
-        final Request getRollupJobRequest = new Request("GET", endpoint + "/job/" + rollupJob);
-        // Hard to know which node we are talking to, so just remove this deprecation warning if we're hitting
-        // the old endpoint
-        if (endpoint.equals("_xpack/rollup")) {
-            RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
-            options.setWarningsHandler(warnings -> {
-                warnings.remove("[GET /_xpack/rollup/job/{id}/] is deprecated! Use [GET /_rollup/job/{id}] instead.");
-                return warnings.size() > 0;
-            });
-            getRollupJobRequest.setOptions(options);
-        }
-
+        final Request getRollupJobRequest = new Request("GET", "_rollup/job/" + rollupJob);
         Map<String, Object> getRollupJobResponse = entityAsMap(client().performRequest(getRollupJobRequest));
         Map<String, Object> job = getJob(getRollupJobResponse, rollupJob);
         if (job != null) {
@@ -252,21 +220,9 @@ public class RollupDateHistoUpgradeIT extends AbstractUpgradeTestCase {
 
     }
 
-    private void waitForRollUpJob(final String rollupJob, final Matcher<?> expectedStates, String endpoint) throws Exception {
+    private void waitForRollUpJob(final String rollupJob, final Matcher<?> expectedStates) throws Exception {
         assertBusy(() -> {
-            final Request getRollupJobRequest = new Request("GET", endpoint + "/job/" + rollupJob);
-
-            // Hard to know which node we are talking to, so just remove this deprecation warning if we're hitting
-            // the old endpoint
-            if (endpoint.equals("_xpack/rollup")) {
-                RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
-                options.setWarningsHandler(warnings -> {
-                    logger.error(warnings);
-                    warnings.remove("[GET /_xpack/rollup/job/{id}/] is deprecated! Use [GET /_rollup/job/{id}] instead.");
-                    return warnings.size() > 0;
-                });
-                getRollupJobRequest.setOptions(options);
-            }
+            final Request getRollupJobRequest = new Request("GET", "_rollup/job/" + rollupJob);
             Response getRollupJobResponse = client().performRequest(getRollupJobRequest);
             assertThat(getRollupJobResponse.getStatusLine().getStatusCode(), equalTo(RestStatus.OK.getStatus()));
 
