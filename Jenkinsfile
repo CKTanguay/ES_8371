@@ -10,7 +10,7 @@ pipeline {
 
         stage ('Linter') {
             steps {
-                sh 'gradlew lint'
+                echo 'gradlew lint'
             }
         }
 
