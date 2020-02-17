@@ -11,6 +11,7 @@ pipeline {
         stage ('Linter') {
             steps {
                 echo 'This is the linting stage'
+                sh 'gradlew lint'
             }
         }
 
